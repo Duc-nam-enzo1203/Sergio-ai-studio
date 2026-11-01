@@ -2192,9 +2192,238 @@ class Sergio_AI_Admin {
 			wp_send_json_error( array( 'message' => __( 'Không đủ quyền thực hiện.', 'sergio-ai-studio' ) ) );
 		}
 
-		Sergio_AI_Logger::purge_old_logs();
+		$type = isset( $_POST['type'] ) ? sanitize_key( $_POST['type'] ) : '30days';
 
-		wp_send_json_success( array( 'message' => __( 'Đã xóa log cũ hơn 30 ngày.', 'sergio-ai-studio' ) ) );
+		if ( 'all' === $type ) {
+			Sergio_AI_Logger::clear_all_logs();
+			$msg = __( 'Đã xóa sạch toàn bộ bản ghi nhật ký.', 'sergio-ai-studio' );
+		} elseif ( '7days' === $type ) {
+			Sergio_AI_Logger::purge_logs_days( 7 );
+			$msg = __( 'Đã dọn dẹp các bản ghi nhật ký cũ hơn 7 ngày.', 'sergio-ai-studio' );
+		} else {
+			Sergio_AI_Logger::purge_old_logs();
+			$msg = __( 'Đã dọn dẹp các bản ghi nhật ký cũ hơn 30 ngày.', 'sergio-ai-studio' );
+		}
+
+		$stats = Sergio_AI_Logger::get_stats();
+
+		wp_send_json_success( array(
+			'message' => $msg,
+			'stats'   => $stats,
+		) );
+	}
+
+	public function ajax_refresh_logs() {
+		check_ajax_referer( 'sergio_ai_studio_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Không đủ quyền thực hiện.', 'sergio-ai-studio' ) ) );
+		}
+
+		$view_mode = isset( $_POST['view_mode'] ) ? sanitize_key( $_POST['view_mode'] ) : 'sessions';
+		$level     = isset( $_POST['level'] ) ? sanitize_key( $_POST['level'] ) : '';
+		$module    = isset( $_POST['module'] ) ? sanitize_key( $_POST['module'] ) : '';
+		$search    = isset( $_POST['search'] ) ? sanitize_text_field( wp_unslash( $_POST['search'] ) ) : '';
+
+		$stats = Sergio_AI_Logger::get_stats();
+
+		if ( 'sessions' === $view_mode ) {
+			$sessions = Sergio_AI_Logger::get_sessions( 20, 0, $search, $level, $module );
+			$html     = self::render_session_cards_html( $sessions );
+			$count    = count( $sessions );
+		} else {
+			$stage = '';
+			if ( ! empty( $module ) ) {
+				$stages = Sergio_AI_Logger::get_module_stages( $module );
+				$stage  = ! empty( $stages ) ? $stages[0] : '';
+			}
+			$logs  = Sergio_AI_Logger::get_logs( 60, 0, $level, $stage, $search );
+			$html  = self::render_raw_logs_rows_html( $logs );
+			$count = count( $logs );
+		}
+
+		wp_send_json_success( array(
+			'stats' => $stats,
+			'html'  => $html,
+			'count' => $count,
+		) );
+	}
+
+	public function ajax_export_logs() {
+		check_ajax_referer( 'sergio_ai_studio_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Không đủ quyền thực hiện.', 'sergio-ai-studio' ) );
+		}
+
+		$logs     = Sergio_AI_Logger::get_logs( 500, 0 );
+		$filename = 'sergio-studio-audit-logs-' . gmdate( 'Y-m-d-His' ) . '.json';
+
+		header( 'Content-Type: application/json; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+		echo wp_json_encode( $logs, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE );
+		exit;
+	}
+
+	/**
+	 * Render HTML for Session Cards in Audit Tab
+	 *
+	 * @param array $sessions
+	 * @return string
+	 */
+	public static function render_session_cards_html( $sessions ) {
+		if ( empty( $sessions ) ) {
+			return '<div class="notice notice-info inline" style="padding: 16px; margin: 10px 0;"><p style="margin: 0;"><span class="dashicons dashicons-info" style="vertical-align: text-bottom;"></span> ' . esc_html__( 'Không tìm thấy phiên thực thi nào phù hợp với bộ lọc.', 'sergio-ai-studio' ) . '</p></div>';
+		}
+
+		ob_start();
+		foreach ( $sessions as $sess ) :
+			$status_class = 'status-' . esc_attr( $sess['status'] );
+			$status_badge = '';
+			if ( 'success' === $sess['status'] ) {
+				$status_badge = '<span class="notice notice-success inline" style="padding: 2px 8px; font-weight: 600; font-size: 11px; margin: 0;"><span class="dashicons dashicons-yes-alt" style="font-size: 13px; width: 13px; height: 13px; vertical-align: text-bottom;"></span> ' . esc_html__( 'HOÀN TẤT', 'sergio-ai-studio' ) . '</span>';
+			} elseif ( 'warning' === $sess['status'] ) {
+				$status_badge = '<span class="notice notice-warning inline" style="padding: 2px 8px; font-weight: 600; font-size: 11px; margin: 0;"><span class="dashicons dashicons-warning" style="font-size: 13px; width: 13px; height: 13px; vertical-align: text-bottom;"></span> ' . esc_html__( 'CẢNH BÁO', 'sergio-ai-studio' ) . '</span>';
+			} elseif ( 'running' === $sess['status'] ) {
+				$status_badge = '<span class="notice notice-info inline" style="padding: 2px 8px; font-weight: 600; font-size: 11px; margin: 0;"><span class="spinner is-active" style="float: none; margin: 0 4px 0 0; width: 12px; height: 12px;"></span> ' . esc_html__( 'ĐANG CHẠY', 'sergio-ai-studio' ) . '</span>';
+			} else {
+				$status_badge = '<span class="notice notice-error inline" style="padding: 2px 8px; font-weight: 600; font-size: 11px; margin: 0;"><span class="dashicons dashicons-dismiss" style="font-size: 13px; width: 13px; height: 13px; vertical-align: text-bottom;"></span> ' . esc_html__( 'THẤT BẠI', 'sergio-ai-studio' ) . '</span>';
+			}
+		?>
+			<div class="sergio-session-card <?php echo esc_attr( $status_class ); ?>">
+				<div class="sergio-session-header">
+					<div class="sergio-session-title">
+						<?php echo $status_badge; ?>
+						<span><?php echo esc_html( $sess['title'] ); ?></span>
+					</div>
+					<div class="sergio-session-meta">
+						<span><span class="dashicons dashicons-clock" style="font-size: 13px; width: 13px; height: 13px; vertical-align: text-bottom;"></span> <?php echo esc_html( $sess['created_at'] ); ?> (<?php echo (int) $sess['duration_seconds']; ?>s)</span>
+						<code><?php echo esc_html( $sess['run_id'] ); ?></code>
+					</div>
+				</div>
+
+				<div class="sergio-session-body">
+					<?php if ( ! empty( $sess['post_info'] ) ) : ?>
+						<div class="notice notice-success inline" style="margin: 0 0 12px; padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+							<div>
+								<strong><span class="dashicons dashicons-admin-post" style="vertical-align: text-bottom;"></span> <?php esc_html_e( 'Bài viết tạo thành công:', 'sergio-ai-studio' ); ?></strong>
+								<span style="margin-left: 4px;"><?php echo esc_html( $sess['post_info']['title'] ); ?></span>
+								<code style="margin-left: 6px;">#<?php echo (int) $sess['post_info']['id']; ?></code>
+								<span class="description" style="margin-left: 4px;">(<?php echo esc_html( strtoupper( $sess['post_info']['status'] ) ); ?>)</span>
+							</div>
+							<div style="display: flex; gap: 6px;">
+								<a href="<?php echo esc_url( $sess['post_info']['edit_link'] ); ?>" target="_blank" class="button button-small button-primary">
+									<span class="dashicons dashicons-edit" style="font-size: 13px; width: 13px; height: 13px; vertical-align: text-bottom;"></span> <?php esc_html_e( 'Sửa bài trong WP', 'sergio-ai-studio' ); ?>
+								</a>
+								<?php if ( ! empty( $sess['post_info']['view_link'] ) ) : ?>
+									<a href="<?php echo esc_url( $sess['post_info']['view_link'] ); ?>" target="_blank" class="button button-small">
+										<span class="dashicons dashicons-external" style="font-size: 13px; width: 13px; height: 13px; vertical-align: text-bottom;"></span> <?php esc_html_e( 'Xem bài', 'sergio-ai-studio' ); ?>
+									</a>
+								<?php endif; ?>
+							</div>
+						</div>
+					<?php endif; ?>
+
+					<?php if ( ! empty( $sess['diagnosis'] ) ) : ?>
+						<div class="notice notice-error inline" style="margin: 0 0 12px; padding: 10px 14px;">
+							<h4 style="margin: 0 0 4px; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+								<span class="dashicons <?php echo esc_attr( $sess['diagnosis']['icon'] ); ?>" style="font-size: 16px; width: 16px; height: 16px;"></span>
+								<span><?php echo esc_html( $sess['diagnosis']['title'] ); ?></span>
+							</h4>
+							<p style="margin: 0 0 6px; font-size: 12px; color: #50575e;"><?php echo esc_html( $sess['diagnosis']['description'] ); ?></p>
+							<p style="margin: 0; font-size: 12px; font-weight: 600; color: #1d2327;">
+								👉 <?php esc_html_e( 'Khuyến nghị giải quyết:', 'sergio-ai-studio' ); ?> <span style="font-weight: normal;"><?php echo esc_html( $sess['diagnosis']['suggestion'] ); ?></span>
+							</p>
+						</div>
+					<?php endif; ?>
+
+					<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+						<button type="button" class="button button-small btn-toggle-session-steps" data-run-id="<?php echo esc_attr( $sess['run_id'] ); ?>">
+							<span class="dashicons dashicons-arrow-down-alt2" style="font-size: 13px; width: 13px; height: 13px; vertical-align: text-bottom;"></span>
+							<?php printf( esc_html__( 'Xem chi tiết quy trình (%d bước)', 'sergio-ai-studio' ), (int) $sess['logs_count'] ); ?>
+						</button>
+						<span class="description" style="font-size: 11px;"><?php printf( esc_html__( '%d sự kiện được ghi nhận', 'sergio-ai-studio' ), count( $sess['logs'] ) ); ?></span>
+					</div>
+
+					<div class="sergio-session-steps-list session-steps-panel-<?php echo esc_attr( $sess['run_id'] ); ?>" style="display: none;">
+						<?php foreach ( $sess['logs'] as $log_item ) :
+							$badge_style = 'padding: 1px 6px; font-size: 10px; font-weight: 600; margin: 0;';
+							$level_badge = '<span class="notice notice-info inline" style="' . $badge_style . '">INFO</span>';
+							if ( 'error' === $log_item['level'] ) {
+								$level_badge = '<span class="notice notice-error inline" style="' . $badge_style . '">ERROR</span>';
+							} elseif ( 'warning' === $log_item['level'] ) {
+								$level_badge = '<span class="notice notice-warning inline" style="' . $badge_style . '">WARN</span>';
+							}
+						?>
+							<div class="sergio-step-item">
+								<div class="sergio-step-time"><?php echo esc_html( substr( $log_item['created_at'], 11, 8 ) ); ?></div>
+								<div class="sergio-step-content">
+									<div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
+										<?php echo $level_badge; ?>
+										<code style="font-size: 11px;"><?php echo esc_html( Sergio_AI_Logger::map_stage_label( $log_item['stage'] ) ); ?></code>
+										<span class="description" style="font-size: 11px;">(<code><?php echo esc_html( $log_item['stage'] ); ?></code>)</span>
+									</div>
+									<div style="font-size: 12px; color: #2c3338; margin-top: 2px;">
+										<?php echo wp_kses_post( Sergio_AI_Logger::format_log_message_html( $log_item['message'] ) ); ?>
+									</div>
+									<?php if ( ! empty( $log_item['details_json'] ) ) : ?>
+										<details style="margin-top: 4px;">
+											<summary style="cursor: pointer; color: #2271b1; font-size: 11px;"><?php esc_html_e( 'Xem chi tiết payload JSON', 'sergio-ai-studio' ); ?></summary>
+											<pre style="background: #f6f7f7; padding: 8px; border: 1px solid #c3c4c7; border-radius: 3px; font-size: 11px; max-height: 160px; overflow-y: auto; margin-top: 4px;"><?php echo esc_html( $log_item['details_json'] ); ?></pre>
+										</details>
+									<?php endif; ?>
+								</div>
+							</div>
+						<?php endforeach; ?>
+					</div>
+				</div>
+			</div>
+		<?php
+		endforeach;
+		return ob_get_clean();
+	}
+
+	/**
+	 * Render HTML rows for Raw Logs Table
+	 *
+	 * @param array $logs
+	 * @return string
+	 */
+	public static function render_raw_logs_rows_html( $logs ) {
+		if ( empty( $logs ) ) {
+			return '<tr><td colspan="5" style="text-align: center; color: #64748b; padding: 20px;">' . esc_html__( 'Không có nhật ký nào được ghi nhận.', 'sergio-ai-studio' ) . '</td></tr>';
+		}
+
+		ob_start();
+		foreach ( $logs as $log ) :
+		?>
+			<tr class="log-row-item" data-level="<?php echo esc_attr( $log['level'] ); ?>" data-stage="<?php echo esc_attr( $log['stage'] ); ?>" data-run-id="<?php echo esc_attr( $log['run_id'] ); ?>">
+				<td><?php echo esc_html( $log['created_at'] ); ?></td>
+				<td><code><?php echo esc_html( $log['run_id'] ); ?></code></td>
+				<td>
+					<?php if ( 'error' === $log['level'] ) : ?>
+						<span class="notice notice-error inline" style="padding: 2px 6px; margin: 0; font-weight: 600; font-size: 11px;">ERROR</span>
+					<?php elseif ( 'warning' === $log['level'] ) : ?>
+						<span class="notice notice-warning inline" style="padding: 2px 6px; margin: 0; font-weight: 600; font-size: 11px;">WARN</span>
+					<?php else : ?>
+						<span class="notice notice-info inline" style="padding: 2px 6px; margin: 0; font-size: 11px;">INFO</span>
+					<?php endif; ?>
+				</td>
+				<td>
+					<strong><?php echo esc_html( Sergio_AI_Logger::map_stage_label( $log['stage'] ) ); ?></strong>
+					<div style="font-size: 11px; color: #64748b;"><code><?php echo esc_html( $log['stage'] ); ?></code></div>
+				</td>
+				<td>
+					<div><?php echo wp_kses_post( Sergio_AI_Logger::format_log_message_html( $log['message'] ) ); ?></div>
+					<?php if ( ! empty( $log['details_json'] ) ) : ?>
+						<details style="margin-top: 5px;">
+							<summary style="cursor: pointer; color: #2271b1; font-size: 11px;"><?php esc_html_e( 'Chi tiết JSON', 'sergio-ai-studio' ); ?></summary>
+							<pre style="background: #f6f7f7; padding: 8px; border: 1px solid #c3c4c7; border-radius: 3px; font-size: 11px; max-height: 200px; overflow-y: auto;"><?php echo esc_html( $log['details_json'] ); ?></pre>
+						</details>
+					<?php endif; ?>
+				</td>
+			</tr>
+		<?php
+		endforeach;
+		return ob_get_clean();
 	}
 
 	public function ajax_site_seo_audit() {
