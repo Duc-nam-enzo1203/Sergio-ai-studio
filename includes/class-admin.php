@@ -327,9 +327,8 @@ class Sergio_AI_Admin {
 				<!-- ===================================== -->
 				<div id="tab-overview" class="sergio-tab-pane <?php echo 'overview' === $active_tab ? 'is-active' : ''; ?>">
 					<div class="sergio-overview-cards">
-						<div class="card <?php echo $has_key ? 'card-success' : 'card-warning'; ?>">
+						<div class="card">
 							<div class="card-kicker">
-								<span class="dashicons dashicons-rest-api"></span>
 								<span><?php esc_html_e( 'Kết Nối Gemini API', 'sergio-ai-studio' ); ?></span>
 							</div>
 							<div class="card-val <?php echo $has_key ? 'val-green' : 'val-amber'; ?>">
@@ -338,9 +337,8 @@ class Sergio_AI_Admin {
 							<p class="card-desc"><code><?php echo esc_html( $primary_model ); ?></code></p>
 						</div>
 
-						<div class="card <?php echo $scheduler_enabled ? 'card-success' : ''; ?>">
+						<div class="card">
 							<div class="card-kicker">
-								<span class="dashicons dashicons-clock"></span>
 								<span><?php esc_html_e( 'Tự Động Hóa WP-Cron', 'sergio-ai-studio' ); ?></span>
 							</div>
 							<div class="card-val <?php echo $scheduler_enabled ? 'val-green' : ''; ?>">
@@ -353,7 +351,6 @@ class Sergio_AI_Admin {
 
 						<div class="card">
 							<div class="card-kicker">
-								<span class="dashicons dashicons-calendar-alt"></span>
 								<span><?php esc_html_e( 'Hàng Đợi Chờ Xử Lý', 'sergio-ai-studio' ); ?></span>
 							</div>
 							<div class="card-val val-blue">
@@ -362,9 +359,8 @@ class Sergio_AI_Admin {
 							<p class="card-desc"><?php printf( esc_html__( 'Mỗi đợt sinh %d bài', 'sergio-ai-studio' ), (int) $posts_per_run ); ?></p>
 						</div>
 
-						<div class="card card-success">
+						<div class="card">
 							<div class="card-kicker">
-								<span class="dashicons dashicons-yes-alt"></span>
 								<span><?php esc_html_e( 'Hôm Nay Đã Tạo', 'sergio-ai-studio' ); ?></span>
 							</div>
 							<div class="card-val val-green">
@@ -394,7 +390,7 @@ class Sergio_AI_Admin {
 							</div>
 						</div>
 
-						<div class="postbox">
+					<div class="postbox">
 							<div class="postbox-header">
 								<h2 class="hndle">
 									<span><?php esc_html_e( 'Bài Tiếp Theo Trong Hàng Đợi', 'sergio-ai-studio' ); ?></span>
@@ -402,18 +398,20 @@ class Sergio_AI_Admin {
 							</div>
 							<div class="inside">
 								<?php if ( empty( $queue_items ) ) : ?>
-									<p style="color: #64748b;"><?php esc_html_e( 'Hàng đợi hiện đang trống. Hệ thống sẽ tự động nghiên cứu theo Lĩnh vực ngách (chế độ Hybrid).', 'sergio-ai-studio' ); ?></p>
+									<p style="color: #64748b; margin: 0 0 12px;"><?php esc_html_e( 'Hàng đợi hiện đang trống. Hệ thống sẽ tự động nghiên cứu theo Lĩnh vực ngách (chế độ Hybrid).', 'sergio-ai-studio' ); ?></p>
 								<?php else : ?>
-									<p>
-										<span class="dashicons dashicons-arrow-right-alt" style="color: #2271b1;"></span>
-										<strong>#<?php echo esc_html( $queue_items[0]['id'] ); ?>:</strong>
-										<?php echo esc_html( $queue_items[0]['topic'] ); ?>
-									</p>
-									<p class="description"><?php echo esc_html( $queue_items[0]['created_at'] ); ?></p>
+									<div style="padding: 10px 12px; background: #f6f7f7; border: 1px solid #c3c4c7; border-radius: 4px; margin-bottom: 12px;">
+										<div style="font-weight: 600; font-size: 13px; color: #1d2327; margin-bottom: 4px;">
+											#<?php echo esc_html( $queue_items[0]['id'] ); ?>: <?php echo esc_html( $queue_items[0]['topic'] ); ?>
+										</div>
+										<div class="description" style="font-size: 12px; color: #64748b;">
+											<?php printf( esc_html__( 'Nạp lúc: %s', 'sergio-ai-studio' ), esc_html( $queue_items[0]['created_at'] ) ); ?>
+										</div>
+									</div>
 								<?php endif; ?>
-								<p style="margin-top: 12px;">
-									<a href="#tab-scheduler" class="button button-secondary button-small" onclick="document.querySelector('[data-tab=tab-scheduler]').click(); return false;">
-										<?php esc_html_e( 'Quản lý hàng đợi →', 'sergio-ai-studio' ); ?>
+								<p style="margin: 0;">
+									<a href="#tab-scheduler" class="button button-secondary button-small nav-tab-link" data-tab="tab-scheduler">
+										<?php esc_html_e( 'Quản lý hàng đợi &rarr;', 'sergio-ai-studio' ); ?>
 									</a>
 								</p>
 							</div>
@@ -430,39 +428,43 @@ class Sergio_AI_Admin {
 							<?php
 							$recent_logs = array_slice( $logs, 0, 5 );
 							if ( empty( $recent_logs ) ) : ?>
-								<p style="padding: 12px 16px; color: #64748b; margin: 0;"><?php esc_html_e( 'Chưa có nhật ký nào được ghi nhận.', 'sergio-ai-studio' ); ?></p>
+								<p style="padding: 16px; color: #64748b; margin: 0;"><?php esc_html_e( 'Chưa có nhật ký nào được ghi nhận.', 'sergio-ai-studio' ); ?></p>
 							<?php else : ?>
 								<table class="widefat striped" style="border: none;">
 									<thead>
 										<tr>
 											<th style="width: 160px;"><?php esc_html_e( 'Thời Gian', 'sergio-ai-studio' ); ?></th>
-											<th style="width: 90px;"><?php esc_html_e( 'Cấp Độ', 'sergio-ai-studio' ); ?></th>
-											<th style="width: 140px;"><?php esc_html_e( 'Giai Đoạn', 'sergio-ai-studio' ); ?></th>
+											<th style="width: 100px;"><?php esc_html_e( 'Cấp Độ', 'sergio-ai-studio' ); ?></th>
+											<th style="width: 160px;"><?php esc_html_e( 'Giai Đoạn', 'sergio-ai-studio' ); ?></th>
 											<th><?php esc_html_e( 'Thông Điệp', 'sergio-ai-studio' ); ?></th>
 										</tr>
 									</thead>
 									<tbody>
 										<?php foreach ( $recent_logs as $log ) : ?>
 											<tr>
-												<td><?php echo esc_html( $log['created_at'] ); ?></td>
-												<td>
+												<td style="vertical-align: middle;"><?php echo esc_html( $log['created_at'] ); ?></td>
+												<td style="vertical-align: middle;">
 													<?php if ( 'error' === $log['level'] ) : ?>
-														<span class="notice notice-error inline" style="padding: 2px 6px; margin: 0; font-weight: 600;">ERROR</span>
+														<span class="sergio-log-badge badge-error"><?php esc_html_e( 'LỖI', 'sergio-ai-studio' ); ?></span>
 													<?php elseif ( 'warning' === $log['level'] ) : ?>
-														<span class="notice notice-warning inline" style="padding: 2px 6px; margin: 0; font-weight: 600;">WARN</span>
+														<span class="sergio-log-badge badge-warning"><?php esc_html_e( 'CẢNH BÁO', 'sergio-ai-studio' ); ?></span>
 													<?php else : ?>
-														<span class="notice notice-info inline" style="padding: 2px 6px; margin: 0;">INFO</span>
+														<span class="sergio-log-badge badge-info"><?php esc_html_e( 'INFO', 'sergio-ai-studio' ); ?></span>
 													<?php endif; ?>
 												</td>
-												<td><code><?php echo esc_html( $log['stage'] ); ?></code></td>
-												<td><?php echo wp_kses_post( Sergio_AI_Logger::format_log_message_html( $log['message'] ) ); ?></td>
+												<td style="vertical-align: middle;">
+													<span style="display: inline-block; padding: 2px 6px; background: #f0f0f1; border-radius: 3px; font-size: 11px; color: #2c3338;">
+														<?php echo esc_html( $log['stage'] ); ?>
+													</span>
+												</td>
+												<td style="vertical-align: middle;"><?php echo wp_kses_post( Sergio_AI_Logger::format_log_message_html( $log['message'] ) ); ?></td>
 											</tr>
 										<?php endforeach; ?>
 									</tbody>
 								</table>
-								<div style="padding: 10px 16px; border-top: 1px solid #dcdcde; background: #f6f7f7; text-align: right;">
-									<a href="#tab-logs" class="button button-small nav-tab-link" data-tab="tab-logs" style="text-decoration: none;">
-										<span class="dashicons dashicons-list-view" style="vertical-align: text-bottom;"></span> <?php esc_html_e( 'Xem Trung Tâm Giám Sát & Nhật Ký Hoạt Động', 'sergio-ai-studio' ); ?> &rarr;
+								<div style="padding: 10px 16px; border-top: 1px solid #c3c4c7; background: #f6f7f7; display: flex; justify-content: flex-end; align-items: center;">
+									<a href="#tab-logs" class="button button-secondary button-small nav-tab-link" data-tab="tab-logs">
+										<?php esc_html_e( 'Xem toàn bộ nhật ký &rarr;', 'sergio-ai-studio' ); ?>
 									</a>
 								</div>
 							<?php endif; ?>
