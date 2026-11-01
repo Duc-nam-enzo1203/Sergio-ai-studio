@@ -292,34 +292,34 @@ class Sergio_AI_Admin {
 
 			<!-- NATIVE WORDPRESS ADMIN TABS -->
 			<nav class="nav-tab-wrapper wp-clearfix" aria-label="<?php esc_attr_e( 'Sergio AI Studio Tabs', 'sergio-ai-studio' ); ?>">
-				<a href="#tab-overview" class="nav-tab <?php echo 'overview' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-overview">
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=overview' ) ); ?>" class="nav-tab <?php echo 'overview' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-overview">
 					<span class="dashicons dashicons-dashboard" aria-hidden="true"></span>
 					<?php esc_html_e( 'Tổng Quan', 'sergio-ai-studio' ); ?>
 				</a>
-				<a href="#tab-settings" class="nav-tab <?php echo 'settings' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-settings">
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=settings' ) ); ?>" class="nav-tab <?php echo 'settings' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-settings">
 					<span class="dashicons dashicons-admin-settings" aria-hidden="true"></span>
 					<?php esc_html_e( 'Cài Đặt', 'sergio-ai-studio' ); ?>
 				</a>
-				<a href="#tab-scheduler" class="nav-tab <?php echo 'scheduler' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-scheduler">
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=scheduler' ) ); ?>" class="nav-tab <?php echo 'scheduler' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-scheduler">
 					<span class="dashicons dashicons-calendar-alt" aria-hidden="true"></span>
 					<?php esc_html_e( 'Lên Lịch', 'sergio-ai-studio' ); ?>
 					<?php if ( $queue_count > 0 ) : ?>
 						<span class="update-plugins count-<?php echo esc_attr( $queue_count ); ?>"><span class="update-count"><?php echo esc_html( $queue_count ); ?></span></span>
 					<?php endif; ?>
 				</a>
-				<a href="#tab-writer" class="nav-tab <?php echo 'writer' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-writer">
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=writer' ) ); ?>" class="nav-tab <?php echo 'writer' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-writer">
 					<span class="dashicons dashicons-edit" aria-hidden="true"></span>
 					<?php esc_html_e( 'Nghiên Cứu & Viết Bài', 'sergio-ai-studio' ); ?>
 				</a>
-				<a href="#tab-crawl" class="nav-tab <?php echo 'crawl' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-crawl">
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=crawl' ) ); ?>" class="nav-tab <?php echo 'crawl' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-crawl">
 					<span class="dashicons dashicons-admin-links" aria-hidden="true"></span>
 					<?php esc_html_e( 'Crawl & Viết Lại', 'sergio-ai-studio' ); ?>
 				</a>
-				<a href="#tab-seo" class="nav-tab <?php echo 'seo' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-seo">
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=seo' ) ); ?>" class="nav-tab <?php echo 'seo' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-seo">
 					<span class="dashicons dashicons-chart-area" aria-hidden="true"></span>
 					<?php esc_html_e( 'Audit & Tối Ưu SEO', 'sergio-ai-studio' ); ?>
 				</a>
-				<a href="#tab-logs" class="nav-tab <?php echo 'logs' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-logs">
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=logs' ) ); ?>" class="nav-tab <?php echo 'logs' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-logs">
 					<span class="dashicons dashicons-list-view" aria-hidden="true"></span>
 					<?php esc_html_e( 'Nhật Ký', 'sergio-ai-studio' ); ?>
 					<?php if ( $log_errors > 0 ) : ?>

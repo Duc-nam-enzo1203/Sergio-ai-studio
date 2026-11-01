@@ -158,35 +158,102 @@ jQuery(document).ready(function($) {
     }
 
     // -------------------------------------------------------------------------
-    // 1. WORDPRESS NATIVE TAB SWITCHING with localStorage persistence
+    // 1. WORDPRESS NATIVE TAB SWITCHING (Instant Client SPA + Progressive Sync)
     // -------------------------------------------------------------------------
-    function activateTab(tabId) {
-        if (!tabId || !$('#' + tabId).length) { return; }
-        $('.nav-tab, .nav-tree-item').removeClass('nav-tab-active is-active');
-        $('[data-tab="' + tabId + '"]').addClass('nav-tab-active is-active');
+    function normalizeTabId(rawId) {
+        if (!rawId) return '';
+        var clean = String(rawId).trim().replace(/^#/, '');
+        if (clean.indexOf('tab=') !== -1) {
+            var match = clean.match(/tab=([a-z0-9_-]+)/i);
+            if (match) clean = match[1];
+        }
+        if (!clean.startsWith('tab-') && $('#tab-' + clean).length) {
+            return 'tab-' + clean;
+        }
+        return clean;
+    }
+
+    function activateTab(rawTabId, updateHistory) {
+        var tabId = normalizeTabId(rawTabId);
+        if (!tabId || !$('#' + tabId).length) {
+            return false;
+        }
+
+        var slug = tabId.replace(/^tab-/, '');
+
+        // 1. Update navigation tab active states
+        $('.nav-tab, .nav-tree-item, .nav-tab-link').removeClass('nav-tab-active is-active');
+        $('[data-tab="' + tabId + '"], [data-tab="' + slug + '"], [href*="tab=' + slug + '"], [href="#' + tabId + '"]').addClass('nav-tab-active is-active');
+
+        // 2. Hide all panes and show target pane
         $('.sergio-tab-pane, .studio-tab-panel').removeClass('is-active').hide();
         $('#' + tabId).addClass('is-active').show();
+
+        // 3. Persist to localStorage
         try {
             localStorage.setItem('sergio_ai_active_tab', tabId);
         } catch(e) {}
+
+        // 4. Update browser URL smoothly without full page refresh
+        if (updateHistory !== false && window.history && window.history.replaceState) {
+            try {
+                var currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('tab', slug);
+                window.history.replaceState({ tab: slug }, '', currentUrl.toString());
+            } catch(e) {}
+        }
+
+        // 5. Trigger SEO overview audit if SEO tab became active
+        if (tabId === 'tab-seo') {
+            if (typeof seoAuditLoaded !== 'undefined' && !seoAuditLoaded && typeof runSiteSeoAudit === 'function') {
+                seoAuditLoaded = true;
+                runSiteSeoAudit();
+            }
+        }
+
+        return true;
     }
 
-    $(document).on('click', '.nav-tab, .nav-tree-item', function(e) {
-        e.preventDefault();
-        var targetTab = $(this).data('tab');
-        activateTab(targetTab);
+    // Unified click handler for tabs and intra-tab links
+    $(document).on('click', '.nav-tab, .nav-tree-item, .nav-tab-link, [data-tab]', function(e) {
+        var $el = $(this);
+        var target = $el.attr('data-tab') || $el.data('tab') || $el.attr('href');
+        var normalized = normalizeTabId(target);
+
+        if (normalized && $('#' + normalized).length) {
+            e.preventDefault();
+            activateTab(normalized, true);
+        }
     });
 
-    // Restore saved tab if no query param in URL
-    var urlParams = new URLSearchParams(window.location.search);
-    if (!urlParams.get('tab')) {
-        try {
-            var savedTab = localStorage.getItem('sergio_ai_active_tab');
-            if (savedTab && $('#' + savedTab).length) {
-                activateTab(savedTab);
-            }
-        } catch(e) {}
-    }
+    // Handle browser back and forward navigation
+    window.addEventListener('popstate', function() {
+        var urlParams = new URLSearchParams(window.location.search);
+        var currentTab = urlParams.get('tab') || window.location.hash;
+        if (currentTab) {
+            activateTab(currentTab, false);
+        }
+    });
+
+    // On page load, prioritize URL param, then hash, then localStorage
+    (function initActiveTab() {
+        var urlParams = new URLSearchParams(window.location.search);
+        var urlTab = urlParams.get('tab');
+        var hashTab = window.location.hash;
+
+        if (urlTab && $('#tab-' + urlTab).length) {
+            activateTab('tab-' + urlTab, false);
+        } else if (hashTab && $('#' + normalizeTabId(hashTab)).length) {
+            activateTab(hashTab, false);
+        } else {
+            try {
+                var saved = localStorage.getItem('sergio_ai_active_tab');
+                if (saved && $('#' + normalizeTabId(saved)).length) {
+                    activateTab(saved, false);
+                }
+            } catch(e) {}
+        }
+    })();
 
     // -------------------------------------------------------------------------
     // 2. MODEL FETCHER & AUTO-DETECTOR
