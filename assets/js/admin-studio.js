@@ -775,8 +775,8 @@ jQuery(document).ready(function($) {
                 if (res.data.results && res.data.results.length > 0) {
                     $.each(res.data.results, function(idx, item) {
                         var statusBadge = item.status === 'success'
-                            ? '<span class="status-badge-inline status-success">Thành công</span>'
-                            : '<span class="status-badge-inline status-failed">Lỗi</span>';
+                            ? '<span class="sergio-log-badge badge-success">THÀNH CÔNG</span>'
+                            : '<span class="sergio-log-badge badge-error">LỖI</span>';
 
                         var actionCol = item.status === 'success'
                             ? '<a href="' + safeUrl(item.edit_url) + '" target="_blank" class="button button-secondary button-small">Xem Nháp</a>'

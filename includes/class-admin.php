@@ -282,7 +282,7 @@ class Sergio_AI_Admin {
 			<hr class="wp-header-end">
 
 			<?php if ( ! $has_key ) : ?>
-				<div class="notice notice-warning inline" style="margin-top: 15px;">
+				<div style="margin-top: 15px; padding: 10px 14px; background: #fff8e5; border: 1px solid #ffeeba; border-radius: 4px; font-size: 13px;">
 					<p>
 						<?php esc_html_e( 'Chưa cấu hình Google Gemini API Key. Vui lòng chuyển sang tab Cài Đặt để nhập khóa API.', 'sergio-ai-studio' ); ?>
 					</p>
@@ -495,7 +495,7 @@ class Sergio_AI_Admin {
 													autocomplete="off"
 													<?php disabled( $is_config_key ); ?> />
 												<button type="button" class="button button-secondary" id="btn_test_conn">
-													<span class="dashicons dashicons-lightning"></span> <?php esc_html_e( 'Kiểm tra kết nối', 'sergio-ai-studio' ); ?>
+													<?php esc_html_e( 'Kiểm tra kết nối', 'sergio-ai-studio' ); ?>
 												</button>
 												<span id="api_conn_feedback" style="margin-left: 10px; font-weight: 500;"></span>
 												<?php if ( $is_config_key ) : ?>
@@ -544,7 +544,7 @@ class Sergio_AI_Admin {
 													<?php endif; ?>
 												</select>
 												<button type="button" class="button button-secondary" id="btn_refresh_models">
-													<span class="dashicons dashicons-update"></span> <?php esc_html_e( 'Làm mới danh sách', 'sergio-ai-studio' ); ?>
+													<?php esc_html_e( 'Làm mới danh sách', 'sergio-ai-studio' ); ?>
 												</button>
 												<p class="description"><?php esc_html_e( 'Dùng cho nghiên cứu dữ kiện và biên soạn nội dung chính.', 'sergio-ai-studio' ); ?></p>
 											</td>
@@ -953,7 +953,7 @@ class Sergio_AI_Admin {
 				<!-- ===================================== -->
 				<div id="tab-writer" class="sergio-tab-pane <?php echo 'writer' === $active_tab ? 'is-active' : ''; ?>">
 					<div class="postbox">
-						<div class="postbox-header"><h2 class="hndle"><span><span class="dashicons dashicons-edit"></span> <?php esc_html_e( 'Nghiên Cứu Dữ Kiện & Viết Bài', 'sergio-ai-studio' ); ?></span></h2></div>
+						<div class="postbox-header"><h2 class="hndle"><span><?php esc_html_e( 'Nghiên Cứu Dữ Kiện & Viết Bài', 'sergio-ai-studio' ); ?></span></h2></div>
 						<div class="inside">
 							<p class="description" style="margin-bottom: 15px;">
 								<?php esc_html_e( 'Hệ thống tra cứu dữ kiện web bằng Google Search Grounding, lập Fact Pack đối chứng và chấp bút bài viết độc bản chuẩn Rank Math SEO.', 'sergio-ai-studio' ); ?>
@@ -1083,11 +1083,9 @@ class Sergio_AI_Admin {
 
 							<p style="margin-top: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
 								<button type="button" class="button button-primary button-large" id="btn_run_pipeline">
-									<span class="dashicons dashicons-superhero"></span>
 									<?php esc_html_e( 'Khởi Chạy Fact Pack & Viết Bài (1-Click)', 'sergio-ai-studio' ); ?>
 								</button>
 								<button type="button" class="button button-secondary button-large" id="btn_step1_fact_pack_only">
-									<span class="dashicons dashicons-shield"></span>
 									<?php esc_html_e( 'Chỉ Lập Fact Pack (Kiểm tra dữ kiện trước)', 'sergio-ai-studio' ); ?>
 								</button>
 							</p>
@@ -1095,7 +1093,7 @@ class Sergio_AI_Admin {
 					</div>
 
 					<!-- Linear Progress Stepper -->
-					<div id="pipeline_progress_box" class="notice notice-info inline" style="display: none; margin-top: 15px; padding: 12px 16px;">
+					<div id="pipeline_progress_box" style="display: none; margin-top: 15px; padding: 12px 16px; background: #f6f7f7; border: 1px solid #c3c4c7; border-radius: 4px;">
 						<div class="stepper-status-header" style="display: flex; align-items: center; gap: 8px;">
 							<span class="stepper-header-icon"><span class="spinner is-active" style="float:none; margin:0;"></span></span>
 							<strong id="pipeline_progress_msg"><?php esc_html_e( 'Đang khởi tạo kết nối...', 'sergio-ai-studio' ); ?></strong>
@@ -1107,7 +1105,7 @@ class Sergio_AI_Admin {
 					<div id="fact_pack_preview_box" class="postbox" style="display: none; margin-top: 20px;">
 						<div class="postbox-header">
 							<h2 class="hndle">
-								<span><span class="dashicons dashicons-shield" style="color: #059669;"></span> <?php esc_html_e( 'Gói Dữ Kiện Đã Xác Thực (Fact Pack Preview)', 'sergio-ai-studio' ); ?></span>
+								<span><?php esc_html_e( 'Gói Dữ Kiện Đã Xác Thực (Fact Pack Preview)', 'sergio-ai-studio' ); ?></span>
 							</h2>
 						</div>
 						<div class="inside">
@@ -1115,7 +1113,7 @@ class Sergio_AI_Admin {
 							<div id="fact_pack_content_area" style="line-height: 1.7; margin: 15px 0;"></div>
 							<p style="margin: 0; padding-top: 10px; border-top: 1px solid #c3c4c7;">
 								<button type="button" class="button button-primary" id="btn_write_from_fact_pack">
-									<span class="dashicons dashicons-edit"></span> <?php esc_html_e( 'Tiến Hành Chấp Bút Bài Viết Từ Fact Pack Này', 'sergio-ai-studio' ); ?>
+									<?php esc_html_e( 'Tiến Hành Chấp Bút Bài Viết Từ Fact Pack Này', 'sergio-ai-studio' ); ?>
 								</button>
 								<button type="button" class="button button-secondary" id="btn_cancel_fact_pack">
 									<?php esc_html_e( 'Đóng Xem Trước', 'sergio-ai-studio' ); ?>
@@ -1125,7 +1123,7 @@ class Sergio_AI_Admin {
 					</div>
 
 					<!-- Result Card -->
-					<div id="pipeline_result_card" class="notice notice-success inline" style="display: none; margin-top: 20px; padding: 14px 18px;"></div>
+					<div id="pipeline_result_card" style="display: none; margin-top: 20px; padding: 14px 18px; background: #edfaef; border: 1px solid #c3e6cb; border-radius: 4px; color: #1a6828;"></div>
 				</div>
 
 				<!-- ===================================== -->
@@ -1133,7 +1131,7 @@ class Sergio_AI_Admin {
 				<!-- ===================================== -->
 				<div id="tab-crawl" class="sergio-tab-pane <?php echo 'crawl' === $active_tab ? 'is-active' : ''; ?>">
 					<div class="postbox">
-						<div class="postbox-header"><h2 class="hndle"><span><span class="dashicons dashicons-admin-links"></span> <?php esc_html_e( 'Crawl & Viết Lại Nội Dung', 'sergio-ai-studio' ); ?></span></h2></div>
+						<div class="postbox-header"><h2 class="hndle"><span><?php esc_html_e( 'Crawl & Viết Lại Nội Dung', 'sergio-ai-studio' ); ?></span></h2></div>
 						<div class="inside">
 							<p class="description" style="margin-bottom: 15px;">
 								<?php esc_html_e( 'Thu thập nội dung từ các trang tin tức bên ngoài, bóc tách bài viết sạch qua thuật toán DOM, và dùng Gemini tái bút bằng góc nhìn riêng biệt kèm trích dẫn nguồn.', 'sergio-ai-studio' ); ?>
@@ -1194,13 +1192,13 @@ class Sergio_AI_Admin {
 
 							<p style="margin-top: 20px;">
 								<button type="button" class="button button-primary button-large" id="btn_crawl_rewrite">
-									<span class="dashicons dashicons-admin-links"></span> <?php esc_html_e( 'Crawl & Viết Lại', 'sergio-ai-studio' ); ?>
+									<?php esc_html_e( 'Crawl & Viết Lại', 'sergio-ai-studio' ); ?>
 								</button>
 							</p>
 						</div>
 					</div>
 
-					<div id="crawl_progress_box" class="notice notice-info inline" style="display: none; margin-top: 15px; padding: 12px 16px;">
+					<div id="crawl_progress_box" style="display: none; margin-top: 15px; padding: 12px 16px; background: #f6f7f7; border: 1px solid #c3c4c7; border-radius: 4px;">
 						<div class="stepper-status-header" style="display: flex; align-items: center; gap: 8px;">
 							<span class="stepper-header-icon"><span class="spinner is-active" style="float:none; margin:0;"></span></span>
 							<strong id="crawl_progress_msg"><?php esc_html_e( 'Đang kết nối crawl...', 'sergio-ai-studio' ); ?></strong>
@@ -1278,7 +1276,7 @@ class Sergio_AI_Admin {
 					</div>
 
 					<!-- Batch Optimizer Banner -->
-					<div id="seo_site_action_plan_box" class="notice notice-warning inline" style="margin-bottom: 20px; display: none; padding: 12px 16px;">
+					<div id="seo_site_action_plan_box" style="margin-bottom: 20px; display: none; padding: 12px 16px; background: #fff8e5; border: 1px solid #ffeeba; border-radius: 4px;">
 						<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
 							<div>
 								<strong><?php esc_html_e( 'Chẩn Đoán & Kế Hoạch Cải Thiện Toàn Site', 'sergio-ai-studio' ); ?></strong>
@@ -1387,7 +1385,7 @@ class Sergio_AI_Admin {
 											</div>
 										</div>
 
-										<div id="ai_seo_loading_box" class="notice notice-info inline" style="display: none; margin-bottom: 15px;">
+										<div id="ai_seo_loading_box" style="display: none; margin-bottom: 15px; padding: 10px 14px; background: #f0f6fc; border: 1px solid #c5d9ed; border-radius: 4px; font-size: 13px;">
 											<p>
 												<span class="spinner is-active" style="float:none; margin:0 6px 0 0;"></span>
 												<span id="ai_seo_loading_msg"><?php esc_html_e( 'Gemini đang phân tích nội dung, ý định tìm kiếm và kiến tạo bộ tiêu đề & mô tả tối ưu...', 'sergio-ai-studio' ); ?></span>
@@ -1395,7 +1393,7 @@ class Sergio_AI_Admin {
 										</div>
 
 										<!-- AI Optimization Results Deck -->
-										<div id="ai_seo_results_deck" class="card" style="display: none; margin: 0 0 16px; padding: 14px 16px; background: #f0f6fc; border-color: #c5d9ed;">
+										<div id="ai_seo_results_deck" style="display: none; margin: 0 0 16px; padding: 14px 16px; background: #f0f6fc; border: 1px solid #c5d9ed; border-radius: 4px;">
 											<h3 style="margin: 0 0 10px; font-size: 14px; font-weight: 600; color: #1d2327;">
 												<?php esc_html_e( 'Chiến Lược Tối Ưu Từ Gemini AI & Rank Math', 'sergio-ai-studio' ); ?>
 											</h3>
@@ -1434,7 +1432,7 @@ class Sergio_AI_Admin {
 										</div>
 
 										<!-- SERP Google Preview & Rank Math Editor -->
-										<div class="card" style="margin: 0 0 16px; padding: 14px 16px;">
+										<div style="margin: 0 0 16px; padding: 14px 16px; background: #ffffff; border: 1px solid #c3c4c7; border-radius: 4px;">
 											<h4 style="margin: 0 0 10px; font-size: 13px;"><?php esc_html_e( 'Mô Phỏng Hiển Thị Google Search (SERP Preview)', 'sergio-ai-studio' ); ?></h4>
 											<div style="background: #fff; border: 1px solid #dadce0; border-radius: 6px; padding: 12px 14px; margin-bottom: 14px;">
 												<div id="serp_preview_url" style="font-size: 12px; color: #202124; margin-bottom: 3px;">
