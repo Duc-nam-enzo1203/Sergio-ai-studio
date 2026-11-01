@@ -220,7 +220,6 @@ class Sergio_AI_Admin {
 		$categories = get_categories( array( 'hide_empty' => false ) );
 		$authors    = get_users( array( 'capability__in' => array( 'edit_posts' ), 'orderby' => 'display_name' ) );
 		$log_stats    = Sergio_AI_Logger::get_stats();
-		$log_sessions = Sergio_AI_Logger::get_sessions( 15 );
 		$logs         = Sergio_AI_Logger::get_logs( 50 );
 
 		// Scheduler settings.
@@ -271,7 +270,6 @@ class Sergio_AI_Admin {
 		<div class="wrap sergio-ai-studio-wrap">
 
 			<h1 class="wp-heading-inline">
-				<span class="dashicons dashicons-superhero"></span>
 				<?php esc_html_e( 'Sergio AI Studio', 'sergio-ai-studio' ); ?>
 			</h1>
 			<span class="sergio-header-badge">
@@ -284,7 +282,6 @@ class Sergio_AI_Admin {
 			<?php if ( ! $has_key ) : ?>
 				<div class="notice notice-warning inline" style="margin-top: 15px;">
 					<p>
-						<span class="dashicons dashicons-warning" style="color:#d97706; vertical-align:middle;"></span>
 						<?php esc_html_e( 'Chưa cấu hình Google Gemini API Key. Vui lòng chuyển sang tab Cài Đặt để nhập khóa API.', 'sergio-ai-studio' ); ?>
 					</p>
 				</div>
@@ -293,34 +290,27 @@ class Sergio_AI_Admin {
 			<!-- NATIVE WORDPRESS ADMIN TABS -->
 			<nav class="nav-tab-wrapper wp-clearfix" aria-label="<?php esc_attr_e( 'Sergio AI Studio Tabs', 'sergio-ai-studio' ); ?>">
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=overview' ) ); ?>" class="nav-tab <?php echo 'overview' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-overview">
-					<span class="dashicons dashicons-dashboard" aria-hidden="true"></span>
 					<?php esc_html_e( 'Tổng Quan', 'sergio-ai-studio' ); ?>
 				</a>
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=settings' ) ); ?>" class="nav-tab <?php echo 'settings' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-settings">
-					<span class="dashicons dashicons-admin-settings" aria-hidden="true"></span>
 					<?php esc_html_e( 'Cài Đặt', 'sergio-ai-studio' ); ?>
 				</a>
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=scheduler' ) ); ?>" class="nav-tab <?php echo 'scheduler' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-scheduler">
-					<span class="dashicons dashicons-calendar-alt" aria-hidden="true"></span>
 					<?php esc_html_e( 'Lên Lịch', 'sergio-ai-studio' ); ?>
 					<?php if ( $queue_count > 0 ) : ?>
 						<span class="update-plugins count-<?php echo esc_attr( $queue_count ); ?>"><span class="update-count"><?php echo esc_html( $queue_count ); ?></span></span>
 					<?php endif; ?>
 				</a>
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=writer' ) ); ?>" class="nav-tab <?php echo 'writer' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-writer">
-					<span class="dashicons dashicons-edit" aria-hidden="true"></span>
 					<?php esc_html_e( 'Nghiên Cứu & Viết Bài', 'sergio-ai-studio' ); ?>
 				</a>
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=crawl' ) ); ?>" class="nav-tab <?php echo 'crawl' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-crawl">
-					<span class="dashicons dashicons-admin-links" aria-hidden="true"></span>
 					<?php esc_html_e( 'Crawl & Viết Lại', 'sergio-ai-studio' ); ?>
 				</a>
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=seo' ) ); ?>" class="nav-tab <?php echo 'seo' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-seo">
-					<span class="dashicons dashicons-chart-area" aria-hidden="true"></span>
 					<?php esc_html_e( 'Audit & Tối Ưu SEO', 'sergio-ai-studio' ); ?>
 				</a>
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=logs' ) ); ?>" class="nav-tab <?php echo 'logs' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-logs">
-					<span class="dashicons dashicons-list-view" aria-hidden="true"></span>
 					<?php esc_html_e( 'Nhật Ký', 'sergio-ai-studio' ); ?>
 					<?php if ( $log_errors > 0 ) : ?>
 						<span class="update-plugins count-<?php echo esc_attr( $log_errors ); ?>"><span class="update-count"><?php echo esc_html( $log_errors ); ?></span></span>
@@ -388,14 +378,14 @@ class Sergio_AI_Admin {
 							<div class="inside">
 								<p><?php esc_html_e( 'Kích hoạt nhanh quy trình biên soạn bài viết bằng Gemini Deep Research hoặc chạy phiên WP-Cron ngay lập tức:', 'sergio-ai-studio' ); ?></p>
 								<p style="display: flex; gap: 10px; flex-wrap: wrap;">
-									<button type="button" class="button button-primary" onclick="document.querySelector('[data-tab=tab-writer]').click()">
-										<span class="dashicons dashicons-edit"></span> <?php esc_html_e( 'Nghiên Cứu & Viết Bài', 'sergio-ai-studio' ); ?>
-									</button>
-									<button type="button" class="button button-secondary" onclick="document.querySelector('[data-tab=tab-crawl]').click()">
-										<span class="dashicons dashicons-admin-links"></span> <?php esc_html_e( 'Crawl & Viết Lại', 'sergio-ai-studio' ); ?>
-									</button>
+									<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=writer' ) ); ?>" class="button button-primary nav-tab-link" data-tab="tab-writer">
+										<?php esc_html_e( 'Nghiên Cứu & Viết Bài', 'sergio-ai-studio' ); ?>
+									</a>
+									<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=crawl' ) ); ?>" class="button button-secondary nav-tab-link" data-tab="tab-crawl">
+										<?php esc_html_e( 'Crawl & Viết Lại', 'sergio-ai-studio' ); ?>
+									</a>
 									<button type="button" class="button button-secondary" id="btn_run_cron_overview">
-										<span class="dashicons dashicons-controls-play"></span> <?php esc_html_e( 'Kích Hoạt 1 Đợt Cron Ngay', 'sergio-ai-studio' ); ?>
+										<?php esc_html_e( 'Kích Hoạt 1 Đợt Cron Ngay', 'sergio-ai-studio' ); ?>
 									</button>
 								</p>
 								<div id="cron_overview_feedback" style="margin-top: 10px; font-size: 13px;"></div>
@@ -1496,150 +1486,64 @@ class Sergio_AI_Admin {
 				<!-- TAB 7: NHẬT KÝ                       -->
 				<!-- ===================================== -->
 				<div id="tab-logs" class="sergio-tab-pane <?php echo 'logs' === $active_tab ? 'is-active' : ''; ?>">
-					
-					<!-- Top Action & Info Bar -->
-					<div class="postbox" style="margin-bottom: 16px;">
-						<div class="postbox-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-							<h2 class="hndle">
-								<span><span class="dashicons dashicons-list-view"></span> <?php esc_html_e( 'Trung Tâm Giám Sát & Nhật Ký Hoạt Động (Execution Monitor)', 'sergio-ai-studio' ); ?></span>
-							</h2>
-							<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-								<button type="button" class="button button-primary button-small" id="btn_refresh_logs">
-									<span class="dashicons dashicons-update"></span> <?php esc_html_e( 'Làm Mới', 'sergio-ai-studio' ); ?>
+					<div class="postbox">
+						<div class="postbox-header" style="display: flex; justify-content: space-between; align-items: center;">
+							<h2 class="hndle"><span><?php esc_html_e( 'Nhật Ký Hoạt Động', 'sergio-ai-studio' ); ?></span></h2>
+							<div style="display: flex; align-items: center; gap: 8px;">
+								<button type="button" class="button button-small" id="btn_refresh_logs">
+									<?php esc_html_e( 'Làm mới', 'sergio-ai-studio' ); ?>
 								</button>
-								<button type="button" class="button button-secondary button-small" id="btn_export_logs">
-									<span class="dashicons dashicons-download"></span> <?php esc_html_e( 'Xuất File JSON', 'sergio-ai-studio' ); ?>
+								<button type="button" class="button button-link-delete button-small" id="btn_clear_logs">
+									<?php esc_html_e( 'Xóa nhật ký', 'sergio-ai-studio' ); ?>
 								</button>
-								<div class="sergio-log-prune-group" style="display: inline-flex; gap: 4px; border-left: 1px solid #c3c4c7; padding-left: 8px; margin-left: 4px;">
-									<button type="button" class="button button-secondary button-small" id="btn_clear_logs_7d">
-										<span class="dashicons dashicons-trash"></span> <?php esc_html_e( 'Dọn > 7 ngày', 'sergio-ai-studio' ); ?>
-									</button>
-									<button type="button" class="button button-secondary button-small" id="btn_clear_logs_30d">
-										<span class="dashicons dashicons-trash"></span> <?php esc_html_e( 'Dọn > 30 ngày', 'sergio-ai-studio' ); ?>
-									</button>
-									<button type="button" class="button button-link-delete button-small" id="btn_clear_logs_all">
-										<span class="dashicons dashicons-dismiss"></span> <?php esc_html_e( 'Xóa Toàn Bộ', 'sergio-ai-studio' ); ?>
-									</button>
+								<span id="clear_logs_feedback" style="margin-left: 6px; font-size: 12px;"></span>
+							</div>
+						</div>
+						<div class="inside" style="padding: 12px;">
+							<!-- Toolbar Filters -->
+							<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; flex-wrap: wrap;">
+								<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+									<!-- Level Filter -->
+									<div class="button-group">
+										<button type="button" class="button button-small button-primary is-active log-level-filter" data-level=""><?php esc_html_e( 'Tất Cả', 'sergio-ai-studio' ); ?></button>
+										<button type="button" class="button button-small button-secondary log-level-filter" data-level="info">INFO</button>
+										<button type="button" class="button button-small button-secondary log-level-filter" data-level="warning">WARN</button>
+										<button type="button" class="button button-small button-secondary log-level-filter" data-level="error">ERROR</button>
+									</div>
+
+									<!-- Stage Filter -->
+									<select id="log_module_filter" style="height: 30px; min-height: 30px; line-height: 28px; padding-top: 0; padding-bottom: 0;">
+										<option value=""><?php esc_html_e( 'Tất cả giai đoạn', 'sergio-ai-studio' ); ?></option>
+										<option value="generation"><?php esc_html_e( 'Viết bài & Nghiên cứu', 'sergio-ai-studio' ); ?></option>
+										<option value="scheduler"><?php esc_html_e( 'Lập lịch tự động', 'sergio-ai-studio' ); ?></option>
+										<option value="seo"><?php esc_html_e( 'Tối ưu SEO', 'sergio-ai-studio' ); ?></option>
+										<option value="image"><?php esc_html_e( 'Xử lý ảnh', 'sergio-ai-studio' ); ?></option>
+										<option value="rewrite"><?php esc_html_e( 'Viết lại bài', 'sergio-ai-studio' ); ?></option>
+									</select>
 								</div>
-								<span id="clear_logs_feedback" style="margin-left: 6px; font-weight: 500;"></span>
+
+								<div>
+									<input type="search" id="sergio_logs_search" class="regular-text" placeholder="<?php esc_attr_e( 'Tìm kiếm nhật ký...', 'sergio-ai-studio' ); ?>" style="width: 220px; height: 30px; margin: 0;" />
+									<span id="log_refresh_spinner" class="spinner" style="float: none; margin: 0 4px;"></span>
+								</div>
 							</div>
+
+							<!-- Bảng đơn giản duy nhất -->
+							<table class="widefat striped" id="logs_table">
+								<thead>
+									<tr>
+										<th style="width: 150px;"><?php esc_html_e( 'Thời Gian', 'sergio-ai-studio' ); ?></th>
+										<th style="width: 80px;"><?php esc_html_e( 'Cấp Độ', 'sergio-ai-studio' ); ?></th>
+										<th style="width: 170px;"><?php esc_html_e( 'Giai Đoạn', 'sergio-ai-studio' ); ?></th>
+										<th><?php esc_html_e( 'Thông Điệp & Dữ Liệu', 'sergio-ai-studio' ); ?></th>
+									</tr>
+								</thead>
+								<tbody id="raw_logs_tbody">
+									<?php echo self::render_raw_logs_rows_html( $logs ); ?>
+								</tbody>
+							</table>
 						</div>
 					</div>
-
-					<!-- Metric Cards -->
-					<div class="sergio-overview-cards" style="margin-bottom: 20px;">
-						<div class="card">
-							<div class="card-kicker">
-								<span class="dashicons dashicons-backup"></span>
-								<span><?php esc_html_e( 'Tổng Phiên Tác Vụ', 'sergio-ai-studio' ); ?></span>
-							</div>
-							<div class="card-val val-blue">
-								<span id="log_stat_total_runs"><?php echo (int) $log_stats['total_runs']; ?></span> <span class="card-val-unit"><?php esc_html_e( 'phiên', 'sergio-ai-studio' ); ?></span>
-							</div>
-							<p class="card-desc"><span id="log_stat_total_logs"><?php echo (int) $log_stats['total_logs']; ?></span> <?php esc_html_e( 'bản ghi chi tiết', 'sergio-ai-studio' ); ?></p>
-						</div>
-
-						<div class="card card-success">
-							<div class="card-kicker">
-								<span class="dashicons dashicons-yes-alt"></span>
-								<span><?php esc_html_e( 'Tỷ Lệ Thành Công', 'sergio-ai-studio' ); ?></span>
-							</div>
-							<div class="card-val val-green">
-								<span id="log_stat_success_rate"><?php echo (int) $log_stats['success_rate']; ?></span> <span class="card-val-unit">%</span>
-							</div>
-							<p class="card-desc"><?php esc_html_e( 'Độ tin cậy luồng AI & Deep Research', 'sergio-ai-studio' ); ?></p>
-						</div>
-
-						<div class="card card-warning">
-							<div class="card-kicker">
-								<span class="dashicons dashicons-admin-post"></span>
-								<span><?php esc_html_e( 'Bài Viết Đã Tạo', 'sergio-ai-studio' ); ?></span>
-							</div>
-							<div class="card-val val-amber">
-								<span id="log_stat_articles_created"><?php echo (int) $log_stats['articles_created']; ?></span> <span class="card-val-unit"><?php esc_html_e( 'bài', 'sergio-ai-studio' ); ?></span>
-							</div>
-							<p class="card-desc"><?php esc_html_e( 'Sinh tự động từ Fact Pack / Cron', 'sergio-ai-studio' ); ?></p>
-						</div>
-
-						<div class="card <?php echo $log_stats['error_count'] > 0 ? 'card-error' : ''; ?>">
-							<div class="card-kicker">
-								<span class="dashicons dashicons-warning"></span>
-								<span><?php esc_html_e( 'Lỗi & Cảnh Báo', 'sergio-ai-studio' ); ?></span>
-							</div>
-							<div class="card-val <?php echo $log_stats['error_count'] > 0 ? 'val-red' : 'val-slate'; ?>">
-								<span id="log_stat_error_count"><?php echo (int) $log_stats['error_count']; ?></span> <span class="card-val-unit">lỗi / <span id="log_stat_warning_count"><?php echo (int) $log_stats['warning_count']; ?></span> cảnh báo</span>
-							</div>
-							<p class="card-desc" id="log_stat_error_label">
-								<?php echo $log_stats['error_count'] > 0 ? esc_html__( 'Cần kiểm tra chẩn đoán lỗi bên dưới', 'sergio-ai-studio' ) : esc_html__( 'Hệ thống hoạt động trơn tru', 'sergio-ai-studio' ); ?>
-							</p>
-						</div>
-					</div>
-
-					<!-- Toolbar: View Switcher, Filter Pills, Module Selector, Search Input -->
-					<div class="sergio-session-toolbar">
-						<div class="sergio-toolbar-left">
-							<!-- Dual View Switcher -->
-							<div class="button-group sergio-view-switcher" style="margin-right: 6px;">
-								<button type="button" class="button button-small is-active btn-log-view-toggle" data-view="sessions">
-									<span class="dashicons dashicons-backup"></span> <?php esc_html_e( 'Theo Phiên Tác Vụ', 'sergio-ai-studio' ); ?>
-								</button>
-								<button type="button" class="button button-small btn-log-view-toggle" data-view="raw">
-									<span class="dashicons dashicons-list-view"></span> <?php esc_html_e( 'Dòng Chi Tiết', 'sergio-ai-studio' ); ?>
-								</button>
-							</div>
-
-							<!-- Level Filter Pills -->
-							<div class="filter-pills-group" style="display: inline-flex; gap: 4px;">
-								<button type="button" class="button button-small button-primary filter-pill is-active log-level-filter" data-level=""><?php esc_html_e( 'Tất Cả', 'sergio-ai-studio' ); ?></button>
-								<button type="button" class="button button-small button-secondary filter-pill log-level-filter" data-level="info">INFO</button>
-								<button type="button" class="button button-small button-secondary filter-pill log-level-filter" data-level="warning">WARN</button>
-								<button type="button" class="button button-small button-secondary filter-pill log-level-filter" data-level="error">ERROR</button>
-							</div>
-
-							<!-- Module Filter Dropdown -->
-							<select id="log_module_filter" style="font-size: 12px; height: 30px; min-height: 30px; line-height: 28px; padding-top: 0; padding-bottom: 0;">
-								<option value=""><?php esc_html_e( 'Tất cả phân hệ', 'sergio-ai-studio' ); ?></option>
-								<option value="generation"><?php esc_html_e( 'Nghiên cứu & Viết bài AI', 'sergio-ai-studio' ); ?></option>
-								<option value="scheduler"><?php esc_html_e( 'Lập lịch Cron tự động', 'sergio-ai-studio' ); ?></option>
-								<option value="seo"><?php esc_html_e( 'Tối ưu Rank Math SEO', 'sergio-ai-studio' ); ?></option>
-								<option value="image"><?php esc_html_e( 'Xử lý Ảnh & AI Banner', 'sergio-ai-studio' ); ?></option>
-								<option value="rewrite"><?php esc_html_e( 'Viết lại nguồn tin', 'sergio-ai-studio' ); ?></option>
-							</select>
-						</div>
-
-						<div class="sergio-toolbar-right">
-							<input type="search" id="sergio_logs_search" class="regular-text" placeholder="<?php esc_attr_e( 'Tìm theo chủ đề, ID bài, mã lỗi...', 'sergio-ai-studio' ); ?>" style="font-size: 12px; height: 30px; width: 240px; margin: 0;" />
-							<span id="log_refresh_spinner" class="spinner" style="float: none; margin: 0 4px;"></span>
-						</div>
-					</div>
-
-					<!-- VIEW 1: SESSIONS TIMELINE (DEFAULT) -->
-					<div id="sergio_sessions_view">
-						<?php echo self::render_session_cards_html( $log_sessions ); ?>
-					</div>
-
-					<!-- VIEW 2: RAW LOG STREAM TABLE -->
-					<div id="sergio_raw_logs_view" style="display: none;">
-						<div class="postbox">
-							<div class="inside" style="padding: 0;">
-								<table class="widefat striped" id="logs_table" style="border: none;">
-									<thead>
-										<tr>
-											<th style="width: 150px;"><?php esc_html_e( 'Thời Gian', 'sergio-ai-studio' ); ?></th>
-											<th style="width: 140px;"><?php esc_html_e( 'Phiên (Run ID)', 'sergio-ai-studio' ); ?></th>
-											<th style="width: 80px;"><?php esc_html_e( 'Cấp Độ', 'sergio-ai-studio' ); ?></th>
-											<th style="width: 150px;"><?php esc_html_e( 'Giai Đoạn', 'sergio-ai-studio' ); ?></th>
-											<th><?php esc_html_e( 'Thông Điệp & Dữ Liệu Chi Tiết', 'sergio-ai-studio' ); ?></th>
-										</tr>
-									</thead>
-									<tbody id="raw_logs_tbody">
-										<?php echo self::render_raw_logs_rows_html( $logs ); ?>
-									</tbody>
-								</table>
-							</div>
-						</div>
-					</div>
-
 				</div>
 </div><!-- .sergio-tab-content -->
 		</div><!-- .wrap -->
@@ -2219,32 +2123,22 @@ class Sergio_AI_Admin {
 			wp_send_json_error( array( 'message' => __( 'Không đủ quyền thực hiện.', 'sergio-ai-studio' ) ) );
 		}
 
-		$view_mode = isset( $_POST['view_mode'] ) ? sanitize_key( $_POST['view_mode'] ) : 'sessions';
-		$level     = isset( $_POST['level'] ) ? sanitize_key( $_POST['level'] ) : '';
-		$module    = isset( $_POST['module'] ) ? sanitize_key( $_POST['module'] ) : '';
-		$search    = isset( $_POST['search'] ) ? sanitize_text_field( wp_unslash( $_POST['search'] ) ) : '';
+		$level  = isset( $_POST['level'] ) ? sanitize_key( $_POST['level'] ) : '';
+		$module = isset( $_POST['module'] ) ? sanitize_key( $_POST['module'] ) : '';
+		$search = isset( $_POST['search'] ) ? sanitize_text_field( wp_unslash( $_POST['search'] ) ) : '';
 
-		$stats = Sergio_AI_Logger::get_stats();
-
-		if ( 'sessions' === $view_mode ) {
-			$sessions = Sergio_AI_Logger::get_sessions( 20, 0, $search, $level, $module );
-			$html     = self::render_session_cards_html( $sessions );
-			$count    = count( $sessions );
-		} else {
-			$stage = '';
-			if ( ! empty( $module ) ) {
-				$stages = Sergio_AI_Logger::get_module_stages( $module );
-				$stage  = ! empty( $stages ) ? $stages[0] : '';
-			}
-			$logs  = Sergio_AI_Logger::get_logs( 60, 0, $level, $stage, $search );
-			$html  = self::render_raw_logs_rows_html( $logs );
-			$count = count( $logs );
+		$stage = '';
+		if ( ! empty( $module ) ) {
+			$stages = Sergio_AI_Logger::get_module_stages( $module );
+			$stage  = ! empty( $stages ) ? $stages[0] : '';
 		}
 
+		$logs  = Sergio_AI_Logger::get_logs( 100, 0, $level, $stage, $search );
+		$html  = self::render_raw_logs_rows_html( $logs );
+
 		wp_send_json_success( array(
-			'stats' => $stats,
 			'html'  => $html,
-			'count' => $count,
+			'count' => count( $logs ),
 		) );
 	}
 

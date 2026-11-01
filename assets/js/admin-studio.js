@@ -983,33 +983,12 @@ jQuery(document).ready(function($) {
     });
 
     // -------------------------------------------------------------------------
-    // 8. LOGS & EXECUTION MONITOR INTELLIGENCE
+    // 8. LOGS: SIMPLE TABLE & FILTERS
     // -------------------------------------------------------------------------
-    var currentLogView = 'sessions';
     var activeLogLevel = '';
     var activeLogModule = '';
     var activeLogSearch = '';
     var logSearchTimer = null;
-
-    function updateLogStatsUI(stats) {
-        if (!stats) return;
-        $('#log_stat_total_runs').text(stats.total_runs || 0);
-        $('#log_stat_total_logs').text(stats.total_logs || 0);
-        $('#log_stat_success_rate').text(stats.success_rate || 100);
-        $('#log_stat_articles_created').text(stats.articles_created || 0);
-        $('#log_stat_error_count').text(stats.error_count || 0);
-        $('#log_stat_warning_count').text(stats.warning_count || 0);
-
-        var $errorCard = $('#log_stat_error_count').closest('.card');
-        var $errorLabel = $('#log_stat_error_label');
-        if (stats.error_count > 0) {
-            $errorCard.addClass('card-error');
-            $errorLabel.text('Cần kiểm tra chẩn đoán lỗi bên dưới');
-        } else {
-            $errorCard.removeClass('card-error');
-            $errorLabel.text('Hệ thống hoạt động trơn tru');
-        }
-    }
 
     function fetchLogsLive(callback) {
         var $spinner = $('#log_refresh_spinner');
@@ -1018,21 +997,15 @@ jQuery(document).ready(function($) {
         $.post(getAjaxUrl(), {
             action: 'sergio_ai_refresh_logs',
             nonce: getNonce(),
-            view_mode: currentLogView,
             level: activeLogLevel,
             module: activeLogModule,
             search: activeLogSearch
         })
         .done(function(res) {
             if (res.success && res.data) {
-                updateLogStatsUI(res.data.stats);
-                if (currentLogView === 'sessions') {
-                    $('#sergio_sessions_view').html(res.data.html);
-                } else {
-                    $('#raw_logs_tbody').html(res.data.html);
-                }
+                $('#raw_logs_tbody').html(res.data.html);
                 if (typeof callback === 'function') {
-                    callback(true, res.data);
+                    callback(true);
                 }
             } else {
                 if (typeof callback === 'function') {
@@ -1049,26 +1022,6 @@ jQuery(document).ready(function($) {
             $spinner.removeClass('is-active');
         });
     }
-
-    // View switcher (Sessions vs Raw)
-    $(document).on('click', '.btn-log-view-toggle', function() {
-        var targetView = $(this).data('view');
-        if (targetView === currentLogView) return;
-
-        currentLogView = targetView;
-        $('.btn-log-view-toggle').removeClass('is-active');
-        $(this).addClass('is-active');
-
-        if (currentLogView === 'sessions') {
-            $('#sergio_raw_logs_view').hide();
-            $('#sergio_sessions_view').show();
-        } else {
-            $('#sergio_sessions_view').hide();
-            $('#sergio_raw_logs_view').show();
-        }
-
-        fetchLogsLive();
-    });
 
     // Level filter pills
     $(document).on('click', '.log-level-filter', function() {
@@ -1104,30 +1057,17 @@ jQuery(document).ready(function($) {
         });
     });
 
-    // Toggle Session Steps Accordion
-    $(document).on('click', '.btn-toggle-session-steps', function() {
-        var runId = $(this).data('run-id');
-        var $panel = $('.session-steps-panel-' + runId);
+    // Clear logs button
+    $('#btn_clear_logs').on('click', function() {
         var $btn = $(this);
-
-        if ($panel.is(':visible')) {
-            $panel.slideUp(150);
-            $btn.find('.dashicons').removeClass('dashicons-arrow-up-alt2').addClass('dashicons-arrow-down-alt2');
-        } else {
-            $panel.slideDown(150);
-            $btn.find('.dashicons').removeClass('dashicons-arrow-down-alt2').addClass('dashicons-arrow-up-alt2');
-        }
-    });
-
-    // Prune Logs: 7 days, 30 days, Clear All
-    function handlePruneLogs(type, confirmMsg) {
         var $feedback = $('#clear_logs_feedback');
-        studioConfirm(confirmMsg, function() {
-            $feedback.css('color', '#64748b').text('Đang xử lý...');
+        studioConfirm('Xác nhận xóa toàn bộ nhật ký hoạt động?', function() {
+            $btn.prop('disabled', true);
+            $feedback.css('color', '#64748b').text('Đang xóa...');
             $.post(getAjaxUrl(), {
                 action: 'sergio_ai_clear_logs',
                 nonce: getNonce(),
-                type: type
+                type: 'all'
             })
             .done(function(res) {
                 if (res.success) {
@@ -1140,28 +1080,12 @@ jQuery(document).ready(function($) {
             })
             .fail(function() {
                 $feedback.css('color', '#d63638').text('Lỗi kết nối.');
+            })
+            .always(function() {
+                $btn.prop('disabled', false);
             });
         });
-    }
-
-    $('#btn_clear_logs_7d').on('click', function() {
-        handlePruneLogs('7days', 'Dọn dẹp tất cả bản ghi nhật ký cũ hơn 7 ngày?');
     });
-
-    $('#btn_clear_logs_30d').on('click', function() {
-        handlePruneLogs('30days', 'Dọn dẹp tất cả bản ghi nhật ký cũ hơn 30 ngày?');
-    });
-
-    $('#btn_clear_logs_all').on('click', function() {
-        handlePruneLogs('all', 'CẢNH BÁO: Hành động này sẽ xóa vĩnh viễn TOÀN BỘ lịch sử nhật ký và phiên tác vụ! Bạn có chắc chắn muốn xóa?');
-    });
-
-    // Export Logs to JSON
-    $('#btn_export_logs').on('click', function() {
-        var exportUrl = getAjaxUrl() + '?action=sergio_ai_export_logs&nonce=' + encodeURIComponent(getNonce());
-        window.open(exportUrl, '_blank');
-    });
-
     // -------------------------------------------------------------------------
     // 9. SCHEDULER DYNAMIC CONTROLS
     // -------------------------------------------------------------------------
