@@ -259,10 +259,14 @@ class Sergio_AI_Admin {
 		?>
 		<div class="wrap sergio-ai-studio-wrap">
 
-			<h1 class="wp-heading-inline"><?php esc_html_e( 'Sergio AI Studio', 'sergio-ai-studio' ); ?></h1>
-			<span class="page-title-action" style="cursor:default; background:transparent; border:none; padding:4px 8px; font-weight:normal; color:#64748b;">
-				<span class="dashicons dashicons-rest-api" style="vertical-align:text-top; font-size:16px; width:16px; height:16px;"></span>
-				<?php echo esc_html( $primary_model ); ?> &bull; v<?php echo esc_html( SERGIO_AI_STUDIO_VERSION ); ?>
+			<h1 class="wp-heading-inline">
+				<span class="dashicons dashicons-superhero"></span>
+				<?php esc_html_e( 'Sergio AI Studio', 'sergio-ai-studio' ); ?>
+			</h1>
+			<span class="sergio-header-badge">
+				<span class="sergio-status-dot <?php echo $has_key ? '' : 'is-disconnected'; ?>"></span>
+				<code><?php echo esc_html( $primary_model ); ?></code>
+				<span>&bull; v<?php echo esc_html( SERGIO_AI_STUDIO_VERSION ); ?></span>
 			</span>
 			<hr class="wp-header-end">
 
@@ -319,39 +323,51 @@ class Sergio_AI_Admin {
 				<!-- TAB 1: TỔNG QUAN                     -->
 				<!-- ===================================== -->
 				<div id="tab-overview" class="sergio-tab-pane <?php echo 'overview' === $active_tab ? 'is-active' : ''; ?>">
-					<div class="sergio-overview-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px;">
-						<div class="card" style="margin: 0; padding: 16px;">
-							<h2 class="title" style="margin: 0 0 8px; font-size: 14px;"><span class="dashicons dashicons-rest-api" style="vertical-align: text-top;"></span> <?php esc_html_e( 'Kết Nối Gemini API', 'sergio-ai-studio' ); ?></h2>
-							<p style="font-size: 20px; font-weight: 600; margin: 4px 0; color: <?php echo $has_key ? '#059669' : '#d97706'; ?>;">
+					<div class="sergio-overview-cards">
+						<div class="card <?php echo $has_key ? 'card-success' : 'card-warning'; ?>">
+							<div class="card-kicker">
+								<span class="dashicons dashicons-rest-api"></span>
+								<span><?php esc_html_e( 'Kết Nối Gemini API', 'sergio-ai-studio' ); ?></span>
+							</div>
+							<div class="card-val <?php echo $has_key ? 'val-green' : 'val-amber'; ?>">
 								<?php echo $has_key ? esc_html__( 'Sẵn Sàng', 'sergio-ai-studio' ) : esc_html__( 'Chưa Cấu Hình', 'sergio-ai-studio' ); ?>
-							</p>
-							<p class="description" style="margin: 0;"><code><?php echo esc_html( $primary_model ); ?></code></p>
+							</div>
+							<p class="card-desc"><code><?php echo esc_html( $primary_model ); ?></code></p>
 						</div>
 
-						<div class="card" style="margin: 0; padding: 16px;">
-							<h2 class="title" style="margin: 0 0 8px; font-size: 14px;"><span class="dashicons dashicons-clock" style="vertical-align: text-top;"></span> <?php esc_html_e( 'Tự Động Hóa WP-Cron', 'sergio-ai-studio' ); ?></h2>
-							<p style="font-size: 20px; font-weight: 600; margin: 4px 0; color: <?php echo $scheduler_enabled ? '#059669' : '#64748b'; ?>;">
+						<div class="card <?php echo $scheduler_enabled ? 'card-success' : ''; ?>">
+							<div class="card-kicker">
+								<span class="dashicons dashicons-clock"></span>
+								<span><?php esc_html_e( 'Tự Động Hóa WP-Cron', 'sergio-ai-studio' ); ?></span>
+							</div>
+							<div class="card-val <?php echo $scheduler_enabled ? 'val-green' : ''; ?>">
 								<?php echo $scheduler_enabled ? esc_html__( 'Đang Chạy', 'sergio-ai-studio' ) : esc_html__( 'Tạm Dừng', 'sergio-ai-studio' ); ?>
-							</p>
-							<p class="description" style="margin: 0;">
+							</div>
+							<p class="card-desc">
 								<?php echo $scheduler_enabled && $next_run_time ? esc_html( sprintf( __( 'Lần tới: %s', 'sergio-ai-studio' ), $next_run_time ) ) : esc_html__( 'Chưa lên lịch', 'sergio-ai-studio' ); ?>
 							</p>
 						</div>
 
-						<div class="card" style="margin: 0; padding: 16px;">
-							<h2 class="title" style="margin: 0 0 8px; font-size: 14px;"><span class="dashicons dashicons-calendar-alt" style="vertical-align: text-top;"></span> <?php esc_html_e( 'Hàng Đợi Chờ Xử Lý', 'sergio-ai-studio' ); ?></h2>
-							<p style="font-size: 20px; font-weight: 600; margin: 4px 0; color: #2271b1;">
-								<?php echo (int) $queue_count; ?> <span style="font-size: 13px; font-weight: normal; color: #64748b;"><?php esc_html_e( 'chủ đề', 'sergio-ai-studio' ); ?></span>
-							</p>
-							<p class="description" style="margin: 0;"><?php printf( esc_html__( 'Mỗi đợt sinh %d bài', 'sergio-ai-studio' ), (int) $posts_per_run ); ?></p>
+						<div class="card">
+							<div class="card-kicker">
+								<span class="dashicons dashicons-calendar-alt"></span>
+								<span><?php esc_html_e( 'Hàng Đợi Chờ Xử Lý', 'sergio-ai-studio' ); ?></span>
+							</div>
+							<div class="card-val val-blue">
+								<?php echo (int) $queue_count; ?> <span class="card-val-unit"><?php esc_html_e( 'chủ đề', 'sergio-ai-studio' ); ?></span>
+							</div>
+							<p class="card-desc"><?php printf( esc_html__( 'Mỗi đợt sinh %d bài', 'sergio-ai-studio' ), (int) $posts_per_run ); ?></p>
 						</div>
 
-						<div class="card" style="margin: 0; padding: 16px;">
-							<h2 class="title" style="margin: 0 0 8px; font-size: 14px;"><span class="dashicons dashicons-yes-alt" style="vertical-align: text-top;"></span> <?php esc_html_e( 'Hôm Nay Đã Tạo', 'sergio-ai-studio' ); ?></h2>
-							<p style="font-size: 20px; font-weight: 600; margin: 4px 0; color: #2271b1;">
-								<?php echo (int) $posts_today; ?> <span style="font-size: 13px; font-weight: normal; color: #64748b;">/ <?php echo $max_posts_per_day > 0 ? (int) $max_posts_per_day : '∞'; ?> <?php esc_html_e( 'bài', 'sergio-ai-studio' ); ?></span>
-							</p>
-							<p class="description" style="margin: 0;"><?php esc_html_e( 'Đã kiểm chứng Fact Pack', 'sergio-ai-studio' ); ?></p>
+						<div class="card card-success">
+							<div class="card-kicker">
+								<span class="dashicons dashicons-yes-alt"></span>
+								<span><?php esc_html_e( 'Hôm Nay Đã Tạo', 'sergio-ai-studio' ); ?></span>
+							</div>
+							<div class="card-val val-green">
+								<?php echo (int) $posts_today; ?> <span class="card-val-unit">/ <?php echo $max_posts_per_day > 0 ? (int) $max_posts_per_day : '∞'; ?> <?php esc_html_e( 'bài', 'sergio-ai-studio' ); ?></span>
+							</div>
+							<p class="card-desc"><?php esc_html_e( 'Đã kiểm chứng Fact Pack', 'sergio-ai-studio' ); ?></p>
 						</div>
 					</div>
 
@@ -1193,37 +1209,49 @@ class Sergio_AI_Admin {
 					</div>
 
 					<!-- Metrics Deck -->
-					<div class="sergio-overview-cards" id="seo_health_strip" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
-						<div class="card" style="margin: 0; padding: 16px;">
-							<h3 class="title" style="margin: 0 0 8px; font-size: 13px;"><?php esc_html_e( 'Điểm SEO Trung Bình', 'sergio-ai-studio' ); ?></h3>
-							<p style="font-size: 24px; font-weight: 600; margin: 4px 0;">
-								<span id="seo_stat_avg_score">--</span> <span style="font-size: 14px; color: #64748b; font-weight: normal;">/ 100</span>
-							</p>
-							<p class="description" id="seo_stat_avg_label" style="margin: 0;"><?php esc_html_e( 'Sức khỏe tổng thể', 'sergio-ai-studio' ); ?></p>
+					<div class="sergio-overview-cards" id="seo_health_strip">
+						<div class="card">
+							<div class="card-kicker">
+								<span class="dashicons dashicons-chart-area"></span>
+								<span><?php esc_html_e( 'Điểm SEO Trung Bình', 'sergio-ai-studio' ); ?></span>
+							</div>
+							<div class="card-val val-blue">
+								<span id="seo_stat_avg_score">--</span> <span class="card-val-unit">/ 100</span>
+							</div>
+							<p class="card-desc" id="seo_stat_avg_label"><?php esc_html_e( 'Sức khỏe tổng thể', 'sergio-ai-studio' ); ?></p>
 						</div>
 
-						<div class="card" style="margin: 0; padding: 16px;">
-							<h3 class="title" style="margin: 0 0 8px; font-size: 13px;"><?php esc_html_e( 'Đạt Chuẩn Tốt (>80đ)', 'sergio-ai-studio' ); ?></h3>
-							<p style="font-size: 24px; font-weight: 600; margin: 4px 0; color: #059669;">
-								<span id="seo_stat_good_count">0</span> <span style="font-size: 14px; color: #64748b; font-weight: normal;"><?php esc_html_e( 'trang', 'sergio-ai-studio' ); ?></span>
-							</p>
-							<p class="description" style="margin: 0;"><?php esc_html_e( 'Chuẩn Rank Math xanh', 'sergio-ai-studio' ); ?></p>
+						<div class="card card-success">
+							<div class="card-kicker">
+								<span class="dashicons dashicons-yes-alt"></span>
+								<span><?php esc_html_e( 'Đạt Chuẩn Tốt (>80đ)', 'sergio-ai-studio' ); ?></span>
+							</div>
+							<div class="card-val val-green">
+								<span id="seo_stat_good_count">0</span> <span class="card-val-unit"><?php esc_html_e( 'trang', 'sergio-ai-studio' ); ?></span>
+							</div>
+							<p class="card-desc"><?php esc_html_e( 'Chuẩn Rank Math xanh', 'sergio-ai-studio' ); ?></p>
 						</div>
 
-						<div class="card" style="margin: 0; padding: 16px;">
-							<h3 class="title" style="margin: 0 0 8px; font-size: 13px;"><?php esc_html_e( 'Cần Tối Ưu (50-79đ)', 'sergio-ai-studio' ); ?></h3>
-							<p style="font-size: 24px; font-weight: 600; margin: 4px 0; color: #d97706;">
-								<span id="seo_stat_warning_count">0</span> <span style="font-size: 14px; color: #64748b; font-weight: normal;"><?php esc_html_e( 'trang', 'sergio-ai-studio' ); ?></span>
-							</p>
-							<p class="description" style="margin: 0;"><?php esc_html_e( 'Cần tinh chỉnh On-page', 'sergio-ai-studio' ); ?></p>
+						<div class="card card-warning">
+							<div class="card-kicker">
+								<span class="dashicons dashicons-warning"></span>
+								<span><?php esc_html_e( 'Cần Tối Ưu (50-79đ)', 'sergio-ai-studio' ); ?></span>
+							</div>
+							<div class="card-val val-amber">
+								<span id="seo_stat_warning_count">0</span> <span class="card-val-unit"><?php esc_html_e( 'trang', 'sergio-ai-studio' ); ?></span>
+							</div>
+							<p class="card-desc"><?php esc_html_e( 'Cần tinh chỉnh On-page', 'sergio-ai-studio' ); ?></p>
 						</div>
 
-						<div class="card" style="margin: 0; padding: 16px;">
-							<h3 class="title" style="margin: 0 0 8px; font-size: 13px;"><?php esc_html_e( 'Thiếu Focus Keyword', 'sergio-ai-studio' ); ?></h3>
-							<p style="font-size: 24px; font-weight: 600; margin: 4px 0; color: #b32d2e;">
-								<span id="seo_stat_missing_kw">0</span> <span style="font-size: 14px; color: #64748b; font-weight: normal;"><?php esc_html_e( 'trang', 'sergio-ai-studio' ); ?></span>
-							</p>
-							<p class="description" style="margin: 0;"><?php esc_html_e( 'Chưa xác định từ khóa', 'sergio-ai-studio' ); ?></p>
+						<div class="card card-error">
+							<div class="card-kicker">
+								<span class="dashicons dashicons-dismiss"></span>
+								<span><?php esc_html_e( 'Thiếu Focus Keyword', 'sergio-ai-studio' ); ?></span>
+							</div>
+							<div class="card-val val-red">
+								<span id="seo_stat_missing_kw">0</span> <span class="card-val-unit"><?php esc_html_e( 'trang', 'sergio-ai-studio' ); ?></span>
+							</div>
+							<p class="card-desc"><?php esc_html_e( 'Chưa xác định từ khóa', 'sergio-ai-studio' ); ?></p>
 						</div>
 					</div>
 

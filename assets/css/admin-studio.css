@@ -1,35 +1,128 @@
 /**
- * Sergio AI Studio — Native WordPress Admin Styles
+ * Sergio AI Studio — Native WordPress Admin Styles (Refined & Polished)
  * Strictly follows WordPress Admin typography, colors, spacing, and layout conventions.
  *
  * @package Sergio_AI_Studio
  */
 
 /* ==========================================================================
-   Page Wrap & Navigation Tabs
+   Page Wrap & Header Branding
    ========================================================================== */
 .sergio-ai-studio-wrap {
-    margin-top: 15px;
+    margin-top: 16px;
+    max-width: 1400px;
+}
+
+.sergio-ai-studio-wrap h1.wp-heading-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 22px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.sergio-ai-studio-wrap h1.wp-heading-inline .dashicons {
+    font-size: 26px;
+    width: 26px;
+    height: 26px;
+    color: #2271b1;
+}
+
+.sergio-header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    background: #ffffff;
+    border: 1px solid #c3c4c7;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #50575e;
+    font-weight: 500;
+    vertical-align: middle;
+    margin-left: 10px;
+}
+
+.sergio-status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #00a32a;
+}
+
+.sergio-status-dot.is-disconnected {
+    background: #dba617;
+}
+
+/* ==========================================================================
+   Navigation Tabs
+   ========================================================================== */
+.sergio-ai-studio-wrap .nav-tab-wrapper {
+    margin-top: 14px;
+    border-bottom: 1px solid #c3c4c7;
+    background: transparent;
+    padding-left: 4px;
+}
+
+.sergio-ai-studio-wrap .nav-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 40px;
+    line-height: 40px;
+    padding: 0 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #50575e;
+    border-color: #c3c4c7;
+    border-bottom: none;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    background: #f0f0f1;
+    margin-right: 4px;
+    transition: all 0.15s ease-in-out;
+}
+
+.sergio-ai-studio-wrap .nav-tab:hover {
+    background: #ffffff;
+    color: #2271b1;
+}
+
+.sergio-ai-studio-wrap .nav-tab-active,
+.sergio-ai-studio-wrap .nav-tab-active:hover {
+    background: #ffffff;
+    color: #1d2327;
+    font-weight: 600;
+    border-bottom-color: #ffffff;
+    border-top: 3px solid #2271b1;
+    height: 38px;
+    line-height: 35px;
 }
 
 .sergio-ai-studio-wrap .nav-tab .dashicons {
-    vertical-align: text-bottom;
-    margin-right: 4px;
     font-size: 17px;
     width: 17px;
     height: 17px;
     line-height: 17px;
+    color: #64748b;
+    margin: 0;
+}
+
+.sergio-ai-studio-wrap .nav-tab-active .dashicons {
+    color: #2271b1;
 }
 
 .sergio-ai-studio-wrap .nav-tab .update-plugins {
-    margin-left: 6px;
+    margin-left: 4px;
     vertical-align: middle;
 }
 
 /* Tab Panes */
 .sergio-tab-pane {
     display: none;
-    margin-top: 15px;
+    margin-top: 18px;
 }
 
 .sergio-tab-pane.is-active {
@@ -41,20 +134,135 @@
    ========================================================================== */
 .sergio-ai-studio-wrap .postbox {
     margin-bottom: 20px;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    background: #ffffff;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+.sergio-ai-studio-wrap .postbox-header {
+    background: #f6f7f7;
+    border-bottom: 1px solid #dcdcde;
+    padding: 12px 18px;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+}
+
+.sergio-ai-studio-wrap .postbox-header .hndle {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d2327;
+    margin: 0;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sergio-ai-studio-wrap .postbox-header .hndle .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #2271b1;
 }
 
 .sergio-ai-studio-wrap .postbox .inside {
-    margin-bottom: 0;
+    padding: 20px 22px;
+    margin: 0;
 }
 
-.sergio-ai-studio-wrap .card {
-    max-width: none;
+/* ==========================================================================
+   Overview Metric Cards
+   ========================================================================== */
+.sergio-overview-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 16px;
+    margin-bottom: 22px;
 }
 
 .sergio-overview-cards .card {
-    background: #fff;
+    background: #ffffff;
     border: 1px solid #c3c4c7;
-    border-radius: 3px;
+    border-left: 4px solid #2271b1;
+    border-radius: 4px;
+    padding: 18px 20px;
+    margin: 0;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sergio-overview-cards .card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.06);
+}
+
+.sergio-overview-cards .card.card-success {
+    border-left-color: #00a32a;
+}
+
+.sergio-overview-cards .card.card-warning {
+    border-left-color: #dba617;
+}
+
+.sergio-overview-cards .card.card-error {
+    border-left-color: #d63638;
+}
+
+.sergio-overview-cards .card .card-kicker {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+    margin-bottom: 8px;
+}
+
+.sergio-overview-cards .card .card-kicker .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: #2271b1;
+}
+
+.sergio-overview-cards .card .card-val {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 4px 0 6px;
+    font-variant-numeric: tabular-nums;
+    color: #1d2327;
+}
+
+.sergio-overview-cards .card .card-val.val-green {
+    color: #00a32a;
+}
+
+.sergio-overview-cards .card .card-val.val-blue {
+    color: #2271b1;
+}
+
+.sergio-overview-cards .card .card-val.val-amber {
+    color: #dba617;
+}
+
+.sergio-overview-cards .card .card-val.val-red {
+    color: #d63638;
+}
+
+.sergio-overview-cards .card .card-val-unit {
+    font-size: 13px;
+    font-weight: 400;
+    color: #64748b;
+}
+
+.sergio-overview-cards .card .card-desc {
+    font-size: 12px;
+    color: #64748b;
+    margin: 0;
 }
 
 @media screen and (max-width: 960px) {
@@ -67,31 +275,139 @@
    Form Tables & Inputs
    ========================================================================== */
 .sergio-ai-studio-wrap .form-table th {
-    width: 220px;
-    padding: 16px 10px 16px 0;
+    width: 230px;
+    padding: 16px 12px 16px 0;
     vertical-align: top;
+    font-weight: 600;
+    color: #1d2327;
 }
 
 .sergio-ai-studio-wrap .form-table td {
-    padding: 12px 10px;
+    padding: 14px 10px;
 }
 
-.sergio-ai-studio-wrap .form-table input[type="text"],
-.sergio-ai-studio-wrap .form-table input[type="password"],
-.sergio-ai-studio-wrap .form-table select,
-.sergio-ai-studio-wrap .form-table textarea {
-    max-width: 100%;
+.sergio-ai-studio-wrap input[type="text"],
+.sergio-ai-studio-wrap input[type="password"],
+.sergio-ai-studio-wrap input[type="search"],
+.sergio-ai-studio-wrap input[type="number"],
+.sergio-ai-studio-wrap select {
+    min-height: 36px;
+    line-height: 34px;
+    padding: 0 10px;
+    border-radius: 4px;
+    border: 1px solid #8c8f94;
+    color: #2c3338;
+    box-shadow: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sergio-ai-studio-wrap textarea {
+    padding: 8px 10px;
+    border-radius: 4px;
+    border: 1px solid #8c8f94;
+    color: #2c3338;
+    box-shadow: none;
+    line-height: 1.5;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sergio-ai-studio-wrap input:focus,
+.sergio-ai-studio-wrap select:focus,
+.sergio-ai-studio-wrap textarea:focus {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+    outline: 2px solid transparent;
+}
+
+.sergio-ai-studio-wrap .description {
+    margin: 6px 0 0;
+    color: #64748b;
+    font-size: 12.5px;
+    line-height: 1.5;
 }
 
 /* ==========================================================================
-   Progress Stepper & Notices
+   Buttons
+   ========================================================================== */
+.sergio-ai-studio-wrap .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    line-height: 34px;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.sergio-ai-studio-wrap .button .dashicons {
+    font-size: 17px;
+    width: 17px;
+    height: 17px;
+    line-height: 17px;
+    margin: 0;
+}
+
+.sergio-ai-studio-wrap .button-primary {
+    background: #2271b1;
+    border-color: #2271b1;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.sergio-ai-studio-wrap .button-primary:hover,
+.sergio-ai-studio-wrap .button-primary:focus {
+    background: #135e96;
+    border-color: #135e96;
+    color: #ffffff;
+}
+
+.sergio-ai-studio-wrap .button-large {
+    min-height: 42px;
+    line-height: 40px;
+    padding: 0 20px;
+    font-size: 14px;
+}
+
+.sergio-ai-studio-wrap .button-small {
+    min-height: 28px;
+    line-height: 26px;
+    padding: 0 8px;
+    font-size: 12px;
+}
+
+.sergio-ai-studio-wrap .button-small .dashicons {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+    line-height: 15px;
+}
+
+.sergio-ai-studio-wrap .button-link-delete {
+    color: #b32d2e;
+    border-color: transparent;
+    background: transparent;
+}
+
+.sergio-ai-studio-wrap .button-link-delete:hover {
+    color: #a00;
+    background: #fcf0f1;
+    border-color: #f5c2c7;
+}
+
+/* ==========================================================================
+   Progress Stepper & Notice Styling
    ========================================================================== */
 .stepper-item-row {
     display: flex;
     align-items: center;
     gap: 8px;
     font-size: 13px;
-    padding: 3px 0;
+    padding: 5px 0;
+    color: #3c434a;
 }
 
 .stepper-item-row .dashicons {
@@ -129,25 +445,33 @@
 .sergio-ai-studio-wrap table.widefat {
     border-collapse: separate;
     border-spacing: 0;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
 }
 
-.sergio-ai-studio-wrap table.widefat td,
-.sergio-ai-studio-wrap table.widefat th {
-    vertical-align: middle;
-}
-
-.sergio-ai-studio-wrap table.widefat th {
+.sergio-ai-studio-wrap table.widefat thead th {
+    background: #f6f7f7;
     font-weight: 600;
+    color: #1d2327;
+    padding: 10px 14px;
+    border-bottom: 1px solid #c3c4c7;
+}
+
+.sergio-ai-studio-wrap table.widefat td {
+    padding: 10px 14px;
+    vertical-align: middle;
+    font-size: 13px;
 }
 
 /* Status Indicators */
 .status-badge-inline {
     display: inline-block;
-    padding: 2px 6px;
+    padding: 2px 8px;
     font-size: 11px;
     font-weight: 600;
     border-radius: 3px;
     text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 .status-badge-inline.status-completed {
@@ -172,33 +496,57 @@
    SEO Workbench & Score Badges
    ========================================================================== */
 .seo-post-pick-card {
-    transition: background 0.15s ease, border-color 0.15s ease;
+    transition: all 0.15s ease;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    background: #ffffff;
 }
 
 .seo-post-pick-card:hover {
-    background: #f6f7f7 !important;
-    border-color: #8c8f94 !important;
+    background: #f6f7f7;
+    border-color: #8c8f94;
+    transform: translateX(2px);
 }
 
 .seo-post-pick-card.is-selected {
     background: #f0f6fc !important;
     border-color: #2271b1 !important;
-    box-shadow: 0 0 0 1px #2271b1;
+    border-left: 4px solid #2271b1;
+    box-shadow: 0 1px 3px rgba(34, 113, 177, 0.15);
+}
+
+.pick-score-badge {
+    font-weight: 700;
+    font-size: 12px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: #f0f0f1;
+    font-variant-numeric: tabular-nums;
 }
 
 .pick-score-badge.score-great {
     background: #edfaef !important;
     color: #1a6828 !important;
+    border: 1px solid #c3e6cb;
 }
 
 .pick-score-badge.score-fair {
     background: #fff8e5 !important;
     color: #855a00 !important;
+    border: 1px solid #ffeeba;
 }
 
 .pick-score-badge.score-poor {
     background: #fcf0f1 !important;
     color: #842029 !important;
+    border: 1px solid #f5c2c7;
+}
+
+#audit_score_disc {
+    font-variant-numeric: tabular-nums;
 }
 
 #audit_score_disc.meter-great {
@@ -271,12 +619,14 @@
     background: #f0f0f1;
     border-radius: 3px;
     color: #64748b;
+    font-variant-numeric: tabular-nums;
 }
 
 .checklist-msg {
     margin: 2px 0 0;
     color: #50575e;
-    font-size: 12px;
+    font-size: 12.5px;
+    line-height: 1.45;
 }
 
 /* AI Recommendation Options */
@@ -285,32 +635,35 @@
     justify-content: space-between;
     align-items: center;
     gap: 10px;
-    padding: 8px 12px;
-    background: #fff;
+    padding: 9px 12px;
+    background: #ffffff;
     border: 1px solid #c3c4c7;
-    border-radius: 3px;
+    border-radius: 4px;
     cursor: pointer;
-    transition: border-color 0.15s ease;
+    transition: all 0.15s ease;
 }
 
 .ai-suggest-option-card:hover {
     border-color: #2271b1;
+    background: #f6f7f7;
 }
 
 .ai-suggest-option-text {
     font-size: 13px;
     color: #1d2327;
     flex: 1;
+    line-height: 1.4;
 }
 
 .ai-lsi-pill {
     display: inline-block;
-    padding: 3px 8px;
-    background: #fff;
+    padding: 3px 9px;
+    background: #ffffff;
     border: 1px solid #c3c4c7;
-    border-radius: 3px;
+    border-radius: 12px;
     font-size: 12px;
     color: #2271b1;
+    font-weight: 500;
 }
 
 /* ==========================================================================
@@ -322,7 +675,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.65);
     z-index: 100050;
     display: flex;
     align-items: center;
@@ -331,10 +684,10 @@
 }
 
 .studio-popup-card {
-    background: #fff;
+    background: #ffffff;
     border: 1px solid #c3c4c7;
     border-radius: 4px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.25);
     max-width: 500px;
     width: 100%;
     box-sizing: border-box;
@@ -369,19 +722,21 @@
 .studio-popup-close-btn {
     background: transparent;
     border: none;
-    font-size: 20px;
+    font-size: 22px;
     line-height: 1;
     color: #64748b;
     cursor: pointer;
-    padding: 4px;
+    padding: 2px 6px;
+    border-radius: 3px;
 }
 
 .studio-popup-close-btn:hover {
     color: #d63638;
+    background: #f0f0f1;
 }
 
 .studio-popup-body {
-    padding: 18px;
+    padding: 20px;
     font-size: 13px;
     line-height: 1.6;
     color: #3c434a;
