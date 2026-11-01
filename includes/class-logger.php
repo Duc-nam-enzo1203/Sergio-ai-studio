@@ -206,6 +206,7 @@ class Sergio_AI_Logger {
 			);
 		}
 
+		$total_runs    = (int) $wpdb->get_var( "SELECT COUNT(DISTINCT run_id) FROM {$table}" );
 		$error_count   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE level = 'error'" );
 		$warning_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE level = 'warning'" );
 		$info_count    = 0;
