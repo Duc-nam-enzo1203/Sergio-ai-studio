@@ -44,18 +44,21 @@ class Sergio_AI_Fact_Pack_Engine {
      * @param string $language  Output language ('vi', 'en', etc.)
      * @return array|WP_Error  Fact Pack array or WP_Error if insufficient data
      */
-    public function build_fact_pack( $topic, $language = 'vi' ) {
+    public function build_fact_pack( $topic, $language = 'vi', $options = array() ) {
         $topic = trim( $topic );
         if ( empty( $topic ) ) {
             return new WP_Error( 'empty_topic', __( 'Chủ đề nghiên cứu không được để trống.', 'sergio-ai-studio' ) );
         }
+
+        $grounding_mode = isset( $options['grounding_mode'] ) ? sanitize_key( $options['grounding_mode'] ) : 'grounding';
+        $override_model = isset( $options['override_model'] ) && ! empty( $options['override_model'] ) && 'default' !== $options['override_model'] ? sanitize_text_field( $options['override_model'] ) : '';
 
         $current_date = wp_date( 'd/m/Y' );
         $current_year = wp_date( 'Y' );
 
         $this->logger->info(
             'fact_collection',
-            sprintf( 'Bắt đầu thu thập dữ kiện thật cho chủ đề: "%s" (Ngày hiện tại: %s)', $topic, $current_date )
+            sprintf( 'Bắt đầu thu thập dữ kiện thật cho chủ đề: "%s" (Ngày: %s, Chế độ: %s, Model: %s)', $topic, $current_date, $grounding_mode, $override_model ? $override_model : 'Mặc định' )
         );
 
         // 1. Direct Structured Integration for GitHub Repositories
@@ -145,13 +148,16 @@ Hãy tìm kiếm và trích xuất một GÓI DỮ KIỆN (FACT PACK) chuẩn x�
 }
 ```";
 
-        // Call Gemini with Google Search Grounding ENABLED
+        // Call Gemini with Search Grounding or direct reasoning based on user options
+        $enable_grounding = ( 'direct' !== $grounding_mode );
+
         $res = $this->client->generate_content(
             $prompt,
             $system_prompt,
-            true, // enable search grounding
-            0.2,  // low temperature for strict factual accuracy
-            90
+            $enable_grounding, // enable search grounding
+            0.2,               // low temperature for strict factual accuracy
+            90,
+            $override_model
         );
 
         if ( is_wp_error( $res ) ) {
@@ -486,9 +492,12 @@ Hãy tìm kiếm và trích xuất một GÓI DỮ KIỆN (FACT PACK) chuẩn x�
             return null;
         }
 
-        $row['sources']  = json_decode( $row['sources_json'], true );
-        $row['facts']    = json_decode( $row['facts_json'], true );
-        $row['entities'] = json_decode( $row['entities_json'], true );
+        $row['sources']          = json_decode( $row['sources_json'], true );
+        $row['facts']            = json_decode( $row['facts_json'], true );
+        $row['entities']         = json_decode( $row['entities_json'], true );
+        $row['key_facts']        = is_array( $row['facts'] ) && isset( $row['facts']['key_facts'] ) ? $row['facts']['key_facts'] : ( is_array( $row['facts'] ) ? $row['facts'] : array() );
+        $row['source_citations'] = is_array( $row['sources'] ) ? $row['sources'] : array();
+        $row['verified_metrics'] = is_array( $row['facts'] ) && isset( $row['facts']['verified_metrics'] ) ? $row['facts']['verified_metrics'] : array();
         return $row;
     }
 }

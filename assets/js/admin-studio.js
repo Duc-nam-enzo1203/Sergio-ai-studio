@@ -318,15 +318,45 @@ jQuery(document).ready(function($) {
     });
 
     // -------------------------------------------------------------------------
-    // 4. FACT-BASED WRITER PIPELINE
+    // 4. FACT-BASED WRITER PIPELINE (1-Click & Step-by-Step Wizard)
     // -------------------------------------------------------------------------
+    var activeFactPackData = null;
+
+    function getWriterOptions() {
+        return {
+            seed_query: $('#writer_seed_query').val().trim(),
+            category_id: $('#writer_category').val() || 0,
+            language: $('#writer_language').val() || 'vi',
+            target_length: $('#writer_target_length').val() || 'standard',
+            tone: $('#writer_tone').val() || 'journalistic',
+            model_override: $('#writer_model_override').val() || 'default',
+            grounding_mode: $('#writer_grounding_mode').val() || 'grounding',
+            image_option: $('#writer_image_option').val() || 'reference',
+            post_status: $('#writer_post_status').val() || 'draft',
+            enable_rank_math: $('#writer_enable_rank_math').is(':checked') ? 1 : 0,
+            enable_internal_links: $('#writer_enable_internal_links').is(':checked') ? 1 : 0,
+            enable_sources_box: $('#writer_enable_sources_box').is(':checked') ? 1 : 0
+        };
+    }
+
+    function addPipelineStep(text, status) {
+        var $steps = $('#pipeline_steps_list');
+        var iconSvg = status === 'done'
+            ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>'
+            : (status === 'fail'
+                ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+                : '<span class="stepper-spinner" style="width:12px; height:12px;"></span>');
+
+        var itemClass = 'stepper-item-row ' + (status === 'done' ? 'is-done' : (status === 'fail' ? 'is-failed' : 'is-active'));
+        $steps.append('<div class="' + itemClass + '">' + iconSvg + '<span>' + escapeHtml(text) + '</span></div>');
+    }
+
+    // 4A. Run 1-Click Pipeline (Full flow)
     $('#btn_run_pipeline').on('click', function() {
         var $btn = $(this);
-        var seedQuery = $('#writer_seed_query').val().trim();
-        var catId = $('#writer_category').val();
-        var lang = $('#writer_language').val();
+        var opts = getWriterOptions();
 
-        if (!seedQuery) {
+        if (!opts.seed_query) {
             studioModal({ title: 'Thiếu Dữ Liệu', message: 'Vui lòng nhập chủ đề hoặc ý định tìm kiếm!', type: 'warning' });
             $('#writer_seed_query').focus();
             return;
@@ -336,56 +366,56 @@ jQuery(document).ready(function($) {
         var $msg = $('#pipeline_progress_msg');
         var $steps = $('#pipeline_steps_list');
         var $resCard = $('#pipeline_result_card');
+        var $previewBox = $('#fact_pack_preview_box');
 
         $btn.prop('disabled', true);
+        $('#btn_step1_fact_pack_only').prop('disabled', true);
         $resCard.hide().empty();
+        $previewBox.hide();
         $box.slideDown(150);
         $steps.empty();
 
-        function addStepRow(text, status) {
-            var iconSvg = status === 'done'
-                ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>'
-                : (status === 'fail'
-                    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
-                    : '<span class="stepper-spinner" style="width:12px; height:12px;"></span>');
+        $msg.text('Đang nghiên cứu dữ kiện thực tế và lập Fact Pack...');
+        addPipelineStep('Giai đoạn 1: Tra cứu dữ liệu thực tế từ web & đối chiếu thực thể...', 'active');
 
-            var itemClass = 'stepper-item-row ' + (status === 'done' ? 'is-done' : (status === 'fail' ? 'is-failed' : 'is-active'));
-            $steps.append('<div class="' + itemClass + '">' + iconSvg + '<span>' + escapeHtml(text) + '</span></div>');
-        }
-
-        $msg.text('Giai đoạn 1/4: Tra cứu Google Search Grounding để lập Fact Pack...');
-        addStepRow('Đang tìm nguồn web thực tế và trích xuất dữ kiện...', 'active');
+        var payload = $.extend({
+            action: 'sergio_ai_run_pipeline_stage1',
+            nonce: getNonce()
+        }, opts);
 
         $.ajax({
             url: getAjaxUrl(),
             type: 'POST',
-            timeout: 120000,
-            data: {
-                action: 'sergio_ai_run_pipeline_stage1',
-                nonce: getNonce(),
-                seed_query: seedQuery,
-                category_id: catId,
-                language: lang
-            }
+            timeout: 300000, // 5 minutes generous timeout
+            data: payload
         })
         .done(function(res) {
             if (res.success) {
                 var d = res.data;
                 $msg.html('<span style="color: #10b981;">' + escapeHtml(d.message) + '</span>');
-                $steps.children().last().replaceWith('<div class="stepper-item-row is-done"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>Thu thập dữ liệu thực tế & đối chiếu thành công</span></div>');
-                addStepRow('Tách tiêu đề khỏi thực thể thật (Disentanglement)', 'done');
-                addStepRow('Biên soạn nội dung độc bản không sao chép', 'done');
-                addStepRow('Lưu bản nháp & Thiết lập Rank Math Focus Keyword: "' + escapeHtml(d.focus_keyword) + '"', 'done');
+                $steps.children().last().replaceWith('<div class="stepper-item-row is-done"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>Giai đoạn 1: Thu thập & đối chiếu dữ kiện thực tế thành công</span></div>');
+                addPipelineStep('Giai đoạn 2: Tách tiêu đề độc bản & phân tích thực thể cốt lõi', 'done');
+                addPipelineStep('Giai đoạn 3: Biên tập bài viết chuyên sâu chuẩn Rank Math SEO (~' + escapeHtml(d.word_count) + ' từ)', 'done');
+                addPipelineStep('Giai đoạn 4: Thiết lập Focus Keyword "' + escapeHtml(d.focus_keyword) + '" & xử lý ảnh đại diện', 'done');
 
-                var cardHtml = '<div style="margin-bottom: 12px; font-size: 16px; font-weight: 700; color: #ffffff;">' + escapeHtml(d.title) + '</div>' +
-                    '<div style="display: flex; gap: 20px; margin-bottom: 16px; font-size: 13px; color: #94a3b8; flex-wrap: wrap;">' +
-                        '<span>Từ khóa: <strong style="color: #f8fafc;">' + escapeHtml(d.focus_keyword) + '</strong></span>' +
-                        '<span>Độ dài: <strong style="color: #f8fafc;">~' + escapeHtml(d.word_count) + ' từ</strong></span>' +
-                        '<span>Nguồn kiểm chứng: <strong style="color: #f8fafc;">' + escapeHtml(d.sources_count) + ' nguồn</strong></span>' +
+                var statusBadge = d.status === 'publish'
+                    ? '<span class="filter-pill" style="background: #ecfdf5; color: #059669; border-color: #a7f3d0;">Đã xuất bản</span>'
+                    : (d.status === 'pending'
+                        ? '<span class="filter-pill" style="background: #fffbeb; color: #d97706; border-color: #fde68a;">Chờ duyệt</span>'
+                        : '<span class="filter-pill" style="background: #f1f5f9; color: #475569; border-color: #cbd5e1;">Bản nháp</span>');
+
+                var cardHtml = '<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; flex-wrap: wrap;">' +
+                        '<div style="font-size: 16px; font-weight: 700; color: #0f172a;">' + escapeHtml(d.title) + '</div>' +
+                        statusBadge +
                     '</div>' +
-                    '<div style="display: flex; gap: 10px;">' +
+                    '<div style="display: flex; gap: 20px; margin-bottom: 16px; font-size: 13px; color: #64748b; flex-wrap: wrap;">' +
+                        '<span>Từ khóa chính: <strong style="color: #0f172a;">' + escapeHtml(d.focus_keyword) + '</strong></span>' +
+                        '<span>Độ dài: <strong style="color: #0f172a;">~' + escapeHtml(d.word_count) + ' từ</strong></span>' +
+                        '<span>Nguồn kiểm chứng: <strong style="color: #059669;">' + escapeHtml(d.sources_count) + ' nguồn uy tín</strong></span>' +
+                    '</div>' +
+                    '<div style="display: flex; gap: 10px; flex-wrap: wrap;">' +
                         '<a href="' + safeUrl(d.edit_url) + '" target="_blank" class="studio-btn studio-btn-primary">Chỉnh Sửa Bài Viết</a>' +
-                        '<a href="' + safeUrl(d.view_url) + '" target="_blank" class="studio-btn studio-btn-secondary">Xem Trước Nháp</a>' +
+                        '<a href="' + safeUrl(d.view_url) + '" target="_blank" class="studio-btn studio-btn-secondary">Xem Bài Viết</a>' +
                     '</div>';
 
                 $resCard.html(cardHtml).slideDown(200);
@@ -393,18 +423,219 @@ jQuery(document).ready(function($) {
                 var err = (res.data && res.data.message) ? res.data.message : 'Có lỗi xảy ra.';
                 $msg.html('<span style="color: #f43f5e;">Thất bại: ' + escapeHtml(err) + '</span>');
                 $steps.children().last().replaceWith('<div class="stepper-item-row is-failed"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span>' + escapeHtml(err) + '</span></div>');
+                studioModal({ title: 'Lỗi Biên Soạn Bài Viết', message: err, type: 'error' });
             }
         })
         .fail(function(xhr, status) {
             var msg = status === 'timeout'
-                ? 'Hết thời gian chờ (120 giây). Kết nối Gemini API quá chậm.'
+                ? 'Hết thời gian chờ kết nối máy chủ (300 giây). Vui lòng thử lại hoặc chọn mô hình "Gemini 2.0 Flash" / "Tri thức trực tiếp" để tăng tốc.'
                 : 'Lỗi mạng hoặc máy chủ (' + xhr.status + ').';
             $msg.html('<span style="color: #f43f5e;">' + escapeHtml(msg) + '</span>');
-            addStepRow(msg, 'fail');
+            addPipelineStep(msg, 'fail');
+            studioModal({ title: 'Lỗi Kết Nối', message: msg, type: 'error' });
+        })
+        .always(function() {
+            $btn.prop('disabled', false);
+            $('#btn_step1_fact_pack_only').prop('disabled', false);
+        });
+    });
+
+    // 4B. Run Step 1 Only: Build Fact Pack for Interactive Preview
+    $('#btn_step1_fact_pack_only').on('click', function() {
+        var $btn = $(this);
+        var opts = getWriterOptions();
+
+        if (!opts.seed_query) {
+            studioModal({ title: 'Thiếu Dữ Liệu', message: 'Vui lòng nhập chủ đề hoặc ý định tìm kiếm!', type: 'warning' });
+            $('#writer_seed_query').focus();
+            return;
+        }
+
+        var $box = $('#pipeline_progress_box');
+        var $msg = $('#pipeline_progress_msg');
+        var $steps = $('#pipeline_steps_list');
+        var $previewBox = $('#fact_pack_preview_box');
+        var $resCard = $('#pipeline_result_card');
+
+        $btn.prop('disabled', true);
+        $('#btn_run_pipeline').prop('disabled', true);
+        $resCard.hide().empty();
+        $previewBox.hide();
+        $box.slideDown(150);
+        $steps.empty();
+
+        $msg.text('Đang tra cứu và lập Fact Pack từ web...');
+        addPipelineStep('Thu thập dữ kiện thời gian thực & trích xuất thực thể...', 'active');
+
+        $.ajax({
+            url: getAjaxUrl(),
+            type: 'POST',
+            timeout: 180000,
+            data: {
+                action: 'sergio_ai_generate_fact_pack_only',
+                nonce: getNonce(),
+                seed_query: opts.seed_query,
+                language: opts.language,
+                model_override: opts.model_override,
+                grounding_mode: opts.grounding_mode
+            }
+        })
+        .done(function(res) {
+            if (res.success) {
+                activeFactPackData = res.data;
+                var d = res.data;
+                $msg.html('<span style="color: #10b981;">' + escapeHtml(d.message) + '</span>');
+                $steps.children().last().replaceWith('<div class="stepper-item-row is-done"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>Đã đối chiếu thành công ' + (d.key_facts ? d.key_facts.length : 0) + ' dữ kiện & ' + (d.source_citations ? d.source_citations.length : 0) + ' nguồn tham khảo</span></div>');
+
+                // Render Fact Pack Preview HTML
+                var html = '';
+                if (d.primary_event) {
+                    html += '<div style="margin-bottom: 12px; font-weight: 600; color: #1e293b;">Trọng tâm sự kiện: ' + escapeHtml(d.primary_event) + '</div>';
+                }
+
+                if (d.entities && d.entities.length) {
+                    html += '<div style="margin-bottom: 12px;"><strong style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b;">Thực thể thật:</strong><div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;">';
+                    $.each(d.entities, function(i, ent) {
+                        html += '<span class="filter-pill" style="background: #f1f5f9; color: #334155; font-size: 12px;">' + escapeHtml(ent.name) + ' (' + escapeHtml(ent.type || ent.role || '') + ')</span>';
+                    });
+                    html += '</div></div>';
+                }
+
+                if (d.key_facts && d.key_facts.length) {
+                    html += '<div style="margin-bottom: 12px;"><strong style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b;">Dữ kiện xác thực:</strong><ul style="margin: 6px 0 0 18px; padding: 0; color: #334155;">';
+                    $.each(d.key_facts, function(i, fact) {
+                        html += '<li style="margin-bottom: 4px;">' + escapeHtml(fact) + '</li>';
+                    });
+                    html += '</ul></div>';
+                }
+
+                if (d.verified_metrics && d.verified_metrics.length) {
+                    html += '<div style="margin-bottom: 12px;"><strong style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #059669;">Số liệu đo lường:</strong><div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;">';
+                    $.each(d.verified_metrics, function(i, mtr) {
+                        html += '<span class="filter-pill" style="background: #ecfdf5; color: #059669; border-color: #a7f3d0; font-size: 12px;">' + escapeHtml(mtr) + '</span>';
+                    });
+                    html += '</div></div>';
+                }
+
+                if (d.source_citations && d.source_citations.length) {
+                    html += '<div><strong style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b;">Nguồn bài viết gốc:</strong><ul style="margin: 6px 0 0 18px; padding: 0;">';
+                    $.each(d.source_citations, function(i, src) {
+                        var u = typeof src === 'string' ? src : (src.url || '#');
+                        var t = typeof src === 'string' ? src : (src.title || src.publisher || u);
+                        html += '<li style="margin-bottom: 4px;"><a href="' + safeUrl(u) + '" target="_blank" style="color: var(--sergio-accent); text-decoration: underline;">' + escapeHtml(t) + '</a></li>';
+                    });
+                    html += '</ul></div>';
+                }
+
+                $('#fact_pack_content_area').html(html);
+                $previewBox.slideDown(200);
+            } else {
+                var err = (res.data && res.data.message) ? res.data.message : 'Không thể lập Fact Pack.';
+                $msg.html('<span style="color: #f43f5e;">Thất bại: ' + escapeHtml(err) + '</span>');
+                $steps.children().last().replaceWith('<div class="stepper-item-row is-failed"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span>' + escapeHtml(err) + '</span></div>');
+                studioModal({ title: 'Lỗi Thu Thập Fact Pack', message: err, type: 'error' });
+            }
+        })
+        .fail(function(xhr, status) {
+            var msg = status === 'timeout'
+                ? 'Hết thời gian chờ kết nối (180 giây). Vui lòng thử lại với chế độ "Tri thức trực tiếp" hoặc chọn model "Gemini 2.0 Flash".'
+                : 'Lỗi mạng hoặc máy chủ (' + xhr.status + ').';
+            $msg.html('<span style="color: #f43f5e;">' + escapeHtml(msg) + '</span>');
+            addPipelineStep(msg, 'fail');
+            studioModal({ title: 'Lỗi Kết Nối', message: msg, type: 'error' });
+        })
+        .always(function() {
+            $btn.prop('disabled', false);
+            $('#btn_run_pipeline').prop('disabled', false);
+        });
+    });
+
+    // 4C. Step 2: Write Article from Active Fact Pack
+    $('#btn_write_from_fact_pack').on('click', function() {
+        if (!activeFactPackData || !activeFactPackData.pack_id) {
+            studioModal({ title: 'Thiếu Dữ Liệu', message: 'Vui lòng lập Fact Pack trước khi chấp bút!', type: 'warning' });
+            return;
+        }
+
+        var $btn = $(this);
+        var opts = getWriterOptions();
+        var $box = $('#pipeline_progress_box');
+        var $msg = $('#pipeline_progress_msg');
+        var $steps = $('#pipeline_steps_list');
+        var $resCard = $('#pipeline_result_card');
+
+        $btn.prop('disabled', true);
+        $box.slideDown(150);
+        $steps.empty();
+
+        $msg.text('Đang chấp bút bài viết độc bản từ Fact Pack #' + activeFactPackData.pack_id + '...');
+        addPipelineStep('Lập kế hoạch biên tập (Editorial Outline & Rank Math Focus Keyword)...', 'active');
+
+        var payload = $.extend({
+            action: 'sergio_ai_write_article_from_fact_pack',
+            nonce: getNonce(),
+            pack_id: activeFactPackData.pack_id
+        }, opts);
+
+        $.ajax({
+            url: getAjaxUrl(),
+            type: 'POST',
+            timeout: 240000,
+            data: payload
+        })
+        .done(function(res) {
+            if (res.success) {
+                var d = res.data;
+                $msg.html('<span style="color: #10b981;">' + escapeHtml(d.message) + '</span>');
+                $steps.children().last().replaceWith('<div class="stepper-item-row is-done"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>Hoàn thành chấp bút & thiết lập SEO</span></div>');
+                addPipelineStep('Lưu bài viết (' + (d.status === 'publish' ? 'Đã xuất bản' : 'Bản nháp') + ') & Xử lý ảnh đại diện', 'done');
+
+                var statusBadge = d.status === 'publish'
+                    ? '<span class="filter-pill" style="background: #ecfdf5; color: #059669; border-color: #a7f3d0;">Đã xuất bản</span>'
+                    : (d.status === 'pending'
+                        ? '<span class="filter-pill" style="background: #fffbeb; color: #d97706; border-color: #fde68a;">Chờ duyệt</span>'
+                        : '<span class="filter-pill" style="background: #f1f5f9; color: #475569; border-color: #cbd5e1;">Bản nháp</span>');
+
+                var cardHtml = '<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; flex-wrap: wrap;">' +
+                        '<div style="font-size: 16px; font-weight: 700; color: #0f172a;">' + escapeHtml(d.title) + '</div>' +
+                        statusBadge +
+                    '</div>' +
+                    '<div style="display: flex; gap: 20px; margin-bottom: 16px; font-size: 13px; color: #64748b; flex-wrap: wrap;">' +
+                        '<span>Từ khóa: <strong style="color: #0f172a;">' + escapeHtml(d.focus_keyword) + '</strong></span>' +
+                        '<span>Độ dài: <strong style="color: #0f172a;">~' + escapeHtml(d.word_count) + ' từ</strong></span>' +
+                        '<span>Nguồn: <strong style="color: #059669;">' + escapeHtml(d.sources_count) + ' nguồn</strong></span>' +
+                    '</div>' +
+                    '<div style="display: flex; gap: 10px; flex-wrap: wrap;">' +
+                        '<a href="' + safeUrl(d.edit_url) + '" target="_blank" class="studio-btn studio-btn-primary">Chỉnh Sửa Bài Viết</a>' +
+                        '<a href="' + safeUrl(d.view_url) + '" target="_blank" class="studio-btn studio-btn-secondary">Xem Bài Viết</a>' +
+                    '</div>';
+
+                $('#fact_pack_preview_box').slideUp(150);
+                $resCard.html(cardHtml).slideDown(200);
+                studioModal({ title: 'Thành Công', message: d.message, type: 'success' });
+            } else {
+                var err = (res.data && res.data.message) ? res.data.message : 'Lỗi khi chấp bút.';
+                $msg.html('<span style="color: #f43f5e;">Thất bại: ' + escapeHtml(err) + '</span>');
+                $steps.children().last().replaceWith('<div class="stepper-item-row is-failed"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span>' + escapeHtml(err) + '</span></div>');
+                studioModal({ title: 'Lỗi Chấp Bút Bài Viết', message: err, type: 'error' });
+            }
+        })
+        .fail(function(xhr, status) {
+            var msg = status === 'timeout'
+                ? 'Hết thời gian chờ kết nối máy chủ (240 giây).'
+                : 'Lỗi mạng hoặc máy chủ (' + xhr.status + ').';
+            $msg.html('<span style="color: #f43f5e;">' + escapeHtml(msg) + '</span>');
+            addPipelineStep(msg, 'fail');
+            studioModal({ title: 'Lỗi Kết Nối', message: msg, type: 'error' });
         })
         .always(function() {
             $btn.prop('disabled', false);
         });
+    });
+
+    $('#btn_cancel_fact_pack').on('click', function() {
+        $('#fact_pack_preview_box').slideUp(150);
+        activeFactPackData = null;
     });
 
     // -------------------------------------------------------------------------

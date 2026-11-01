@@ -27,6 +27,8 @@ class Sergio_AI_Admin {
 		add_action( 'wp_ajax_sergio_ai_refresh_models', array( $this, 'ajax_refresh_models' ) );
 		add_action( 'wp_ajax_sergio_ai_test_connection', array( $this, 'ajax_test_connection' ) );
 		add_action( 'wp_ajax_sergio_ai_run_pipeline_stage1', array( $this, 'ajax_run_pipeline_stage1' ) );
+		add_action( 'wp_ajax_sergio_ai_generate_fact_pack_only', array( $this, 'ajax_generate_fact_pack_only' ) );
+		add_action( 'wp_ajax_sergio_ai_write_article_from_fact_pack', array( $this, 'ajax_write_article_from_fact_pack' ) );
 		add_action( 'wp_ajax_sergio_ai_add_queue_topics', array( $this, 'ajax_add_queue_topics' ) );
 		add_action( 'wp_ajax_sergio_ai_retry_queue_item', array( $this, 'ajax_retry_queue_item' ) );
 		add_action( 'wp_ajax_sergio_ai_prioritize_queue_item', array( $this, 'ajax_prioritize_queue_item' ) );
@@ -995,6 +997,7 @@ class Sergio_AI_Admin {
 
 						<section class="studio-surface-box">
 							<div class="studio-form-grid">
+								<!-- Seed Query (Full Width) -->
 								<div class="studio-field-row" style="grid-column: 1 / -1;">
 									<label class="studio-label" for="writer_seed_query"><?php esc_html_e( 'Chủ Đề Hoặc Ý Định Tìm Kiếm (*)', 'sergio-ai-studio' ); ?></label>
 									<input type="text" id="writer_seed_query" class="studio-input"
@@ -1004,6 +1007,7 @@ class Sergio_AI_Admin {
 									</span>
 								</div>
 
+								<!-- Chuyên Mục Đích -->
 								<div class="studio-field-row">
 									<label class="studio-label" for="writer_category"><?php esc_html_e( 'Chuyên Mục Đích', 'sergio-ai-studio' ); ?></label>
 									<select id="writer_category" class="studio-select">
@@ -1014,6 +1018,7 @@ class Sergio_AI_Admin {
 									</select>
 								</div>
 
+								<!-- Ngôn Ngữ Bài Viết -->
 								<div class="studio-field-row">
 									<label class="studio-label" for="writer_language"><?php esc_html_e( 'Ngôn Ngữ Bài Viết', 'sergio-ai-studio' ); ?></label>
 									<select id="writer_language" class="studio-select">
@@ -1021,12 +1026,97 @@ class Sergio_AI_Admin {
 										<option value="en" <?php selected( $language, 'en' ); ?>>English (Global)</option>
 									</select>
 								</div>
+
+								<!-- Độ Dài Bài Viết -->
+								<div class="studio-field-row">
+									<label class="studio-label" for="writer_target_length"><?php esc_html_e( 'Độ Dài & Cấu Trúc Nội Dung', 'sergio-ai-studio' ); ?></label>
+									<select id="writer_target_length" class="studio-select">
+										<option value="standard" selected><?php esc_html_e( 'Tiêu chuẩn SEO (~1.000 - 1.500 từ)', 'sergio-ai-studio' ); ?></option>
+										<option value="short"><?php esc_html_e( 'Ngắn gọn / Tin nhanh (~600 - 900 từ)', 'sergio-ai-studio' ); ?></option>
+										<option value="deep_dive"><?php esc_html_e( 'Chuyên sâu / Mega Post (~1.800 - 2.800 từ)', 'sergio-ai-studio' ); ?></option>
+									</select>
+								</div>
+
+								<!-- Giọng Văn & Phong Cách -->
+								<div class="studio-field-row">
+									<label class="studio-label" for="writer_tone"><?php esc_html_e( 'Giọng Văn & Phong Cách Biên Soạn', 'sergio-ai-studio' ); ?></label>
+									<select id="writer_tone" class="studio-select">
+										<option value="journalistic" selected><?php esc_html_e( 'Báo chí phân tích & Khách quan (Khuyên dùng)', 'sergio-ai-studio' ); ?></option>
+										<option value="tech"><?php esc_html_e( 'Chuyên gia công nghệ (Tech Deep Dive)', 'sergio-ai-studio' ); ?></option>
+										<option value="tutorial"><?php esc_html_e( 'Hướng dẫn thực hành (Step-by-step How-To)', 'sergio-ai-studio' ); ?></option>
+										<option value="review"><?php esc_html_e( 'Đánh giá & So sánh toàn diện (Review & Comparison)', 'sergio-ai-studio' ); ?></option>
+										<option value="engaging"><?php esc_html_e( 'Sôi nổi, truyền cảm hứng & Dễ tiếp cận', 'sergio-ai-studio' ); ?></option>
+									</select>
+								</div>
+
+								<!-- Mô Hình AI Thực Thi -->
+								<div class="studio-field-row">
+									<label class="studio-label" for="writer_model_override"><?php esc_html_e( 'Mô Hình AI Thực Thi', 'sergio-ai-studio' ); ?></label>
+									<select id="writer_model_override" class="studio-select">
+										<option value="default"><?php esc_html_e( 'Theo cấu hình hệ thống (Primary/Fallback)', 'sergio-ai-studio' ); ?></option>
+										<option value="gemini-2.0-flash"><?php esc_html_e( 'Gemini 2.0 Flash (Tốc độ cao nhất, đề xuất chống timeout)', 'sergio-ai-studio' ); ?></option>
+										<option value="gemini-2.5-flash"><?php esc_html_e( 'Gemini 2.5 Flash (Cân bằng & Toàn diện)', 'sergio-ai-studio' ); ?></option>
+										<option value="gemini-1.5-flash"><?php esc_html_e( 'Gemini 1.5 Flash (Ổn định cao LTS)', 'sergio-ai-studio' ); ?></option>
+										<option value="gemini-2.5-pro"><?php esc_html_e( 'Gemini 2.5 Pro (Lập luận chuyên sâu)', 'sergio-ai-studio' ); ?></option>
+									</select>
+								</div>
+
+								<!-- Chế Độ Tra Cứu Dữ Kiện -->
+								<div class="studio-field-row">
+									<label class="studio-label" for="writer_grounding_mode"><?php esc_html_e( 'Phương Thức Dữ Kiện', 'sergio-ai-studio' ); ?></label>
+									<select id="writer_grounding_mode" class="studio-select">
+										<option value="grounding" selected><?php esc_html_e( 'Google Search Grounding (Tìm dữ kiện web thời gian thực)', 'sergio-ai-studio' ); ?></option>
+										<option value="direct"><?php esc_html_e( 'Tri thức tổng hợp trực tiếp (Tốc độ cực nhanh, không lo hạn mức Search)', 'sergio-ai-studio' ); ?></option>
+									</select>
+								</div>
+
+								<!-- Xử Lý Ảnh Đại Diện -->
+								<div class="studio-field-row">
+									<label class="studio-label" for="writer_image_option"><?php esc_html_e( 'Xử Lý Ảnh Đại Diện (Featured Image)', 'sergio-ai-studio' ); ?></label>
+									<select id="writer_image_option" class="studio-select">
+										<option value="reference" selected><?php esc_html_e( 'Trích xuất từ nguồn tham khảo (Ghi nguồn tác giả rõ ràng)', 'sergio-ai-studio' ); ?></option>
+										<option value="banner"><?php esc_html_e( 'Tự động vẽ Banner đồ họa chuẩn mạng xã hội (1200x630)', 'sergio-ai-studio' ); ?></option>
+										<option value="none"><?php esc_html_e( 'Không tạo ảnh (Tối ưu tốc độ tối đa)', 'sergio-ai-studio' ); ?></option>
+									</select>
+								</div>
+
+								<!-- Trạng Thái Xuất Bản -->
+								<div class="studio-field-row">
+									<label class="studio-label" for="writer_post_status"><?php esc_html_e( 'Trạng Thái Bài Viết Khi Tạo', 'sergio-ai-studio' ); ?></label>
+									<select id="writer_post_status" class="studio-select">
+										<option value="draft" selected><?php esc_html_e( 'Lưu bản nháp (Draft - Khuyên dùng để kiểm duyệt)', 'sergio-ai-studio' ); ?></option>
+										<option value="pending"><?php esc_html_e( 'Chờ duyệt (Pending Review)', 'sergio-ai-studio' ); ?></option>
+										<option value="publish"><?php esc_html_e( 'Xuất bản trực tiếp (Publish)', 'sergio-ai-studio' ); ?></option>
+									</select>
+								</div>
+
+								<!-- Tùy Chọn Nâng Cao (Full Width Checkboxes) -->
+								<div class="studio-field-row" style="grid-column: 1 / -1; padding-top: 10px; border-top: 1px solid #e2e8f0;">
+									<div style="display: flex; gap: 24px; flex-wrap: wrap;">
+										<label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; cursor: pointer;">
+											<input type="checkbox" id="writer_enable_rank_math" checked value="1" />
+											<span><?php esc_html_e( 'Tối ưu Rank Math SEO PRO (Focus Keyword, SEO Title/Description, Social Card)', 'sergio-ai-studio' ); ?></span>
+										</label>
+										<label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; cursor: pointer;">
+											<input type="checkbox" id="writer_enable_internal_links" checked value="1" />
+											<span><?php esc_html_e( 'Tự động quét & chèn Liên kết nội bộ (Internal Links)', 'sergio-ai-studio' ); ?></span>
+										</label>
+										<label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; cursor: pointer;">
+											<input type="checkbox" id="writer_enable_sources_box" checked value="1" />
+											<span><?php esc_html_e( 'Chèn hộp Nguồn kiểm chứng minh bạch (Sources Box) ở cuối bài', 'sergio-ai-studio' ); ?></span>
+										</label>
+									</div>
+								</div>
 							</div>
 
-							<div class="studio-form-actions" style="margin-top: 20px;">
+							<div class="studio-form-actions" style="margin-top: 24px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
 								<button type="button" class="studio-btn studio-btn-primary studio-btn-lg" id="btn_run_pipeline">
 									<?php echo self::svg( 'sparkles', 16 ); // phpcs:ignore ?>
-									<span><?php esc_html_e( 'Khởi Chạy Fact Pack & Viết Bài', 'sergio-ai-studio' ); ?></span>
+									<span><?php esc_html_e( 'Khởi Chạy Fact Pack & Viết Bài (1-Click)', 'sergio-ai-studio' ); ?></span>
+								</button>
+								<button type="button" class="studio-btn studio-btn-secondary studio-btn-lg" id="btn_step1_fact_pack_only">
+									<?php echo self::svg( 'shield', 15 ); // phpcs:ignore ?>
+									<span><?php esc_html_e( 'Chỉ Lập Fact Pack (Kiểm tra dữ kiện trước)', 'sergio-ai-studio' ); ?></span>
 								</button>
 							</div>
 						</section>
@@ -1038,6 +1128,27 @@ class Sergio_AI_Admin {
 								<span id="pipeline_progress_msg"><?php esc_html_e( 'Đang khởi tạo kết nối...', 'sergio-ai-studio' ); ?></span>
 							</div>
 							<div id="pipeline_steps_list" class="stepper-items-track"></div>
+						</div>
+
+						<!-- Interactive Fact Pack Preview Card (For Step-by-Step Mode) -->
+						<div id="fact_pack_preview_box" class="studio-surface-box" style="display: none; margin-top: 20px; border-left: 4px solid var(--sergio-accent);">
+							<div class="surface-header" style="margin-bottom: 14px;">
+								<h2 class="surface-title" style="display: flex; align-items: center; gap: 8px;">
+									<span><?php esc_html_e( 'Gói Dữ Kiện Đã Xác Thực (Fact Pack Preview)', 'sergio-ai-studio' ); ?></span>
+									<span id="fact_pack_badge" class="filter-pill" style="background: #ecfdf5; color: #059669; border-color: #a7f3d0;">Verified</span>
+								</h2>
+								<p class="panel-subtext" style="margin: 0;"><?php esc_html_e( 'Xem trước các dữ kiện thật đã được đối chiếu từ web trước khi chấp bút bài viết.', 'sergio-ai-studio' ); ?></p>
+							</div>
+							<div id="fact_pack_content_area" style="font-size: 13.5px; line-height: 1.7; color: var(--sergio-text-primary);"></div>
+							<div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid #e2e8f0; display: flex; gap: 12px; align-items: center;">
+								<button type="button" class="studio-btn studio-btn-primary" id="btn_write_from_fact_pack">
+									<?php echo self::svg( 'sparkles', 14 ); // phpcs:ignore ?>
+									<span><?php esc_html_e( 'Tiến Hành Chấp Bút Bài Viết Từ Fact Pack Này', 'sergio-ai-studio' ); ?></span>
+								</button>
+								<button type="button" class="studio-btn studio-btn-secondary" id="btn_cancel_fact_pack">
+									<span><?php esc_html_e( 'Đóng Xem Trước', 'sergio-ai-studio' ); ?></span>
+								</button>
+							</div>
 						</div>
 
 						<!-- Result Card -->
@@ -1598,66 +1709,226 @@ class Sergio_AI_Admin {
 			wp_send_json_error( array( 'message' => __( 'Không đủ quyền đăng bài viết.', 'sergio-ai-studio' ) ) );
 		}
 
+		if ( function_exists( 'set_time_limit' ) ) {
+			@set_time_limit( 300 );
+		}
+		if ( function_exists( 'wp_raise_memory_limit' ) ) {
+			@wp_raise_memory_limit( 'admin' );
+		}
+
 		$user_id      = get_current_user_id();
 		$cooldown_key = 'sergio_ai_cooldown_' . $user_id;
 		if ( get_transient( $cooldown_key ) ) {
-			wp_send_json_error( array( 'message' => __( 'Vui lòng đợi 15 giây trước khi thực thi bài tiếp theo.', 'sergio-ai-studio' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Vui lòng đợi 10 giây trước khi thực thi bài tiếp theo.', 'sergio-ai-studio' ) ) );
 		}
-		set_transient( $cooldown_key, 1, 15 );
+		set_transient( $cooldown_key, 1, 10 );
 
-		$seed_query = isset( $_POST['seed_query'] ) ? sanitize_text_field( wp_unslash( $_POST['seed_query'] ) ) : '';
-		$category   = isset( $_POST['category_id'] ) ? absint( $_POST['category_id'] ) : 0;
-		$language   = isset( $_POST['language'] ) ? sanitize_text_field( wp_unslash( $_POST['language'] ) ) : 'vi';
+		$seed_query     = isset( $_POST['seed_query'] ) ? sanitize_text_field( wp_unslash( $_POST['seed_query'] ) ) : '';
+		$category       = isset( $_POST['category_id'] ) ? absint( $_POST['category_id'] ) : 0;
+		$language       = isset( $_POST['language'] ) ? sanitize_text_field( wp_unslash( $_POST['language'] ) ) : 'vi';
+		$target_length  = isset( $_POST['target_length'] ) ? sanitize_key( $_POST['target_length'] ) : 'standard';
+		$tone           = isset( $_POST['tone'] ) ? sanitize_key( $_POST['tone'] ) : 'journalistic';
+		$model_override = isset( $_POST['model_override'] ) ? sanitize_text_field( wp_unslash( $_POST['model_override'] ) ) : '';
+		$grounding_mode = isset( $_POST['grounding_mode'] ) ? sanitize_key( $_POST['grounding_mode'] ) : 'grounding';
+		$image_option   = isset( $_POST['image_option'] ) ? sanitize_key( $_POST['image_option'] ) : 'reference';
+		$post_status    = isset( $_POST['post_status'] ) && in_array( $_POST['post_status'], array( 'draft', 'pending', 'publish' ), true ) ? $_POST['post_status'] : 'draft';
+		$enable_rm      = ! empty( $_POST['enable_rank_math'] );
+		$enable_il      = ! empty( $_POST['enable_internal_links'] );
+		$enable_sb      = ! empty( $_POST['enable_sources_box'] );
 
 		if ( empty( $seed_query ) ) {
 			wp_send_json_error( array( 'message' => __( 'Vui lòng nhập chủ đề cần nghiên cứu.', 'sergio-ai-studio' ) ) );
 		}
 
+		$options_payload = array(
+			'override_model'        => $model_override,
+			'grounding_mode'        => $grounding_mode,
+			'target_length'         => $target_length,
+			'tone'                  => $tone,
+			'image_option'          => $image_option,
+			'status'                => $post_status,
+			'category_id'           => $category,
+			'enable_rank_math'      => $enable_rm,
+			'enable_internal_links' => $enable_il,
+			'enable_sources_box'    => $enable_sb,
+		);
+
 		$logger = new Sergio_AI_Logger();
-		$client = new Sergio_AI_Gemini_Client( '', '', $logger );
+		$client = new Sergio_AI_Gemini_Client( '', $model_override, $logger );
 
 		$fact_engine = new Sergio_AI_Fact_Pack_Engine( $client, $logger );
-		$fact_pack   = $fact_engine->build_fact_pack( $seed_query, $language );
+		$fact_pack   = $fact_engine->build_fact_pack( $seed_query, $language, $options_payload );
 
 		if ( is_wp_error( $fact_pack ) ) {
 			wp_send_json_error( array( 'step' => 'fact_pack', 'message' => $fact_pack->get_error_message() ) );
 		}
 
 		$topic_analyzer = new Sergio_AI_Topic_Analyzer( $client, $logger );
-		$editorial_plan = $topic_analyzer->generate_editorial_plan( $seed_query, $fact_pack, $language );
+		$editorial_plan = $topic_analyzer->generate_editorial_plan( $seed_query, $fact_pack, $language, $options_payload );
 
 		if ( is_wp_error( $editorial_plan ) ) {
 			wp_send_json_error( array( 'step' => 'editorial_plan', 'message' => $editorial_plan->get_error_message() ) );
 		}
 
 		$writer  = new Sergio_AI_Article_Writer( $client, $logger );
-		$article = $writer->write_article( $fact_pack, $editorial_plan );
+		$article = $writer->write_article( $fact_pack, $editorial_plan, $options_payload );
 
 		if ( is_wp_error( $article ) ) {
 			wp_send_json_error( array( 'step' => 'writing', 'message' => $article->get_error_message() ) );
 		}
 
-		$post_id = $writer->save_post( $article, array(
-			'status'      => 'draft',
-			'category_id' => $category,
-		), $fact_pack['id'] );
+		$post_id = $writer->save_post( $article, $options_payload, $fact_pack['id'] );
 
 		if ( is_wp_error( $post_id ) ) {
 			wp_send_json_error( array( 'step' => 'saving', 'message' => $post_id->get_error_message() ) );
 		}
 
+		$status_label = 'publish' === $post_status ? __( 'Đã xuất bản', 'sergio-ai-studio' ) : ( 'pending' === $post_status ? __( 'Chờ duyệt', 'sergio-ai-studio' ) : __( 'Bản nháp', 'sergio-ai-studio' ) );
+
 		wp_send_json_success( array(
-			'message'       => __( 'Tạo bài viết dựa trên dữ kiện thật hoàn tất (Bản nháp)!', 'sergio-ai-studio' ),
+			'message'       => sprintf( __( 'Tạo bài viết dựa trên dữ kiện thật hoàn tất (%s)!', 'sergio-ai-studio' ), $status_label ),
 			'post_id'       => $post_id,
 			'title'         => $editorial_plan['headline'],
 			'focus_keyword' => $editorial_plan['primary_focus_keyword'],
-			'sources_count' => count( $fact_pack['source_citations'] ),
-			'sources'       => $fact_pack['source_citations'],
-			'entities'      => $fact_pack['entities'],
+			'sources_count' => count( $fact_pack['source_citations'] ?? array() ),
+			'sources'       => $fact_pack['source_citations'] ?? array(),
+			'entities'      => $fact_pack['entities'] ?? array(),
 			'word_count'    => str_word_count( strip_tags( $article['content'] ) ),
 			'edit_url'      => get_edit_post_link( $post_id, 'raw' ),
 			'view_url'      => get_permalink( $post_id ),
-			'status'        => 'draft',
+			'status'        => $post_status,
+		) );
+	}
+
+	public function ajax_generate_fact_pack_only() {
+		check_ajax_referer( 'sergio_ai_studio_nonce', 'nonce' );
+		if ( ! current_user_can( 'publish_posts' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Không đủ quyền thực hiện.', 'sergio-ai-studio' ) ) );
+		}
+
+		if ( function_exists( 'set_time_limit' ) ) {
+			@set_time_limit( 180 );
+		}
+
+		$seed_query     = isset( $_POST['seed_query'] ) ? sanitize_text_field( wp_unslash( $_POST['seed_query'] ) ) : '';
+		$language       = isset( $_POST['language'] ) ? sanitize_text_field( wp_unslash( $_POST['language'] ) ) : 'vi';
+		$model_override = isset( $_POST['model_override'] ) ? sanitize_text_field( wp_unslash( $_POST['model_override'] ) ) : '';
+		$grounding_mode = isset( $_POST['grounding_mode'] ) ? sanitize_key( $_POST['grounding_mode'] ) : 'grounding';
+
+		if ( empty( $seed_query ) ) {
+			wp_send_json_error( array( 'message' => __( 'Vui lòng nhập chủ đề cần nghiên cứu.', 'sergio-ai-studio' ) ) );
+		}
+
+		$options_payload = array(
+			'override_model' => $model_override,
+			'grounding_mode' => $grounding_mode,
+		);
+
+		$logger      = new Sergio_AI_Logger();
+		$client      = new Sergio_AI_Gemini_Client( '', $model_override, $logger );
+		$fact_engine = new Sergio_AI_Fact_Pack_Engine( $client, $logger );
+		$fact_pack   = $fact_engine->build_fact_pack( $seed_query, $language, $options_payload );
+
+		if ( is_wp_error( $fact_pack ) ) {
+			wp_send_json_error( array( 'message' => $fact_pack->get_error_message() ) );
+		}
+
+		wp_send_json_success( array(
+			'message'          => __( 'Thu thập dữ kiện và lập Fact Pack thành công!', 'sergio-ai-studio' ),
+			'pack_id'          => $fact_pack['id'] ?? 0,
+			'topic'            => $seed_query,
+			'status'           => $fact_pack['status'] ?? 'verified',
+			'primary_event'    => $fact_pack['primary_event'] ?? '',
+			'entities'         => $fact_pack['entities'] ?? array(),
+			'key_facts'        => $fact_pack['key_facts'] ?? array(),
+			'verified_metrics' => $fact_pack['verified_metrics'] ?? array(),
+			'source_citations' => $fact_pack['source_citations'] ?? array(),
+		) );
+	}
+
+	public function ajax_write_article_from_fact_pack() {
+		check_ajax_referer( 'sergio_ai_studio_nonce', 'nonce' );
+		if ( ! current_user_can( 'publish_posts' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Không đủ quyền đăng bài viết.', 'sergio-ai-studio' ) ) );
+		}
+
+		if ( function_exists( 'set_time_limit' ) ) {
+			@set_time_limit( 300 );
+		}
+		if ( function_exists( 'wp_raise_memory_limit' ) ) {
+			@wp_raise_memory_limit( 'admin' );
+		}
+
+		$pack_id        = isset( $_POST['pack_id'] ) ? absint( $_POST['pack_id'] ) : 0;
+		$category       = isset( $_POST['category_id'] ) ? absint( $_POST['category_id'] ) : 0;
+		$language       = isset( $_POST['language'] ) ? sanitize_text_field( wp_unslash( $_POST['language'] ) ) : 'vi';
+		$target_length  = isset( $_POST['target_length'] ) ? sanitize_key( $_POST['target_length'] ) : 'standard';
+		$tone           = isset( $_POST['tone'] ) ? sanitize_key( $_POST['tone'] ) : 'journalistic';
+		$model_override = isset( $_POST['model_override'] ) ? sanitize_text_field( wp_unslash( $_POST['model_override'] ) ) : '';
+		$image_option   = isset( $_POST['image_option'] ) ? sanitize_key( $_POST['image_option'] ) : 'reference';
+		$post_status    = isset( $_POST['post_status'] ) && in_array( $_POST['post_status'], array( 'draft', 'pending', 'publish' ), true ) ? $_POST['post_status'] : 'draft';
+		$enable_rm      = ! empty( $_POST['enable_rank_math'] );
+		$enable_il      = ! empty( $_POST['enable_internal_links'] );
+		$enable_sb      = ! empty( $_POST['enable_sources_box'] );
+
+		if ( empty( $pack_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'ID Fact Pack không hợp lệ.', 'sergio-ai-studio' ) ) );
+		}
+
+		$fact_pack = Sergio_AI_Fact_Pack_Engine::get_pack_by_id( $pack_id );
+		if ( ! $fact_pack ) {
+			wp_send_json_error( array( 'message' => __( 'Không tìm thấy dữ liệu Fact Pack trên hệ thống.', 'sergio-ai-studio' ) ) );
+		}
+
+		$options_payload = array(
+			'override_model'        => $model_override,
+			'target_length'         => $target_length,
+			'tone'                  => $tone,
+			'image_option'          => $image_option,
+			'status'                => $post_status,
+			'category_id'           => $category,
+			'enable_rank_math'      => $enable_rm,
+			'enable_internal_links' => $enable_il,
+			'enable_sources_box'    => $enable_sb,
+		);
+
+		$logger = new Sergio_AI_Logger();
+		$client = new Sergio_AI_Gemini_Client( '', $model_override, $logger );
+
+		$topic_analyzer = new Sergio_AI_Topic_Analyzer( $client, $logger );
+		$editorial_plan = $topic_analyzer->generate_editorial_plan( $fact_pack['topic'] ?? '', $fact_pack, $language, $options_payload );
+
+		if ( is_wp_error( $editorial_plan ) ) {
+			wp_send_json_error( array( 'step' => 'editorial_plan', 'message' => $editorial_plan->get_error_message() ) );
+		}
+
+		$writer  = new Sergio_AI_Article_Writer( $client, $logger );
+		$article = $writer->write_article( $fact_pack, $editorial_plan, $options_payload );
+
+		if ( is_wp_error( $article ) ) {
+			wp_send_json_error( array( 'step' => 'writing', 'message' => $article->get_error_message() ) );
+		}
+
+		$post_id = $writer->save_post( $article, $options_payload, $pack_id );
+
+		if ( is_wp_error( $post_id ) ) {
+			wp_send_json_error( array( 'step' => 'saving', 'message' => $post_id->get_error_message() ) );
+		}
+
+		$status_label = 'publish' === $post_status ? __( 'Đã xuất bản', 'sergio-ai-studio' ) : ( 'pending' === $post_status ? __( 'Chờ duyệt', 'sergio-ai-studio' ) : __( 'Bản nháp', 'sergio-ai-studio' ) );
+
+		wp_send_json_success( array(
+			'message'       => sprintf( __( 'Chấp bút bài viết từ Fact Pack thành công (%s)!', 'sergio-ai-studio' ), $status_label ),
+			'post_id'       => $post_id,
+			'title'         => $editorial_plan['headline'],
+			'focus_keyword' => $editorial_plan['primary_focus_keyword'],
+			'sources_count' => count( $fact_pack['source_citations'] ?? array() ),
+			'sources'       => $fact_pack['source_citations'] ?? array(),
+			'entities'      => $fact_pack['entities'] ?? array(),
+			'word_count'    => str_word_count( strip_tags( $article['content'] ) ),
+			'edit_url'      => get_edit_post_link( $post_id, 'raw' ),
+			'view_url'      => get_permalink( $post_id ),
+			'status'        => $post_status,
 		) );
 	}
 

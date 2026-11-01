@@ -52,6 +52,29 @@ class Sergio_AI_Article_Writer {
         $focus_kw   = $editorial_plan['primary_focus_keyword'];
         $outline_str = wp_json_encode( $editorial_plan['outline'], JSON_UNESCAPED_UNICODE );
 
+        $override_model = isset( $options['override_model'] ) && ! empty( $options['override_model'] ) && 'default' !== $options['override_model'] ? sanitize_text_field( $options['override_model'] ) : '';
+        $tone           = isset( $options['tone'] ) ? sanitize_key( $options['tone'] ) : 'journalistic';
+
+        $tone_guide = '';
+        switch ( $tone ) {
+            case 'tech':
+                $tone_guide = "PHONG CÁCH VIẾT: Chuyên gia kỹ thuật sâu (Tech Deep Dive). Đi sâu vào phân tích kiến trúc, benchmark, thông số chi tiết, thuật ngữ chuyên ngành chuẩn xác.";
+                break;
+            case 'tutorial':
+                $tone_guide = "PHONG CÁCH VIẾT: Hướng dẫn thực hành (Step-by-step How-To). Trình bày từng bước rõ ràng, dễ áp dụng, có hướng dẫn chi tiết.";
+                break;
+            case 'review':
+                $tone_guide = "PHONG CÁCH VIẾT: Đánh giá & So sánh toàn diện (Review & Comparison). Phân tích ưu/nhược điểm khách quan, đối chiếu bảng thông số.";
+                break;
+            case 'engaging':
+                $tone_guide = "PHONG CÁCH VIẾT: Sôi nổi, cuốn hút, truyền cảm hứng và gần gũi với đại chúng.";
+                break;
+            case 'journalistic':
+            default:
+                $tone_guide = "PHONG CÁCH VIẾT: Báo chí phân tích chuẩn mực, khách quan, trung thực và sắc bén.";
+                break;
+        }
+
         // Determine target article length from options or stored plugin settings
         $options_stored = get_option( 'sergio_ai_studio_options', array() );
         $target_length  = isset( $options['target_length'] ) ? sanitize_key( $options['target_length'] ) : ( $options_stored['schedule_target_length'] ?? 'standard' );
@@ -98,6 +121,7 @@ class Sergio_AI_Article_Writer {
         $system_prompt = "Bạn là nhà báo phân tích công nghệ hàng đầu, viết bài với tư duy sắc bén, trung thực và khách quan.
 HÔM NAY LÀ NGÀY {$current_date} (NĂM {$current_year}).
 
+{$tone_guide}
 {$length_instruction}
 
 NGUYÊN TẮC BẤT DI BẤT DỊCH (VI PHẠM SẼ BỊ TỪ CHỐI):
@@ -162,7 +186,8 @@ HƯỚNG DẪN VIẾT BÀI:
             $system_prompt,
             false,
             0.5,
-            $timeout
+            $timeout,
+            $override_model
         );
 
         if ( is_wp_error( $res ) ) {
@@ -183,14 +208,16 @@ HƯỚNG DẪN VIẾT BÀI:
         // Enforce Focus Keyword in first 10% and in at least one H2
         $parsed['content'] = $this->enforce_rank_math_keyword_placement( $parsed['content'], $focus_kw );
 
-        // Append internal link suggestion box
-        $internal_links_html = $this->get_internal_link_suggestions( $focus_kw );
-        if ( ! empty( $internal_links_html ) ) {
-            $parsed['content'] .= $internal_links_html;
+        // Append internal link suggestion box if enabled (default true)
+        if ( ! isset( $options['enable_internal_links'] ) || ! empty( $options['enable_internal_links'] ) ) {
+            $internal_links_html = $this->get_internal_link_suggestions( $focus_kw );
+            if ( ! empty( $internal_links_html ) ) {
+                $parsed['content'] .= $internal_links_html;
+            }
         }
 
-        // Append real verified sources box if AI missed it
-        if ( false === strpos( $parsed['content'], 'sergio-sources-box' ) && ! empty( $sources ) ) {
+        // Append real verified sources box if enabled (default true) and AI missed it
+        if ( ( ! isset( $options['enable_sources_box'] ) || ! empty( $options['enable_sources_box'] ) ) && false === strpos( $parsed['content'], 'sergio-sources-box' ) && ! empty( $sources ) ) {
             $parsed['content'] .= $this->build_sources_html( $sources );
         }
 
@@ -304,30 +331,46 @@ HƯỚNG DẪN VIẾT BÀI:
         // -------------------------------------------------------------
         // FEATURED IMAGE SERVICE (Rank Math & OpenGraph Ready)
         // -------------------------------------------------------------
-        try {
-            if ( class_exists( 'Sergio_AI_Image_Service' ) ) {
-                $image_service = new Sergio_AI_Image_Service( $this->logger );
+        $image_option = isset( $settings['image_option'] ) ? sanitize_key( $settings['image_option'] ) : 'reference';
 
-                // Resolve sources from article_data or fact pack
-                $sources = ! empty( $article_data['sources'] ) ? (array) $article_data['sources'] : array();
-                if ( empty( $sources ) && $fact_pack_id > 0 && class_exists( 'Sergio_AI_Fact_Pack_Engine' ) ) {
-                    $engine = new Sergio_AI_Fact_Pack_Engine( $this->client, $this->logger );
-                    $pack   = $engine->get_pack_by_id( $fact_pack_id );
-                    if ( ! empty( $pack['source_citations'] ) ) {
-                        $sources = (array) $pack['source_citations'];
+        if ( 'none' !== $image_option ) {
+            try {
+                if ( class_exists( 'Sergio_AI_Image_Service' ) ) {
+                    $image_service = new Sergio_AI_Image_Service( $this->logger );
+
+                    if ( 'banner' === $image_option ) {
+                        // Directly generate GD template banner without network scraping
+                        $clean_t = sanitize_text_field( wp_strip_all_tags( $post_title ) );
+                        $alt_t   = ! empty( $focus_kw ) ? $focus_kw . ' - ' . $clean_t : $clean_t;
+                        $banner_id = $image_service->generate_template_banner( $post_id, $clean_t, $alt_t );
+                        if ( $banner_id && ! is_wp_error( $banner_id ) ) {
+                            set_post_thumbnail( $post_id, $banner_id );
+                            update_post_meta( $post_id, '_sergio_ai_featured_image_id', $banner_id );
+                            update_post_meta( $post_id, '_sergio_ai_image_type', 'gd_template' );
+                        }
+                    } else {
+                        // Resolve sources from article_data or fact pack
+                        $sources = ! empty( $article_data['sources'] ) ? (array) $article_data['sources'] : array();
+                        if ( empty( $sources ) && $fact_pack_id > 0 && class_exists( 'Sergio_AI_Fact_Pack_Engine' ) ) {
+                            $engine = new Sergio_AI_Fact_Pack_Engine( $this->client, $this->logger );
+                            $pack   = $engine->get_pack_by_id( $fact_pack_id );
+                            if ( ! empty( $pack['source_citations'] ) ) {
+                                $sources = (array) $pack['source_citations'];
+                            }
+                        }
+
+                        $image_service->attach_featured_image(
+                            $post_id,
+                            $post_title,
+                            $article_data['primary_focus_keyword'] ?? '',
+                            $article_data['image_prompt_en'] ?? '',
+                            $sources
+                        );
                     }
                 }
-
-                $image_service->attach_featured_image(
-                    $post_id,
-                    $post_title,
-                    $article_data['primary_focus_keyword'] ?? '',
-                    $article_data['image_prompt_en'] ?? '',
-                    $sources
-                );
+            } catch ( Exception $e ) {
+                $this->logger->warning( 'image_service_failed', 'Lỗi ngoại lệ khi tạo ảnh bài viết: ' . $e->getMessage() );
             }
-        } catch ( Exception $e ) {
-            $this->logger->warning( 'image_service_failed', 'Lỗi ngoại lệ khi tạo ảnh bài viết: ' . $e->getMessage() );
         }
 
         $this->logger->info(
