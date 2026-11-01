@@ -54,6 +54,11 @@ class Sergio_AI_Logger {
 	 * @param mixed  $details Optional array or object to store as JSON
 	 */
 	public function log( $stage, $level, $message, $details = null ) {
+		// Filter out info level according to user preference ("info không cần, chỉ cần ghi lại cảnh báo và lỗi")
+		if ( 'info' === $level ) {
+			return;
+		}
+
 		global $wpdb;
 
 		$table = Sergio_AI_DB::table( 'logs' );
@@ -109,6 +114,9 @@ class Sergio_AI_Logger {
 		if ( ! empty( $level ) ) {
 			$where[]  = 'level = %s';
 			$params[] = $level;
+		} else {
+			// Default to only warning and error as requested
+			$where[] = "level IN ('warning', 'error')";
 		}
 
 		if ( ! empty( $stage ) ) {
@@ -149,6 +157,9 @@ class Sergio_AI_Logger {
 		if ( ! empty( $level ) ) {
 			$where[]  = 'level = %s';
 			$params[] = $level;
+		} else {
+			// Default to only warning and error as requested
+			$where[] = "level IN ('warning', 'error')";
 		}
 
 		if ( ! empty( $stage ) ) {
@@ -195,10 +206,10 @@ class Sergio_AI_Logger {
 			);
 		}
 
-		$total_runs    = (int) $wpdb->get_var( "SELECT COUNT(DISTINCT run_id) FROM {$table}" );
 		$error_count   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE level = 'error'" );
 		$warning_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE level = 'warning'" );
-		$info_count    = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE level = 'info'" );
+		$info_count    = 0;
+		$total_logs    = $error_count + $warning_count;
 
 		$failed_runs   = (int) $wpdb->get_var( "SELECT COUNT(DISTINCT run_id) FROM {$table} WHERE level = 'error'" );
 		$success_runs  = max( 0, $total_runs - $failed_runs );
@@ -239,6 +250,9 @@ class Sergio_AI_Logger {
 		if ( ! empty( $level ) ) {
 			$where[]  = 'level = %s';
 			$params[] = $level;
+		} else {
+			// Default to only warning and error as requested
+			$where[] = "level IN ('warning', 'error')";
 		}
 
 		if ( ! empty( $module ) ) {
@@ -481,22 +495,31 @@ class Sergio_AI_Logger {
 	 */
 	public static function format_log_message_html( $message ) {
 		$safe_msg = esc_html( $message );
+		$seen_ids = array();
 
 		return preg_replace_callback(
-			'/(?:(?:bài viết|bài|post)?\s*(?:ID\s*)?#?|ID\s*#?)(\d{1,8})/ui',
-			function( $m ) {
+			'/(?:(?:bài viết\s*(?:ID\s*)?#|ID\s*#))(\d+)/ui',
+			function( $m ) use ( &$seen_ids ) {
 				$post_id = (int) $m[1];
-				if ( $post_id <= 0 ) {
+				if ( $post_id <= 0 || isset( $seen_ids[ $post_id ] ) ) {
 					return $m[0];
 				}
 
-				$edit_url = get_edit_post_link( $post_id, 'raw' );
-				$view_url = get_permalink( $post_id );
+				if ( function_exists( 'get_post' ) ) {
+					$post = get_post( $post_id );
+					if ( ! $post || ( ! empty( $post->post_type ) && ! in_array( $post->post_type, array( 'post', 'page' ), true ) ) || ( ! empty( $post->post_status ) && in_array( $post->post_status, array( 'trash', 'auto-draft' ), true ) ) ) {
+						return $m[0];
+					}
+				}
+
+				$seen_ids[ $post_id ] = true;
+				$edit_url = function_exists( 'get_edit_post_link' ) ? get_edit_post_link( $post_id, 'raw' ) : '';
+				$view_url = function_exists( 'get_permalink' ) ? get_permalink( $post_id ) : '';
 
 				if ( $edit_url ) {
 					return $m[0] . ' <span class="sergio-log-post-actions">'
-						. '<a href="' . esc_url( $edit_url ) . '" target="_blank" class="button button-small" style="padding:0 5px; height:22px; line-height:20px; font-size:11px; margin-left:4px; vertical-align:middle;" title="' . esc_attr__( 'Chỉnh sửa bài viết trong WordPress', 'sergio-ai-studio' ) . '"><span class="dashicons dashicons-edit" style="font-size:12px; width:12px; height:12px; vertical-align:text-bottom;"></span> Sửa</a>'
-						. ( $view_url ? ' <a href="' . esc_url( $view_url ) . '" target="_blank" class="button button-small" style="padding:0 5px; height:22px; line-height:20px; font-size:11px; margin-left:2px; vertical-align:middle;" title="' . esc_attr__( 'Xem bài viết ngoài trang chủ', 'sergio-ai-studio' ) . '"><span class="dashicons dashicons-external" style="font-size:12px; width:12px; height:12px; vertical-align:text-bottom;"></span> Xem</a>' : '' )
+						. '<a href="' . esc_url( $edit_url ) . '" target="_blank" class="button button-small" style="padding:0 6px; height:20px; line-height:18px; font-size:11px; margin-left:4px; vertical-align:middle;" title="' . esc_attr__( 'Chỉnh sửa bài viết trong WordPress', 'sergio-ai-studio' ) . '">Sửa</a>'
+						. ( $view_url ? ' <a href="' . esc_url( $view_url ) . '" target="_blank" class="button button-small" style="padding:0 6px; height:20px; line-height:18px; font-size:11px; margin-left:2px; vertical-align:middle;" title="' . esc_attr__( 'Xem bài viết ngoài trang chủ', 'sergio-ai-studio' ) . '">Xem</a>' : '' )
 						. '</span>';
 				}
 

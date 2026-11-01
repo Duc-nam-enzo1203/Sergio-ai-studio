@@ -349,6 +349,11 @@ $formatted_log = Sergio_AI_Logger::format_log_message_html( $log_msg_with_post )
 assert_true( false !== strpos( $formatted_log, 'post.php?post=999' ), 'Log message converts post ID into clickable WordPress admin edit link' );
 assert_true( false !== strpos( $formatted_log, 'sergio-log-post-actions' ), 'Log message injects styled action buttons for view & edit' );
 
+// Test anti-false-positive: Normal numbers must NOT be converted to post buttons
+$log_msg_with_metrics = 'Bài viết đạt điểm SEO On-page: 90/100, số từ: 1825, cụm 100.000 GPU';
+$formatted_metrics_log = Sergio_AI_Logger::format_log_message_html( $log_msg_with_metrics );
+assert_true( false === strpos( $formatted_metrics_log, 'sergio-log-post-actions' ), 'Normal numbers like 90/100 or 100.000 are not falsely converted to post action buttons' );
+
 // Test stage label localization
 assert_true( Sergio_AI_Logger::map_stage_label( 'fact_collection' ) === 'Nghiên cứu & Đối chứng dữ kiện', 'Stage slug maps to user-friendly Vietnamese label' );
 assert_true( Sergio_AI_Logger::map_stage_label( 'writing' ) === 'Biên tập bài viết AI', 'Writing stage maps to user-friendly Vietnamese label' );

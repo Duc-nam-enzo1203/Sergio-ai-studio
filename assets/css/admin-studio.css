@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Sergio AI Studio — Native WordPress Admin Styles (Refined & Polished)
  * Strictly follows WordPress Admin typography, colors, spacing, and layout conventions.
  *
@@ -103,7 +103,7 @@
     color: #1d2327;
     font-weight: 600;
     border-bottom-color: #ffffff;
-    border-top: 3px solid #2271b1;
+    /* border-top removed */
     height: 38px;
     line-height: 35px;
 }
@@ -308,18 +308,20 @@
 }
 
 .sergio-ai-studio-wrap select {
-    min-height: 36px;
-    line-height: 34px;
-    padding: 0 34px 0 12px !important;
+    min-height: 32px;
+    line-height: 2;
+    padding: 0 32px 0 10px !important;
     border-radius: 4px;
     border: 1px solid #8c8f94;
     color: #2c3338;
-    background-color: #ffffff;
+    background: #ffffff url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%206l5%205%205-5%202%201-7%207-7-7%202-1z%22%20fill%3D%22%23555%22%2F%3E%3C%2Fsvg%3E") no-repeat right 8px center !important;
+    background-size: 16px 16px !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    box-sizing: border-box !important;
     box-shadow: none;
     max-width: 100%;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
     vertical-align: middle;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -917,4 +919,115 @@
     gap: 3px;
     margin-left: 4px;
     vertical-align: middle;
+}
+
+
+/* ==========================================================================
+   WP List Table Native Alignment & Badges (Refined)
+   ========================================================================== */
+.sergio-ai-studio-wrap .subsubsub {
+    margin: 8px 0 12px;
+    border: none !important;
+}
+
+.sergio-ai-studio-wrap .subsubsub a {
+    border: none !important;
+    text-decoration: none;
+    box-shadow: none !important;
+}
+
+.sergio-ai-studio-wrap .subsubsub a.current {
+    font-weight: 600;
+    color: #000;
+    border: none !important;
+}
+
+.sergio-ai-studio-wrap .tablenav .actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    float: left;
+    padding: 2px 0;
+}
+
+.sergio-ai-studio-wrap .tablenav .actions select {
+    margin: 0;
+}
+
+.sergio-ai-studio-wrap .tablenav .actions .button {
+    margin: 0;
+}
+
+.sergio-ai-studio-wrap table.wp-list-table {
+    border-collapse: collapse !important;
+    table-layout: fixed;
+    width: 100%;
+}
+
+.sergio-ai-studio-wrap table.wp-list-table th.check-column,
+.sergio-ai-studio-wrap table.wp-list-table td.check-column {
+    width: 38px !important;
+    min-width: 38px !important;
+    max-width: 38px !important;
+    padding: 8px 0 !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+}
+
+.sergio-ai-studio-wrap table.wp-list-table .check-column input[type="checkbox"] {
+    margin: 0 auto !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+}
+
+.sergio-ai-studio-wrap table.wp-list-table th.column-date,
+.sergio-ai-studio-wrap table.wp-list-table td.column-date {
+    width: 160px !important;
+    vertical-align: middle;
+}
+
+.sergio-ai-studio-wrap table.wp-list-table th.column-level,
+.sergio-ai-studio-wrap table.wp-list-table td.column-level {
+    width: 100px !important;
+    vertical-align: middle;
+    text-align: center;
+}
+
+.sergio-ai-studio-wrap table.wp-list-table th.column-stage,
+.sergio-ai-studio-wrap table.wp-list-table td.column-stage {
+    width: 180px !important;
+    vertical-align: middle;
+}
+
+.sergio-ai-studio-wrap table.wp-list-table td.column-primary {
+    vertical-align: middle;
+}
+
+.sergio-log-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 3px;
+    line-height: 1.4;
+    letter-spacing: 0.3px;
+    border: 1px solid transparent;
+}
+
+.sergio-log-badge.badge-error {
+    background: #fcf0f1;
+    color: #b32d2e;
+    border-color: #f5c2c7;
+}
+
+.sergio-log-badge.badge-warning {
+    background: #fff8e5;
+    color: #855a00;
+    border-color: #ffeeba;
+}
+
+.sergio-log-badge.badge-info {
+    background: #f0f6fc;
+    color: #0c5460;
+    border-color: #bee5eb;
 }

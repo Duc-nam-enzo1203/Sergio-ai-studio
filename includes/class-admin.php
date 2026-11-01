@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Admin Dashboard UI & AJAX Controller — Sergio AI Studio v2.1
  *
@@ -717,13 +717,13 @@ class Sergio_AI_Admin {
 												<td>
 													<select name="sergio_ai_studio_options[schedule_topic_mode]" id="schedule_topic_mode" style="width: 100%;">
 														<option value="hybrid" <?php selected( $topic_mode, 'hybrid' ); ?>>
-															<?php esc_html_e( 'Kết Hợp Thông Minh (Ưu tiên Hàng đợi, tự động tìm kiếm khi hết)', 'sergio-ai-studio' ); ?>
+															<?php esc_html_e( 'Kết Hợp Thông Minh (Ưu tiên hàng đợi, tự tìm khi hết)', 'sergio-ai-studio' ); ?>
 														</option>
 														<option value="queue_only" <?php selected( $topic_mode, 'queue_only' ); ?>>
-															<?php esc_html_e( 'Chỉ Lấy Từ Hàng Đợi (Chỉ viết các chủ đề bạn nạp sẵn)', 'sergio-ai-studio' ); ?>
+															<?php esc_html_e( 'Chỉ Lấy Từ Hàng Đợi (Chỉ viết chủ đề nạp sẵn)', 'sergio-ai-studio' ); ?>
 														</option>
 														<option value="ai_discover" <?php selected( $topic_mode, 'ai_discover' ); ?>>
-															<?php esc_html_e( 'AI Tự Động Khám Phá 100% (Tự nghiên cứu tin hot theo Lĩnh vực)', 'sergio-ai-studio' ); ?>
+															<?php esc_html_e( 'AI Tự Khám Phá (Tự nghiên cứu theo lĩnh vực)', 'sergio-ai-studio' ); ?>
 														</option>
 													</select>
 												</td>
@@ -1490,8 +1490,7 @@ class Sergio_AI_Admin {
 					<!-- Subsubsub Filter Links -->
 					<ul class="subsubsub">
 						<li class="all"><a href="#tab-logs" class="current log-subsubsub-link" data-level="" aria-current="page"><?php esc_html_e( 'Tất cả', 'sergio-ai-studio' ); ?> <span class="count">(<?php echo (int) $log_stats['total_logs']; ?>)</span></a> |</li>
-						<li class="info"><a href="#tab-logs" class="log-subsubsub-link" data-level="info">INFO <span class="count">(<?php echo (int) $log_stats['info_count']; ?>)</span></a> |</li>
-						<li class="warning"><a href="#tab-logs" class="log-subsubsub-link" data-level="warning"><?php esc_html_e( 'Cảnh báo', 'sergio-ai-studio' ); ?> <span class="count">(<?php echo (int) $log_stats['warning_count']; ?>)</span></a> |</li>
+												<li class="warning"><a href="#tab-logs" class="log-subsubsub-link" data-level="warning"><?php esc_html_e( 'Cảnh báo', 'sergio-ai-studio' ); ?> <span class="count">(<?php echo (int) $log_stats['warning_count']; ?>)</span></a> |</li>
 						<li class="error"><a href="#tab-logs" class="log-subsubsub-link" data-level="error"><?php esc_html_e( 'Lỗi', 'sergio-ai-studio' ); ?> <span class="count">(<?php echo (int) $log_stats['error_count']; ?>)</span></a></li>
 					</ul>
 
@@ -1518,7 +1517,6 @@ class Sergio_AI_Admin {
 							<label for="filter-by-level" class="screen-reader-text"><?php esc_html_e( 'Lọc theo cấp độ', 'sergio-ai-studio' ); ?></label>
 							<select name="level" id="filter-by-level">
 								<option value=""><?php esc_html_e( 'Tất cả cấp độ', 'sergio-ai-studio' ); ?></option>
-								<option value="info">INFO</option>
 								<option value="warning"><?php esc_html_e( 'Cảnh báo (WARN)', 'sergio-ai-studio' ); ?></option>
 								<option value="error"><?php esc_html_e( 'Lỗi (ERROR)', 'sergio-ai-studio' ); ?></option>
 							</select>
@@ -1548,10 +1546,10 @@ class Sergio_AI_Admin {
 					<table class="wp-list-table widefat fixed striped posts" id="logs_table">
 						<thead>
 							<tr>
-								<td id="cb" class="manage-column column-cb check-column">
+								<th scope="col" id="cb" class="manage-column column-cb check-column">
 									<label class="screen-reader-text" for="cb-select-all-1"><?php esc_html_e( 'Chọn tất cả', 'sergio-ai-studio' ); ?></label>
 									<input id="cb-select-all-1" type="checkbox">
-								</td>
+								</th>
 								<th scope="col" id="date" class="manage-column column-date" style="width: 160px;"><?php esc_html_e( 'Thời Gian', 'sergio-ai-studio' ); ?></th>
 								<th scope="col" id="level" class="manage-column column-level" style="width: 90px;"><?php esc_html_e( 'Cấp Độ', 'sergio-ai-studio' ); ?></th>
 								<th scope="col" id="stage" class="manage-column column-stage" style="width: 180px;"><?php esc_html_e( 'Giai Đoạn', 'sergio-ai-studio' ); ?></th>
@@ -1563,10 +1561,10 @@ class Sergio_AI_Admin {
 						</tbody>
 						<tfoot>
 							<tr>
-								<td class="manage-column column-cb check-column">
+								<th scope="col" class="manage-column column-cb check-column">
 									<label class="screen-reader-text" for="cb-select-all-2"><?php esc_html_e( 'Chọn tất cả', 'sergio-ai-studio' ); ?></label>
 									<input id="cb-select-all-2" type="checkbox">
-								</td>
+								</th>
 								<th scope="col" class="manage-column column-date"><?php esc_html_e( 'Thời Gian', 'sergio-ai-studio' ); ?></th>
 								<th scope="col" class="manage-column column-level"><?php esc_html_e( 'Cấp Độ', 'sergio-ai-studio' ); ?></th>
 								<th scope="col" class="manage-column column-stage"><?php esc_html_e( 'Giai Đoạn', 'sergio-ai-studio' ); ?></th>
@@ -2353,11 +2351,11 @@ class Sergio_AI_Admin {
 				</td>
 				<td class="column-level">
 					<?php if ( 'error' === $log['level'] ) : ?>
-						<span class="notice notice-error inline" style="padding: 2px 6px; margin: 0; font-weight: 600; font-size: 11px;">ERROR</span>
+						<span class="sergio-log-badge badge-error"><?php esc_html_e( 'LỖI', 'sergio-ai-studio' ); ?></span>
 					<?php elseif ( 'warning' === $log['level'] ) : ?>
-						<span class="notice notice-warning inline" style="padding: 2px 6px; margin: 0; font-weight: 600; font-size: 11px;">WARN</span>
+						<span class="sergio-log-badge badge-warning"><?php esc_html_e( 'CẢNH BÁO', 'sergio-ai-studio' ); ?></span>
 					<?php else : ?>
-						<span class="notice notice-info inline" style="padding: 2px 6px; margin: 0; font-size: 11px;">INFO</span>
+						<span class="sergio-log-badge badge-info"><?php esc_html_e( 'INFO', 'sergio-ai-studio' ); ?></span>
 					<?php endif; ?>
 				</td>
 				<td class="column-stage">
