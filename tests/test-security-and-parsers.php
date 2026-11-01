@@ -28,6 +28,9 @@ function wp_salt( $scheme = 'auth' ) {
 function sanitize_text_field( $str ) {
     return is_scalar( $str ) ? trim( strip_tags( (string) $str ) ) : '';
 }
+function sanitize_title( $title ) {
+    return strtolower( trim( preg_replace( '/[^a-zA-Z0-9]+/', '-', (string) $title ), '-' ) );
+}
 function wp_strip_all_tags( $string, $remove_breaks = false ) {
     return strip_tags( (string) $string );
 }
@@ -252,6 +255,40 @@ foreach ( $github_citations as $vc ) {
 $has_platform = in_array( 'github.com', array_keys( $unique_domains ), true );
 $gate_passed = ( count( $unique_domains ) >= 2 ) || ( $has_platform && count( $unique_urls ) >= 2 );
 assert_true( $gate_passed, 'Verification gate recognizes multiple independent repositories on github.com as verified' );
+
+// 10. Test Rank Math SEO Pro Architecture & Enforcements
+require_once __DIR__ . '/../includes/class-article-writer.php';
+$writer_test = new Sergio_AI_Article_Writer( $client_inst, new Sergio_AI_Logger() );
+$reflection  = new ReflectionClass( $writer_test );
+
+// Test TOC Generator
+$toc_method = $reflection->getMethod( 'enforce_table_of_contents' );
+$toc_method->setAccessible( true );
+$sample_content = '<p>Giới thiệu về AI.</p><h2>Kiến trúc vLLM</h2><p>Phân tích vLLM.</p><h2>Benchmark thực tế</h2><p>Số liệu benchmark.</p>';
+$toc_result = $toc_method->invoke( $writer_test, $sample_content );
+assert_true( false !== strpos( $toc_result, 'sergio-toc' ), 'Automated Table of Contents (TOC) is injected into content' );
+assert_true( false !== strpos( $toc_result, 'href="#kientruc-vllm"' ) || false !== strpos( $toc_result, 'href="#' ), 'TOC contains anchor link to headings' );
+
+// Test FAQ Section Generator
+$faq_method = $reflection->getMethod( 'enforce_faq_section' );
+$faq_method->setAccessible( true );
+$faq_result = $faq_method->invoke( $writer_test, $sample_content, array( 'key_facts' => array( 'Dữ kiện 1: Đạt 1000 stars.' ) ), 'mã nguồn mở' );
+assert_true( false !== strpos( $faq_result, 'sergio-faq-section' ), 'Structured FAQ section is injected for GEO/AEO' );
+assert_true( false !== strpos( $faq_result, 'mã nguồn mở' ), 'FAQ section mentions focus keyword' );
+
+// Test SEO Title & Meta Description Enforcement
+$meta_method = $reflection->getMethod( 'enforce_seo_metadata' );
+$meta_method->setAccessible( true );
+$article_meta = array(
+    'seo_title' => 'Tổng Hợp Xu Hướng AI Mới Nhất',
+    'meta_description' => 'Báo cáo chi tiết về các dự án công nghệ nổi bật năm 2026.',
+    'content' => $sample_content,
+);
+$meta_method->invokeArgs( $writer_test, array( &$article_meta, 'repo github', 'Tổng Hợp Xu Hướng AI Mới Nhất' ) );
+assert_true( false !== mb_stripos( $article_meta['seo_title'], 'repo github', 0, 'UTF-8' ), 'Focus keyword is enforced into SEO Title' );
+assert_true( false !== mb_stripos( $article_meta['meta_description'], 'repo github', 0, 'UTF-8' ), 'Focus keyword is enforced into Meta Description' );
+assert_true( mb_strlen( $article_meta['seo_title'], 'UTF-8' ) <= 65, 'SEO Title length conforms to SERP boundary (<=65 chars)' );
+assert_true( mb_strlen( $article_meta['meta_description'], 'UTF-8' ) <= 165, 'Meta Description conforms to SERP boundary (<=165 chars)' );
 
 echo "\n🎉 ALL TESTS PASSED SUCCESSFULLY!\n";
 

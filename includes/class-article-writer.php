@@ -208,6 +208,15 @@ HƯỚNG DẪN VIẾT BÀI:
         // Enforce Focus Keyword in first 10% and in at least one H2
         $parsed['content'] = $this->enforce_rank_math_keyword_placement( $parsed['content'], $focus_kw );
 
+        // Enforce Table of Contents (TOC) with anchor IDs (Rank Math SEO requirement)
+        $parsed['content'] = $this->enforce_table_of_contents( $parsed['content'] );
+
+        // Enforce FAQ / GEO / AEO Section with structured Q&A (Helpful Content)
+        $parsed['content'] = $this->enforce_faq_section( $parsed['content'], $fact_pack, $focus_kw );
+
+        // Enforce strict Rank Math SEO Title and Meta Description constraints
+        $this->enforce_seo_metadata( $parsed, $focus_kw, $headline );
+
         // Append internal link suggestion box if enabled (default true)
         if ( ! isset( $options['enable_internal_links'] ) || ! empty( $options['enable_internal_links'] ) ) {
             $internal_links_html = $this->get_internal_link_suggestions( $focus_kw );
@@ -373,6 +382,23 @@ HƯỚNG DẪN VIẾT BÀI:
             }
         }
 
+        // -------------------------------------------------------------
+        // AUTOMATED ON-PAGE SEO AUDIT & RANK MATH SCORING
+        // -------------------------------------------------------------
+        if ( class_exists( 'Sergio_AI_SEO_Audit' ) ) {
+            try {
+                $seo_audit = Sergio_AI_SEO_Audit::audit_post( $post_id );
+                if ( ! is_wp_error( $seo_audit ) && ! empty( $seo_audit['score'] ) ) {
+                    $this->logger->info(
+                        'seo_audit_initial',
+                        sprintf( 'Bài viết #%d đạt điểm SEO On-page: %d/100 chuẩn Rank Math.', $post_id, $seo_audit['score'] )
+                    );
+                }
+            } catch ( Exception $e ) {
+                $this->logger->warning( 'seo_audit_failed', 'Lỗi khi kiểm định SEO bài viết: ' . $e->getMessage() );
+            }
+        }
+
         $this->logger->info(
             'post_saved_success',
             sprintf( 'Đã tạo bài viết thành công ID #%d (Trạng thái: %s, Tiêu đề: "%s")', $post_id, $post_status, $post_title )
@@ -453,15 +479,21 @@ HƯỚNG DẪN VIẾT BÀI:
         $html .= '<h3 class="h5 mb-3" style="font-size:17px; font-weight:700; color:#0f172a; margin-bottom:12px;">🔗 Nguồn tham khảo & Dữ liệu đối chiếu:</h3>';
         $html .= '<ul class="mb-0" style="padding-left:20px; font-size:14px; line-height:1.8; color:#475569;">';
 
+        $is_first = true;
         foreach ( $sources as $src ) {
             $title = ! empty( $src['title'] ) ? esc_html( $src['title'] ) : esc_html( $src['publisher'] );
             $url   = ! empty( $src['url'] ) ? esc_url( $src['url'] ) : '#';
             $pub   = ! empty( $src['publisher'] ) ? ' — <em>' . esc_html( $src['publisher'] ) . '</em>' : '';
             $date  = ! empty( $src['published_date'] ) ? ' (' . esc_html( $src['published_date'] ) . ')' : '';
 
+            // Rank Math SEO Pro Rule: At least 1 trusted primary external source must be DoFollow
+            $rel = $is_first ? 'noopener noreferrer' : 'noopener noreferrer nofollow';
+            $is_first = false;
+
             $html .= sprintf(
-                '<li><a href="%s" target="_blank" rel="noopener noreferrer nofollow" style="color:#4f46e5; text-decoration:underline;">%s</a>%s%s</li>',
+                '<li><a href="%s" target="_blank" rel="%s" style="color:#4f46e5; text-decoration:underline;">%s</a>%s%s</li>',
                 $url,
+                $rel,
                 $title,
                 $pub,
                 $date
@@ -526,6 +558,189 @@ HƯỚNG DẪN VIẾT BÀI:
         }
 
         return $content;
+    }
+
+    /**
+     * Generate an automated Table of Contents (TOC) with anchor IDs on H2 headings
+     * Satisfies Rank Math SEO "Use Table of Contents to break-down your text" requirement
+     *
+     * @param string $content HTML content
+     * @return string
+     */
+    private function enforce_table_of_contents( $content ) {
+        // If content already contains a structured TOC with links, skip
+        if ( preg_match( '/<(?:div|nav)[^>]*(?:class|id)=[\'"][^\'"]*toc[^\'"]*[\'"][^>]*>.*?<a\s+href=[\'"]#/isu', $content ) ) {
+            return $content;
+        }
+
+        // Extract all H2 tags
+        if ( ! preg_match_all( '/<h2\b([^>]*)>(.*?)<\/h2>/isu', $content, $matches, PREG_SET_ORDER ) || count( $matches ) < 2 ) {
+            return $content;
+        }
+
+        $toc_items = array();
+        $counter   = 1;
+
+        // Replace each H2 with an H2 containing an id attribute
+        $content = preg_replace_callback( '/<h2\b([^>]*)>(.*?)<\/h2>/isu', function( $m ) use ( &$toc_items, &$counter ) {
+            $attr       = $m[1];
+            $title_html = $m[2];
+            $plain_text = trim( wp_strip_all_tags( $title_html ) );
+
+            // Check if already has an id
+            if ( preg_match( '/\bid=([\'"])(.*?)\1/i', $attr, $id_match ) ) {
+                $anchor_id = $id_match[2];
+            } else {
+                $slug = function_exists( 'sanitize_title' )
+                    ? sanitize_title( $plain_text )
+                    : strtolower( trim( preg_replace( '/[^a-zA-Z0-9]+/', '-', $plain_text ), '-' ) );
+                if ( empty( $slug ) ) {
+                    $slug = 'muc-' . $counter;
+                }
+                $anchor_id = $slug;
+                $attr = trim( $attr . ' id="' . esc_attr( $anchor_id ) . '"' );
+            }
+
+            $toc_items[] = array(
+                'id'    => $anchor_id,
+                'title' => $plain_text,
+            );
+            $counter++;
+
+            return sprintf( '<h2 %s>%s</h2>', $attr, $title_html );
+        }, $content );
+
+        if ( empty( $toc_items ) ) {
+            return $content;
+        }
+
+        // Build elegant TOC Box
+        $toc_html  = '<div class="sergio-toc my-4 p-4 border rounded" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:18px 22px; margin:24px 0;">';
+        $toc_html .= '<div style="font-weight:700; font-size:15px; color:#0f172a; margin-bottom:12px; display:flex; align-items:center; gap:8px;">';
+        $toc_html .= '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>';
+        $toc_html .= '<span>Mục Lục Nội Dung</span></div>';
+        $toc_html .= '<ol style="margin:0; padding-left:22px; font-size:14px; line-height:1.8; color:#334155;">';
+        foreach ( $toc_items as $item ) {
+            $toc_html .= sprintf( '<li><a href="#%s" style="color:#4f46e5; text-decoration:none; font-weight:500;">%s</a></li>', esc_attr( $item['id'] ), esc_html( $item['title'] ) );
+        }
+        $toc_html .= '</ol></div>';
+
+        // Insert after first paragraph <p>...</p> or before first H2
+        if ( preg_match( '/<\/p>/i', $content ) ) {
+            $content = preg_replace( '/<\/p>/i', "</p>\n" . $toc_html, $content, 1 );
+        } else {
+            $content = $toc_html . "\n" . $content;
+        }
+
+        return $content;
+    }
+
+    /**
+     * Ensure content has a structured FAQ / Key Takeaways section (GEO / AEO / Helpful Content)
+     *
+     * @param string $content
+     * @param array  $fact_pack
+     * @param string $focus_kw
+     * @return string
+     */
+    private function enforce_faq_section( $content, $fact_pack, $focus_kw ) {
+        if ( preg_match( '/(?:faq|câu hỏi thường gặp|hỏi đáp|key takeaways|tóm tắt nhanh|q&a)/iu', $content ) ) {
+            return $content;
+        }
+
+        $facts = isset( $fact_pack['key_facts'] ) ? (array) $fact_pack['key_facts'] : array();
+        if ( empty( $facts ) && empty( $focus_kw ) ) {
+            return $content;
+        }
+
+        $clean_kw = esc_html( $focus_kw );
+        $faq_html  = sprintf( '<div class="sergio-faq-section my-5 p-4 border rounded" style="background:#fdfdfe; border:1px solid #e0e7ff; border-radius:12px; padding:22px 26px; margin-top:36px;">' );
+        $faq_html .= sprintf( '<h2 style="font-size:18px; font-weight:700; color:#1e1b4b; margin-bottom:16px;">Câu Hỏi Thường Gặp Về %s (FAQ)</h2>', $clean_kw );
+
+        $faq_html .= sprintf( '<div style="margin-bottom:14px;"><h3 style="font-size:15px; font-weight:600; color:#312e81; margin-bottom:6px;">1. %s có điểm gì nổi bật đáng chú ý?</h3>', $clean_kw );
+        $ans1 = ! empty( $facts[0] ) ? esc_html( $facts[0] ) : sprintf( 'Các phân tích thực tế cho thấy %s mang lại nhiều cải tiến về hiệu năng và khả năng ứng dụng thực tiễn.', $clean_kw );
+        $faq_html .= sprintf( '<p style="margin:0; font-size:14px; line-height:1.7; color:#475569;">%s</p></div>', $ans1 );
+
+        if ( ! empty( $facts[1] ) ) {
+            $faq_html .= sprintf( '<div style="margin-bottom:14px;"><h3 style="font-size:15px; font-weight:600; color:#312e81; margin-bottom:6px;">2. Số liệu và dữ kiện thực tế về %s được ghi nhận như thế nào?</h3>', $clean_kw );
+            $faq_html .= sprintf( '<p style="margin:0; font-size:14px; line-height:1.7; color:#475569;">%s</p></div>', esc_html( $facts[1] ) );
+        }
+
+        $faq_html .= sprintf( '<div><h3 style="font-size:15px; font-weight:600; color:#312e81; margin-bottom:6px;">3. Cần lưu ý những gì khi tiếp cận và ứng dụng %s?</h3>', $clean_kw );
+        $faq_html .= sprintf( '<p style="margin:0; font-size:14px; line-height:1.7; color:#475569;">Người dùng và kỹ sư công nghệ nên đối chiếu các thông số từ tài liệu chính thức, thử nghiệm trong môi trường thực tế trước khi triển khai quy mô lớn.</p></div>' );
+
+        $faq_html .= '</div>';
+
+        return $content . "\n" . $faq_html;
+    }
+
+    /**
+     * Enforce strict Rank Math SEO Title and Meta Description constraints
+     *
+     * @param array  $article_data Output from parser
+     * @param string $focus_kw     Focus keyword
+     * @param string $headline     Article Headline
+     */
+    private function enforce_seo_metadata( &$article_data, $focus_kw, $headline ) {
+        $has_mb = function_exists( 'mb_strlen' );
+
+        // 1. Optimize SEO Title (Ideal: 45 - 60 chars, contains focus keyword at/near beginning)
+        $title = ! empty( $article_data['seo_title'] ) ? trim( wp_strip_all_tags( $article_data['seo_title'] ) ) : trim( wp_strip_all_tags( $headline ) );
+
+        $kw_in_title = false;
+        if ( ! empty( $focus_kw ) ) {
+            $kw_in_title = $has_mb ? ( false !== mb_stripos( $title, $focus_kw, 0, 'UTF-8' ) ) : ( false !== stripos( $title, $focus_kw ) );
+        }
+
+        if ( ! $kw_in_title && ! empty( $focus_kw ) ) {
+            $candidate = $focus_kw . ': ' . $title;
+            $cand_len  = $has_mb ? mb_strlen( $candidate, 'UTF-8' ) : strlen( $candidate );
+            if ( $cand_len <= 65 ) {
+                $title = $candidate;
+            } else {
+                $remain = 60 - ( $has_mb ? mb_strlen( $focus_kw, 'UTF-8' ) : strlen( $focus_kw ) ) - 3;
+                $short_title = $has_mb ? mb_substr( $title, 0, max( 15, $remain ), 'UTF-8' ) : substr( $title, 0, max( 15, $remain ) );
+                $title = $focus_kw . ': ' . trim( $short_title ) . '...';
+            }
+        }
+
+        $title_len = $has_mb ? mb_strlen( $title, 'UTF-8' ) : strlen( $title );
+        if ( $title_len > 65 ) {
+            $title = $has_mb ? mb_substr( $title, 0, 62, 'UTF-8' ) . '...' : substr( $title, 0, 62 ) . '...';
+        }
+
+        $article_data['seo_title'] = $title;
+
+        // 2. Optimize Meta Description (Ideal: 130 - 160 chars, contains focus keyword + clear CTA)
+        $desc = ! empty( $article_data['meta_description'] ) ? trim( wp_strip_all_tags( $article_data['meta_description'] ) ) : '';
+        if ( empty( $desc ) ) {
+            $desc = wp_strip_all_tags( $article_data['content'] );
+            $desc = $has_mb ? mb_substr( $desc, 0, 150, 'UTF-8' ) : substr( $desc, 0, 150 );
+        }
+
+        $kw_in_desc = false;
+        if ( ! empty( $focus_kw ) ) {
+            $kw_in_desc = $has_mb ? ( false !== mb_stripos( $desc, $focus_kw, 0, 'UTF-8' ) ) : ( false !== stripos( $desc, $focus_kw ) );
+        }
+
+        if ( ! $kw_in_desc && ! empty( $focus_kw ) ) {
+            $prefix = sprintf( 'Khám phá %s: ', $focus_kw );
+            $desc   = $prefix . $desc;
+        }
+
+        // Add call to action if room permits
+        $desc_len = $has_mb ? mb_strlen( $desc, 'UTF-8' ) : strlen( $desc );
+        if ( $desc_len < 135 && false === stripos( $desc, 'chi tiết' ) && false === stripos( $desc, 'tìm hiểu' ) ) {
+            $desc .= ' Xem đánh giá và phân tích chi tiết!';
+        }
+
+        // Trim to 160 chars max
+        $desc_len = $has_mb ? mb_strlen( $desc, 'UTF-8' ) : strlen( $desc );
+        if ( $desc_len > 160 ) {
+            $desc = $has_mb ? mb_substr( $desc, 0, 157, 'UTF-8' ) . '...' : substr( $desc, 0, 157 ) . '...';
+        }
+
+        $article_data['meta_description'] = $desc;
     }
 
     /**

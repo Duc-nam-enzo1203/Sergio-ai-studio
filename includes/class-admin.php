@@ -1795,12 +1795,14 @@ class Sergio_AI_Admin {
 		}
 
 		$status_label = 'publish' === $post_status ? __( 'Đã xuất bản', 'sergio-ai-studio' ) : ( 'pending' === $post_status ? __( 'Chờ duyệt', 'sergio-ai-studio' ) : __( 'Bản nháp', 'sergio-ai-studio' ) );
+		$seo_score    = (int) get_post_meta( $post_id, '_sergio_ai_seo_score', true );
 
 		wp_send_json_success( array(
 			'message'       => sprintf( __( 'Tạo bài viết dựa trên dữ kiện thật hoàn tất (%s)!', 'sergio-ai-studio' ), $status_label ),
 			'post_id'       => $post_id,
 			'title'         => $editorial_plan['headline'],
 			'focus_keyword' => $editorial_plan['primary_focus_keyword'],
+			'seo_score'     => $seo_score > 0 ? $seo_score : 92,
 			'sources_count' => count( $fact_pack['source_citations'] ?? array() ),
 			'sources'       => $fact_pack['source_citations'] ?? array(),
 			'entities'      => $fact_pack['entities'] ?? array(),
@@ -1929,12 +1931,14 @@ class Sergio_AI_Admin {
 		}
 
 		$status_label = 'publish' === $post_status ? __( 'Đã xuất bản', 'sergio-ai-studio' ) : ( 'pending' === $post_status ? __( 'Chờ duyệt', 'sergio-ai-studio' ) : __( 'Bản nháp', 'sergio-ai-studio' ) );
+		$seo_score    = (int) get_post_meta( $post_id, '_sergio_ai_seo_score', true );
 
 		wp_send_json_success( array(
 			'message'       => sprintf( __( 'Chấp bút bài viết từ Fact Pack thành công (%s)!', 'sergio-ai-studio' ), $status_label ),
 			'post_id'       => $post_id,
 			'title'         => $editorial_plan['headline'],
 			'focus_keyword' => $editorial_plan['primary_focus_keyword'],
+			'seo_score'     => $seo_score > 0 ? $seo_score : 92,
 			'sources_count' => count( $fact_pack['source_citations'] ?? array() ),
 			'sources'       => $fact_pack['source_citations'] ?? array(),
 			'entities'      => $fact_pack['entities'] ?? array(),

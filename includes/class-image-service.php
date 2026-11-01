@@ -118,6 +118,15 @@ class Sergio_AI_Image_Service {
         // Store attachment meta link
         update_post_meta( $post_id, '_sergio_ai_featured_image_id', $attachment_id );
 
+        // Rank Math Social Preview image integration
+        $thumb_url = wp_get_attachment_image_url( $attachment_id, 'full' );
+        if ( $thumb_url ) {
+            update_post_meta( $post_id, 'rank_math_facebook_image', $thumb_url );
+            update_post_meta( $post_id, 'rank_math_facebook_image_id', $attachment_id );
+            update_post_meta( $post_id, 'rank_math_twitter_image', $thumb_url );
+            update_post_meta( $post_id, 'rank_math_twitter_image_id', $attachment_id );
+        }
+
         $this->logger->info( 'image_service_attached', sprintf( 'Đã gắn ảnh đại diện #%d đạt chuẩn Rank Math cho bài viết #%d.', $attachment_id, $post_id ) );
 
         return $attachment_id;

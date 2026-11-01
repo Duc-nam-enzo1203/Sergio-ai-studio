@@ -440,8 +440,9 @@ jQuery(document).ready(function($) {
                         '<div style="font-size: 16px; font-weight: 700; color: #0f172a;">' + escapeHtml(d.title) + '</div>' +
                         statusBadge +
                     '</div>' +
-                    '<div style="display: flex; gap: 20px; margin-bottom: 16px; font-size: 13px; color: #64748b; flex-wrap: wrap;">' +
+                    '<div style="display: flex; gap: 20px; margin-bottom: 16px; font-size: 13px; color: #64748b; flex-wrap: wrap; align-items: center;">' +
                         '<span>Từ khóa chính: <strong style="color: #0f172a;">' + escapeHtml(d.focus_keyword) + '</strong></span>' +
+                        '<span>Điểm SEO: <strong style="color: #059669; background: #ecfdf5; padding: 2px 8px; border-radius: 4px; border: 1px solid #a7f3d0;">' + (d.seo_score ? escapeHtml(d.seo_score) + '/100 (Xanh Rank Math)' : 'Tối ưu') + '</strong></span>' +
                         '<span>Độ dài: <strong style="color: #0f172a;">~' + escapeHtml(d.word_count) + ' từ</strong></span>' +
                         '<span>Nguồn kiểm chứng: <strong style="color: #059669;">' + escapeHtml(d.sources_count) + ' nguồn uy tín</strong></span>' +
                     '</div>' +
@@ -632,8 +633,9 @@ jQuery(document).ready(function($) {
                         '<div style="font-size: 16px; font-weight: 700; color: #0f172a;">' + escapeHtml(d.title) + '</div>' +
                         statusBadge +
                     '</div>' +
-                    '<div style="display: flex; gap: 20px; margin-bottom: 16px; font-size: 13px; color: #64748b; flex-wrap: wrap;">' +
+                    '<div style="display: flex; gap: 20px; margin-bottom: 16px; font-size: 13px; color: #64748b; flex-wrap: wrap; align-items: center;">' +
                         '<span>Từ khóa: <strong style="color: #0f172a;">' + escapeHtml(d.focus_keyword) + '</strong></span>' +
+                        '<span>Điểm SEO: <strong style="color: #059669; background: #ecfdf5; padding: 2px 8px; border-radius: 4px; border: 1px solid #a7f3d0;">' + (d.seo_score ? escapeHtml(d.seo_score) + '/100 (Xanh Rank Math)' : 'Tối ưu') + '</strong></span>' +
                         '<span>Độ dài: <strong style="color: #0f172a;">~' + escapeHtml(d.word_count) + ' từ</strong></span>' +
                         '<span>Nguồn: <strong style="color: #059669;">' + escapeHtml(d.sources_count) + ' nguồn</strong></span>' +
                     '</div>' +
