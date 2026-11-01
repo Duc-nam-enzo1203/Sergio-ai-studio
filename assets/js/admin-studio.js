@@ -331,6 +331,7 @@ jQuery(document).ready(function($) {
             tone: $('#writer_tone').val() || 'journalistic',
             model_override: $('#writer_model_override').val() || 'default',
             grounding_mode: $('#writer_grounding_mode').val() || 'grounding',
+            verification_gate: $('#writer_verification_gate').val() || 'standard',
             image_option: $('#writer_image_option').val() || 'reference',
             post_status: $('#writer_post_status').val() || 'draft',
             enable_rank_math: $('#writer_enable_rank_math').is(':checked') ? 1 : 0,
@@ -477,7 +478,8 @@ jQuery(document).ready(function($) {
                 seed_query: opts.seed_query,
                 language: opts.language,
                 model_override: opts.model_override,
-                grounding_mode: opts.grounding_mode
+                grounding_mode: opts.grounding_mode,
+                verification_gate: opts.verification_gate
             }
         })
         .done(function(res) {

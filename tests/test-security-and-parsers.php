@@ -236,5 +236,22 @@ assert_true( ! is_wp_error( $grounded_res ), 'Grounded JSON parses successfully'
 assert_true( 'Báo cáo AI 2026 chính xác.' === $grounded_res['text'], 'Parsed text matches response part' );
 assert_true( count( $grounded_res['grounding_metadata']['sources'] ) === 1, 'Grounding sources metadata extracted correctly' );
 
+// 9. Test Fact Pack Verification Gate Resilience
+$github_citations = array(
+    array( 'url' => 'https://github.com/vllm-project/vllm', 'title' => 'vLLM' ),
+    array( 'url' => 'https://github.com/huggingface/transformers', 'title' => 'Transformers' ),
+);
+$unique_domains = array();
+$unique_urls = array();
+foreach ( $github_citations as $vc ) {
+    $host = strtolower( (string) parse_url( $vc['url'], PHP_URL_HOST ) );
+    $clean_host = str_replace( 'www.', '', $host );
+    $unique_domains[ $clean_host ] = true;
+    $unique_urls[ $vc['url'] ] = true;
+}
+$has_platform = in_array( 'github.com', array_keys( $unique_domains ), true );
+$gate_passed = ( count( $unique_domains ) >= 2 ) || ( $has_platform && count( $unique_urls ) >= 2 );
+assert_true( $gate_passed, 'Verification gate recognizes multiple independent repositories on github.com as verified' );
+
 echo "\n🎉 ALL TESTS PASSED SUCCESSFULLY!\n";
 

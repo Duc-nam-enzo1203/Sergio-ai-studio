@@ -52,6 +52,7 @@ class Sergio_AI_Fact_Pack_Engine {
 
         $grounding_mode = isset( $options['grounding_mode'] ) ? sanitize_key( $options['grounding_mode'] ) : 'grounding';
         $override_model = isset( $options['override_model'] ) && ! empty( $options['override_model'] ) && 'default' !== $options['override_model'] ? sanitize_text_field( $options['override_model'] ) : '';
+        $strictness     = isset( $options['verification_strictness'] ) ? sanitize_key( $options['verification_strictness'] ) : 'standard';
 
         $current_date = wp_date( 'd/m/Y' );
         $current_year = wp_date( 'Y' );
@@ -227,24 +228,75 @@ Hãy tìm kiếm và trích xuất một GÓI DỮ KIỆN (FACT PACK) chuẩn x�
         $parsed_pack['source_citations'] = $valid_citations;
         $domain_count = count( $unique_domains );
 
-        // Strict Code-Level Gate: Require >= 2 distinct independent domains for web search grounding
-        if (
-            ( isset( $parsed_pack['status'] ) && 'insufficient_data' === $parsed_pack['status'] ) ||
-            empty( $parsed_pack['key_facts'] ) ||
-            $domain_count < 2
-        ) {
-            $reason = ( $domain_count < 2 && ! empty( $parsed_pack['key_facts'] ) )
-                ? sprintf( __( 'Cổng kiểm chứng từ chối: Chỉ tìm thấy %d domain nguồn (%s). Bắt buộc tối thiểu 2 nguồn độc lập từ 2 domain khác nhau để bảo đảm dữ kiện thật.', 'sergio-ai-studio' ), $domain_count, implode( ', ', array_keys( $unique_domains ) ) )
-                : ( ! empty( $parsed_pack['status_reason'] ) ? $parsed_pack['status_reason'] : __( 'Không tìm thấy đủ dữ kiện thực tế có nguồn dẫn chứng hợp lệ trên Internet.', 'sergio-ai-studio' ) );
+        // Collect unique URLs count for platform sources (e.g. GitHub repos, HuggingFace models, ArXiv papers)
+        $unique_urls = array();
+        foreach ( $valid_citations as $vc ) {
+            if ( ! empty( $vc['url'] ) ) {
+                $unique_urls[ $vc['url'] ] = true;
+            }
+        }
+        $unique_url_count = count( $unique_urls );
 
-            $this->logger->warning( 'fact_pack_rejected', sprintf( 'Dừng tạo bài: %s', $reason ), $parsed_pack );
+        // Reputable platforms where multiple resources on the same domain are independent projects
+        $has_reputable_platform = false;
+        foreach ( array_keys( $unique_domains ) as $d ) {
+            if ( in_array( $d, array( 'github.com', 'huggingface.co', 'arxiv.org', 'pypi.org', 'npmjs.com', 'wordpress.org', 'kaggle.com', 'paperswithcode.com' ), true ) ) {
+                $has_reputable_platform = true;
+                break;
+            }
+        }
+
+        // Verification Gate
+        $is_verified      = true;
+        $rejection_reason = '';
+
+        if ( isset( $parsed_pack['status'] ) && 'insufficient_data' === $parsed_pack['status'] ) {
+            $is_verified      = false;
+            $rejection_reason = ! empty( $parsed_pack['status_reason'] ) ? $parsed_pack['status_reason'] : __( 'Không tìm thấy đủ dữ kiện thực tế có nguồn dẫn chứng hợp lệ trên Internet.', 'sergio-ai-studio' );
+        } elseif ( empty( $parsed_pack['key_facts'] ) ) {
+            $is_verified      = false;
+            $rejection_reason = __( 'Gói dữ kiện không chứa các dữ kiện cốt lõi (key_facts trống).', 'sergio-ai-studio' );
+        } elseif ( 'direct' === $grounding_mode ) {
+            // Grounding-Free: Relies on deep model reasoning without external web citations
+            $is_verified = true;
+        } elseif ( 'strict' === $strictness ) {
+            if ( $domain_count < 2 ) {
+                $is_verified      = false;
+                $rejection_reason = sprintf(
+                    __( 'Cổng kiểm chứng nghiêm ngặt: Chỉ tìm thấy %d domain nguồn (%s). Chế độ Nghiêm ngặt yêu cầu tối thiểu 2 domain độc lập.', 'sergio-ai-studio' ),
+                    $domain_count,
+                    implode( ', ', array_keys( $unique_domains ) )
+                );
+            }
+        } else {
+            // Standard Mode (Flexible & Resilient):
+            // Accepts if:
+            // 1) >= 2 distinct independent domains, OR
+            // 2) >= 2 distinct resource/repository URLs from reputable platforms (GitHub, Hugging Face, ArXiv, etc.), OR
+            // 3) At least 1 verified primary source + at least 2 key facts
+            if ( $domain_count >= 2 ) {
+                $is_verified = true;
+            } elseif ( $has_reputable_platform && $unique_url_count >= 2 ) {
+                $is_verified = true;
+            } elseif ( $domain_count >= 1 && count( $parsed_pack['key_facts'] ) >= 2 ) {
+                $is_verified = true;
+            } else {
+                $is_verified      = false;
+                $rejection_reason = sprintf(
+                    __( 'Cổng kiểm chứng từ chối: Không tìm thấy nguồn dẫn chứng hợp lệ hoặc dữ kiện quá sơ sài để đảm bảo tính xác thực.', 'sergio-ai-studio' )
+                );
+            }
+        }
+
+        if ( ! $is_verified ) {
+            $this->logger->warning( 'fact_pack_rejected', sprintf( 'Dừng tạo bài: %s', $rejection_reason ), $parsed_pack );
 
             // Save as rejected in DB
             $pack_id = $this->save_to_db( $topic, $language, $parsed_pack, 'rejected' );
 
             return new WP_Error(
                 'insufficient_data',
-                sprintf( __( 'Dữ kiện không đủ độ tin cậy để viết bài: %s (Đã dừng để bảo đảm tính xác thực, tránh bịa số liệu).', 'sergio-ai-studio' ), $reason ),
+                sprintf( __( 'Dữ kiện không đủ độ tin cậy để viết bài: %s (Đã dừng để bảo đảm tính xác thực, tránh bịa số liệu).', 'sergio-ai-studio' ), $rejection_reason ),
                 array( 'fact_pack_id' => $pack_id )
             );
         }

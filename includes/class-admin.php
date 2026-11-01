@@ -1070,6 +1070,15 @@ class Sergio_AI_Admin {
 									</select>
 								</div>
 
+								<!-- Cổng Kiểm Chứng Dữ Kiện -->
+								<div class="studio-field-row">
+									<label class="studio-label" for="writer_verification_gate"><?php esc_html_e( 'Cổng Kiểm Chứng Dữ Kiện', 'sergio-ai-studio' ); ?></label>
+									<select id="writer_verification_gate" class="studio-select">
+										<option value="standard" selected><?php esc_html_e( 'Tiêu chuẩn (Linh hoạt: Nền tảng uy tín / Nguồn chính thức / ≥2 link)', 'sergio-ai-studio' ); ?></option>
+										<option value="strict"><?php esc_html_e( 'Nghiêm ngặt (Bắt buộc tối thiểu 2 domain báo chí độc lập)', 'sergio-ai-studio' ); ?></option>
+									</select>
+								</div>
+
 								<!-- Xử Lý Ảnh Đại Diện -->
 								<div class="studio-field-row">
 									<label class="studio-label" for="writer_image_option"><?php esc_html_e( 'Xử Lý Ảnh Đại Diện (Featured Image)', 'sergio-ai-studio' ); ?></label>
@@ -1729,28 +1738,30 @@ class Sergio_AI_Admin {
 		$target_length  = isset( $_POST['target_length'] ) ? sanitize_key( $_POST['target_length'] ) : 'standard';
 		$tone           = isset( $_POST['tone'] ) ? sanitize_key( $_POST['tone'] ) : 'journalistic';
 		$model_override = isset( $_POST['model_override'] ) ? sanitize_text_field( wp_unslash( $_POST['model_override'] ) ) : '';
-		$grounding_mode = isset( $_POST['grounding_mode'] ) ? sanitize_key( $_POST['grounding_mode'] ) : 'grounding';
-		$image_option   = isset( $_POST['image_option'] ) ? sanitize_key( $_POST['image_option'] ) : 'reference';
-		$post_status    = isset( $_POST['post_status'] ) && in_array( $_POST['post_status'], array( 'draft', 'pending', 'publish' ), true ) ? $_POST['post_status'] : 'draft';
-		$enable_rm      = ! empty( $_POST['enable_rank_math'] );
-		$enable_il      = ! empty( $_POST['enable_internal_links'] );
-		$enable_sb      = ! empty( $_POST['enable_sources_box'] );
+		$grounding_mode    = isset( $_POST['grounding_mode'] ) ? sanitize_key( $_POST['grounding_mode'] ) : 'grounding';
+		$verification_gate = isset( $_POST['verification_gate'] ) ? sanitize_key( $_POST['verification_gate'] ) : 'standard';
+		$image_option      = isset( $_POST['image_option'] ) ? sanitize_key( $_POST['image_option'] ) : 'reference';
+		$post_status       = isset( $_POST['post_status'] ) && in_array( $_POST['post_status'], array( 'draft', 'pending', 'publish' ), true ) ? $_POST['post_status'] : 'draft';
+		$enable_rm         = ! empty( $_POST['enable_rank_math'] );
+		$enable_il         = ! empty( $_POST['enable_internal_links'] );
+		$enable_sb         = ! empty( $_POST['enable_sources_box'] );
 
 		if ( empty( $seed_query ) ) {
 			wp_send_json_error( array( 'message' => __( 'Vui lòng nhập chủ đề cần nghiên cứu.', 'sergio-ai-studio' ) ) );
 		}
 
 		$options_payload = array(
-			'override_model'        => $model_override,
-			'grounding_mode'        => $grounding_mode,
-			'target_length'         => $target_length,
-			'tone'                  => $tone,
-			'image_option'          => $image_option,
-			'status'                => $post_status,
-			'category_id'           => $category,
-			'enable_rank_math'      => $enable_rm,
-			'enable_internal_links' => $enable_il,
-			'enable_sources_box'    => $enable_sb,
+			'override_model'          => $model_override,
+			'grounding_mode'          => $grounding_mode,
+			'verification_strictness' => $verification_gate,
+			'target_length'           => $target_length,
+			'tone'                    => $tone,
+			'image_option'            => $image_option,
+			'status'                  => $post_status,
+			'category_id'             => $category,
+			'enable_rank_math'        => $enable_rm,
+			'enable_internal_links'   => $enable_il,
+			'enable_sources_box'      => $enable_sb,
 		);
 
 		$logger = new Sergio_AI_Logger();
@@ -1812,16 +1823,18 @@ class Sergio_AI_Admin {
 
 		$seed_query     = isset( $_POST['seed_query'] ) ? sanitize_text_field( wp_unslash( $_POST['seed_query'] ) ) : '';
 		$language       = isset( $_POST['language'] ) ? sanitize_text_field( wp_unslash( $_POST['language'] ) ) : 'vi';
-		$model_override = isset( $_POST['model_override'] ) ? sanitize_text_field( wp_unslash( $_POST['model_override'] ) ) : '';
-		$grounding_mode = isset( $_POST['grounding_mode'] ) ? sanitize_key( $_POST['grounding_mode'] ) : 'grounding';
+		$model_override    = isset( $_POST['model_override'] ) ? sanitize_text_field( wp_unslash( $_POST['model_override'] ) ) : '';
+		$grounding_mode    = isset( $_POST['grounding_mode'] ) ? sanitize_key( $_POST['grounding_mode'] ) : 'grounding';
+		$verification_gate = isset( $_POST['verification_gate'] ) ? sanitize_key( $_POST['verification_gate'] ) : 'standard';
 
 		if ( empty( $seed_query ) ) {
 			wp_send_json_error( array( 'message' => __( 'Vui lòng nhập chủ đề cần nghiên cứu.', 'sergio-ai-studio' ) ) );
 		}
 
 		$options_payload = array(
-			'override_model' => $model_override,
-			'grounding_mode' => $grounding_mode,
+			'override_model'          => $model_override,
+			'grounding_mode'          => $grounding_mode,
+			'verification_strictness' => $verification_gate,
 		);
 
 		$logger      = new Sergio_AI_Logger();
