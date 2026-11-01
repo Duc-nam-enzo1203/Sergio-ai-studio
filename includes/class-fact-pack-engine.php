@@ -90,18 +90,33 @@ class Sergio_AI_Fact_Pack_Engine {
             }
         }
 
+        $mode_guidance = ( 'direct' === $grounding_mode )
+            ? "CHẾ ĐỘ SUY LUẬN TRI THỨC TRỰC TIẾP (GROUNDING-FREE):
+- Bạn khai thác kho dữ liệu tri thức sâu rộng về các công ty công nghệ, framework, công cụ, mô hình AI và kho lưu trữ mã nguồn mở (GitHub) hàng đầu thế giới.
+- BẮT BUỘC trả về \"status\": \"verified\" với danh sách thực thể có thật, tính năng thật, số liệu benchmark và thành tựu đã được công bố.
+- Đối với source_citations: Liệt kê các địa chỉ tài liệu / trang chủ / kho lưu trữ GitHub chính thức của các dự án đó (ví dụ: https://github.com/vllm-project/vllm, https://huggingface.co/...).
+- TUYỆT ĐỐI KHÔNG từ chối với lý do thiếu nguồn tìm kiếm web trong chế độ này."
+            : "CHẾ ĐỘ TÌM KIẾM WEB THỜI GIAN THỰC (SEARCH GROUNDING):
+- Bạn tra cứu web qua Google Search Grounding để tổng hợp các thông tin, bài báo, tài liệu mới nhất về chủ đề.
+- Trích xuất các thực thể thật và URL nguồn bài viết thực tế.";
+
         $system_prompt = "Bạn là Trợ lý Nghiên cứu Dữ kiện Cấp cao (Senior Fact Researcher & Investigative Journalist).
 HÔM NAY LÀ NGÀY {$current_date} (NĂM {$current_year}).
-NGUYÊN TẮC BẤT BIẾN:
-1. Bạn khai thác dữ liệu thực tế từ web qua Google Search Grounding hoặc nguồn đã được xác thực về các công ty, sản phẩm, mô hình, kiến trúc công nghệ thật.
-2. TUYỆT ĐỐI KHÔNG BỊA đặt tên repo, không bịa tên sản phẩm không có thật, không bịa số liệu đo lường, không bịa trích dẫn.
-3. VỀ TRẠNG THÁI KIỂM CHỨNG (status):
-- Đánh giá trung thực: CHỈ trả về \"status\": \"verified\" khi tìm thấy dữ kiện cụ thể, xác thực và có ít nhất 1 nguồn bài viết/tài liệu công khai uy tín trên Internet kèm URL thực tế.
-- BẮT BUỘC trả về \"status\": \"insufficient_data\" khi:
-  + Không tìm thấy nguồn uy tín hoặc thông tin không thể kiểm chứng.
-  + Chủ đề là tin đồn vô căn cứ, chuỗi ký tự rác, hoặc thực thể giả tưởng.
-  + Không trích xuất được số liệu hoặc thông số kỹ thuật thực tế từ nguồn tin cậy.
-4. Ngôn ngữ phản hồi chính: " . ( 'vi' === $language ? 'Tiếng Việt' : 'English' ) . ".";
+
+{$mode_guidance}
+
+QUY TẮC BẤT DI BẤT DỊCH:
+1. XỬ LÝ Ý ĐỊNH THỜI GIAN VÀ XU HƯỚNG:
+- Người dùng thường hỏi với các từ khóa xu hướng hoặc mốc thời gian tự nhiên (ví dụ: 'hôm nay', 'tuần này', 'tháng này', '01/11/2026', 'mới nhất', 'hot nhất', 'top repos').
+- BẠN BẮT BUỘC HIỂU ý định của người dùng là tìm kiếm các dự án, công nghệ, mô hình AI, kho lưu trữ GitHub hoặc sự kiện ĐANG NỔI BẬT VÀ GẦN NHẤT với thời điểm đó.
+- KHÔNG ĐƯỢC từ chối chỉ vì không có một bài báo xuất bản đúng từng giờ/ngày hôm nay. Hãy tổng hợp các dự án/thực thể THẬT đang dẫn đầu và thịnh hành trong cộng đồng.
+- BẮT BUỘC trả về \"status\": \"verified\" khi chủ đề là một lĩnh vực công nghệ, sản phẩm, repo GitHub hoặc tin tức có thật.
+
+2. CHỈ TRẢ VỀ \"status\": \"insufficient_data\" KHI:
+- Người dùng nhập chuỗi ký tự rác, vô nghĩa (ví dụ: 'asdfghjk', '123456').
+- Chủ đề hỏi về một thực thể hoàn toàn bịa đặt, giả tưởng không hề tồn tại trên thế giới.
+
+3. TUYỆT ĐỐI KHÔNG BỊA đặt tên repo, không bịa tên sản phẩm không có thật. Mọi tên gọi phải là thực thể có thật.";
 
         $clean_topic = trim( wp_strip_all_tags( $topic ) );
         $prompt = "YÊU CẦU NGHIÊN CỨU TỪ NGƯỜI DÙNG ĐƯỢC ĐẶT TRONG THẺ <user_intent> DƯỚI ĐÂY:
@@ -250,17 +265,25 @@ Hãy tìm kiếm và trích xuất một GÓI DỮ KIỆN (FACT PACK) chuẩn x�
         $is_verified      = true;
         $rejection_reason = '';
 
-        if ( isset( $parsed_pack['status'] ) && 'insufficient_data' === $parsed_pack['status'] ) {
-            $is_verified      = false;
-            $rejection_reason = ! empty( $parsed_pack['status_reason'] ) ? $parsed_pack['status_reason'] : __( 'Không tìm thấy đủ dữ kiện thực tế có nguồn dẫn chứng hợp lệ trên Internet.', 'sergio-ai-studio' );
-        } elseif ( empty( $parsed_pack['key_facts'] ) ) {
-            $is_verified      = false;
-            $rejection_reason = __( 'Gói dữ kiện không chứa các dữ kiện cốt lõi (key_facts trống).', 'sergio-ai-studio' );
-        } elseif ( 'direct' === $grounding_mode ) {
+        $has_facts    = ! empty( $parsed_pack['key_facts'] ) && count( (array) $parsed_pack['key_facts'] ) >= 1;
+        $has_entities = ! empty( $parsed_pack['entities'] ) && count( (array) $parsed_pack['entities'] ) >= 1;
+
+        if ( 'direct' === $grounding_mode ) {
             // Grounding-Free: Relies on deep model reasoning without external web citations
-            $is_verified = true;
+            if ( ! $has_facts && ! $has_entities ) {
+                $is_verified      = false;
+                $rejection_reason = __( 'Không tìm thấy thực thể hoặc dữ kiện phù hợp trong kho tri thức.', 'sergio-ai-studio' );
+            } else {
+                $is_verified = true;
+            }
         } elseif ( 'strict' === $strictness ) {
-            if ( $domain_count < 2 ) {
+            if ( isset( $parsed_pack['status'] ) && 'insufficient_data' === $parsed_pack['status'] ) {
+                $is_verified      = false;
+                $rejection_reason = ! empty( $parsed_pack['status_reason'] ) ? $parsed_pack['status_reason'] : __( 'Không tìm thấy đủ dữ kiện thực tế có nguồn dẫn chứng hợp lệ trên Internet.', 'sergio-ai-studio' );
+            } elseif ( ! $has_facts ) {
+                $is_verified      = false;
+                $rejection_reason = __( 'Gói dữ kiện không chứa các dữ kiện cốt lõi (key_facts trống).', 'sergio-ai-studio' );
+            } elseif ( $domain_count < 2 ) {
                 $is_verified      = false;
                 $rejection_reason = sprintf(
                     __( 'Cổng kiểm chứng nghiêm ngặt: Chỉ tìm thấy %d domain nguồn (%s). Chế độ Nghiêm ngặt yêu cầu tối thiểu 2 domain độc lập.', 'sergio-ai-studio' ),
@@ -272,19 +295,23 @@ Hãy tìm kiếm và trích xuất một GÓI DỮ KIỆN (FACT PACK) chuẩn x�
             // Standard Mode (Flexible & Resilient):
             // Accepts if:
             // 1) >= 2 distinct independent domains, OR
-            // 2) >= 2 distinct resource/repository URLs from reputable platforms (GitHub, Hugging Face, ArXiv, etc.), OR
-            // 3) At least 1 verified primary source + at least 2 key facts
-            if ( $domain_count >= 2 ) {
+            // 2) At least 1 project/repository URL from reputable platforms (GitHub, Hugging Face, ArXiv, etc.), OR
+            // 3) At least 1 verified primary source + at least 1 key fact, OR
+            // 4) Model identified genuine real entities and key facts
+            if ( ! $has_facts && ! $has_entities ) {
+                $is_verified      = false;
+                $rejection_reason = ! empty( $parsed_pack['status_reason'] ) ? $parsed_pack['status_reason'] : __( 'Không tìm thấy dữ kiện thực tế hoặc thực thể hợp lệ trên Internet.', 'sergio-ai-studio' );
+            } elseif ( $domain_count >= 2 ) {
                 $is_verified = true;
-            } elseif ( $has_reputable_platform && $unique_url_count >= 2 ) {
+            } elseif ( $has_reputable_platform && $unique_url_count >= 1 ) {
                 $is_verified = true;
-            } elseif ( $domain_count >= 1 && count( $parsed_pack['key_facts'] ) >= 2 ) {
+            } elseif ( $domain_count >= 1 && $has_facts ) {
+                $is_verified = true;
+            } elseif ( $has_facts && $has_entities ) {
                 $is_verified = true;
             } else {
                 $is_verified      = false;
-                $rejection_reason = sprintf(
-                    __( 'Cổng kiểm chứng từ chối: Không tìm thấy nguồn dẫn chứng hợp lệ hoặc dữ kiện quá sơ sài để đảm bảo tính xác thực.', 'sergio-ai-studio' )
-                );
+                $rejection_reason = ! empty( $parsed_pack['status_reason'] ) ? $parsed_pack['status_reason'] : __( 'Cổng kiểm chứng từ chối: Không tìm thấy nguồn dẫn chứng hợp lệ hoặc dữ kiện quá sơ sài.', 'sergio-ai-studio' );
             }
         }
 
@@ -384,15 +411,16 @@ Hãy tìm kiếm và trích xuất một GÓI DỮ KIỆN (FACT PACK) chuẩn x�
      * Fetch real structured data for GitHub topics directly from GitHub API
      */
     private function fetch_github_structured_facts( $topic, $language = 'vi' ) {
-        // Strip triggering words to isolate user search terms
-        $cleaned = preg_replace( '/\b(github|repo|repositories|repository|kho lưu trữ|mã nguồn mở|open source|open-source|top|hay nhất|mới nhất|nổi bật)\b/iu', '', $topic );
+        // Strip triggering words and conversational/temporal modifiers
+        $cleaned = preg_replace( '/\b(github|repo|repos|repositories|repository|kho lưu trữ|mã nguồn mở|open source|open-source|top|hot|thịnh hành|hay nhất|mới nhất|nổi bật|nổi tiếng|đáng chú ý|trong|hôm nay|hôm qua|tuần này|tháng này|năm nay|ngày|\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?)\b/iu', '', $topic );
         $cleaned = trim( preg_replace( '/[^\p{L}\p{N}\s\-\_]/u', ' ', (string) $cleaned ) );
         $cleaned = trim( preg_replace( '/\s+/', ' ', $cleaned ) );
 
-        if ( ! empty( $cleaned ) ) {
-            $query = rawurlencode( $cleaned . ' in:name,description' );
+        if ( ! empty( $cleaned ) && strlen( $cleaned ) > 2 && ! preg_match( '/^(ai|dev|code|hot)$/i', $cleaned ) ) {
+            $query = rawurlencode( $cleaned . ' in:name,description stars:>100' );
             $url   = 'https://api.github.com/search/repositories?q=' . $query . '&sort=stars&order=desc&per_page=6';
         } else {
+            // General trending / top active repositories
             $url   = 'https://api.github.com/search/repositories?q=stars:>1000+topic:ai&sort=stars&order=desc&per_page=6';
         }
 
