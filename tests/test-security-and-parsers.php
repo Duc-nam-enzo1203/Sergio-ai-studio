@@ -37,6 +37,12 @@ function esc_html( $text ) {
 function esc_attr( $text ) {
     return htmlspecialchars( (string) $text, ENT_QUOTES, 'UTF-8' );
 }
+function esc_url_raw( $url ) {
+    return filter_var( (string) $url, FILTER_SANITIZE_URL );
+}
+function esc_url( $url ) {
+    return htmlspecialchars( (string) $url, ENT_QUOTES, 'UTF-8' );
+}
 function wp_upload_dir() {
     return array( 'path' => sys_get_temp_dir(), 'url' => 'http://example.com/uploads', 'error' => false );
 }
@@ -155,6 +161,20 @@ $article_hallucinated = "<p>Model có 175B tham số, chạy ở xung nhịp 4.8
 $audit_hallucinated = $writer_inst->verify_metrics_in_sources( $article_hallucinated, $mock_fact_pack );
 assert_true( 'flagged' === $audit_hallucinated['status'], 'Anti-hallucination flags article containing unverified metrics' );
 assert_true( in_array( '4999 USD', $audit_hallucinated['unverified_items'], true ), 'Unverified number 4999 USD is correctly identified in audit report' );
+
+// 7. Test Extraction of Reference Source Images & Metadata
+$sample_html_with_og = '<html><head><meta property="og:image" content="https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200"></head><body><h1>News</h1></body></html>';
+$crawler_inst = new Sergio_AI_Web_Crawler();
+$reflection = new ReflectionClass( $crawler_inst );
+$extract_meta = $reflection->getMethod( 'extract_metadata' );
+$extract_meta->setAccessible( true );
+$meta_extracted = $extract_meta->invoke( $crawler_inst, $sample_html_with_og );
+
+assert_true( $meta_extracted['image_url'] === 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200', 'Extract og:image URL from HTML head correctly' );
+
+$sample_jsonld_image = '<html><head><script type="application/ld+json">{"@context":"https://schema.org","@type":"NewsArticle","image":{"@type":"ImageObject","url":"https://cdn.example.com/lead-photo.png"}}</script></head><body></body></html>';
+$jsonld_img = $crawler_inst->extract_jsonld_image_url( $sample_jsonld_image );
+assert_true( $jsonld_img === 'https://cdn.example.com/lead-photo.png', 'Extract image URL from JSON-LD NewsArticle schema correctly' );
 
 echo "\n🎉 ALL TESTS PASSED SUCCESSFULLY!\n";
 

@@ -172,6 +172,7 @@ HƯỚNG DẪN VIẾT BÀI:
 
         $raw_text = $res['text'];
         $parsed   = $this->parse_article_response( $raw_text, $headline, $focus_kw, $sources );
+        $parsed['sources'] = $sources;
 
         // Enforce anti-cliche filtering on the output
         $parsed['content'] = $this->filter_cliches( $parsed['content'] );
@@ -306,11 +307,23 @@ HƯỚNG DẪN VIẾT BÀI:
         try {
             if ( class_exists( 'Sergio_AI_Image_Service' ) ) {
                 $image_service = new Sergio_AI_Image_Service( $this->logger );
+
+                // Resolve sources from article_data or fact pack
+                $sources = ! empty( $article_data['sources'] ) ? (array) $article_data['sources'] : array();
+                if ( empty( $sources ) && $fact_pack_id > 0 && class_exists( 'Sergio_AI_Fact_Pack_Engine' ) ) {
+                    $engine = new Sergio_AI_Fact_Pack_Engine( $this->client, $this->logger );
+                    $pack   = $engine->get_pack_by_id( $fact_pack_id );
+                    if ( ! empty( $pack['source_citations'] ) ) {
+                        $sources = (array) $pack['source_citations'];
+                    }
+                }
+
                 $image_service->attach_featured_image(
                     $post_id,
                     $post_title,
                     $article_data['primary_focus_keyword'] ?? '',
-                    $article_data['image_prompt_en'] ?? ''
+                    $article_data['image_prompt_en'] ?? '',
+                    $sources
                 );
             }
         } catch ( Exception $e ) {

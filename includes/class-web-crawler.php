@@ -163,6 +163,7 @@ class Sergio_AI_Web_Crawler {
             'title'            => $metadata['title'],
             'meta_description' => $metadata['description'],
             'published_date'   => $metadata['published_date'],
+            'image_url'        => $metadata['image_url'] ?? '',
             'content'          => $article_text,
         );
     }
@@ -195,16 +196,17 @@ class Sergio_AI_Web_Crawler {
     }
 
     /**
-     * Extract og:title, og:description, article:published_time from HTML.
+     * Extract og:title, og:description, og:image, article:published_time from HTML.
      *
      * @param  string $html
-     * @return array{title: string, description: string, published_date: string}
+     * @return array{title: string, description: string, published_date: string, image_url: string}
      */
     private function extract_metadata( string $html ): array {
         $meta = array(
             'title'          => '',
             'description'    => '',
             'published_date' => '',
+            'image_url'      => '',
         );
 
         // Use DOMDocument to safely parse.
@@ -237,6 +239,17 @@ class Sergio_AI_Web_Crawler {
         $pub_time = $xpath->query( '//meta[@property="article:published_time"]/@content' );
         if ( $pub_time && $pub_time->length > 0 ) {
             $meta['published_date'] = sanitize_text_field( $pub_time->item( 0 )->nodeValue );
+        }
+
+        // og:image / twitter:image
+        $og_img = $xpath->query( '//meta[@property="og:image"]/@content | //meta[@property="og:image:secure_url"]/@content | //meta[@name="twitter:image"]/@content | //meta[@name="twitter:image:src"]/@content' );
+        if ( $og_img && $og_img->length > 0 ) {
+            $meta['image_url'] = esc_url_raw( trim( $og_img->item( 0 )->nodeValue ) );
+        }
+
+        // JSON-LD fallback for image
+        if ( empty( $meta['image_url'] ) ) {
+            $meta['image_url'] = $this->extract_jsonld_image_url( $html );
         }
 
         return $meta;
@@ -477,6 +490,41 @@ class Sergio_AI_Web_Crawler {
                                 }
                             }
                         }
+                    }
+                }
+            }
+        }
+        return '';
+    }
+
+    /**
+     * Extract representative image URL from JSON-LD schema
+     *
+     * @param string $html
+     * @return string
+     */
+    public function extract_jsonld_image_url( string $html ): string {
+        if ( preg_match_all( '/<script\s+[^>]*type=[\'"]application\/ld\+json[\'"][^>]*>(.*?)<\/script>/is', $html, $matches ) ) {
+            foreach ( $matches[1] as $json_raw ) {
+                $data = json_decode( trim( $json_raw ), true );
+                if ( ! is_array( $data ) ) {
+                    continue;
+                }
+                $items = isset( $data['@graph'] ) && is_array( $data['@graph'] ) ? $data['@graph'] : array( $data );
+                foreach ( $items as $item ) {
+                    if ( ! empty( $item['image'] ) ) {
+                        if ( is_string( $item['image'] ) ) {
+                            return esc_url_raw( trim( $item['image'] ) );
+                        } elseif ( is_array( $item['image'] ) ) {
+                            if ( isset( $item['image']['url'] ) && is_string( $item['image']['url'] ) ) {
+                                return esc_url_raw( trim( $item['image']['url'] ) );
+                            } elseif ( isset( $item['image'][0] ) && is_string( $item['image'][0] ) ) {
+                                return esc_url_raw( trim( $item['image'][0] ) );
+                            }
+                        }
+                    }
+                    if ( ! empty( $item['thumbnailUrl'] ) && is_string( $item['thumbnailUrl'] ) ) {
+                        return esc_url_raw( trim( $item['thumbnailUrl'] ) );
                     }
                 }
             }

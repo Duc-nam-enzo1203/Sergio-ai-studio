@@ -139,6 +139,7 @@ PROMPT;
             'content'          => $clean_content, // Will be wp_kses-filtered when saving.
             'source_url'       => $source_url,
             'source_domain'    => $source_domain,
+            'image_url'        => $article['image_url'] ?? '',
         );
     }
 
@@ -197,15 +198,25 @@ PROMPT;
         update_post_meta( $post_id, '_sergio_ai_generated', 1 );
         update_post_meta( $post_id, '_sergio_ai_studio_version', '2.1.0' );
 
-        // Attach featured image banner
+        // Attach featured image from reference source (with fallback to GD template)
         try {
             if ( class_exists( 'Sergio_AI_Image_Service' ) ) {
                 $image_service = new Sergio_AI_Image_Service( $this->logger );
+                $source_ref    = array(
+                    array(
+                        'url'           => $rewritten['source_url'] ?? '',
+                        'source_domain' => $rewritten['source_domain'] ?? '',
+                        'publisher'     => $rewritten['source_domain'] ?? '',
+                        'image_url'     => $rewritten['image_url'] ?? '',
+                        'title'         => $rewritten['title'] ?? '',
+                    ),
+                );
                 $image_service->attach_featured_image(
                     $post_id,
                     $rewritten['title'],
                     $rewritten['focus_keyword'] ?? '',
-                    ''
+                    '',
+                    $source_ref
                 );
             }
         } catch ( Exception $e ) {
