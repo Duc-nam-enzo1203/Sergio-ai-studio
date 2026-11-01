@@ -1204,56 +1204,44 @@ class Sergio_AI_Admin {
 				<!-- TAB 6: AUDIT & TỐI ƯU SEO             -->
 				<!-- ===================================== -->
 				<div id="tab-seo" class="sergio-tab-pane <?php echo 'seo' === $active_tab ? 'is-active' : ''; ?>">
-					<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+					<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
 						<div>
 							<h2 style="margin: 0; font-size: 18px; font-weight: 600;"><?php esc_html_e( 'Audit & Tối Ưu SEO Toàn Diện', 'sergio-ai-studio' ); ?></h2>
-							<p class="description" style="margin: 2px 0 0;"><?php esc_html_e( 'Quét sức khỏe SEO on-page toàn site, đo lường theo tiêu chuẩn Rank Math và kích hoạt Gemini AI tối ưu tiêu đề, mô tả, từ khóa LSI.', 'sergio-ai-studio' ); ?></p>
+							<p class="description" style="margin: 3px 0 0;"><?php esc_html_e( 'Quét sức khỏe SEO on-page toàn site, đo lường theo tiêu chuẩn Rank Math và kích hoạt Gemini AI tối ưu tiêu đề, mô tả, từ khóa LSI.', 'sergio-ai-studio' ); ?></p>
 						</div>
-						<button type="button" class="button button-secondary" id="btn_run_site_seo_audit">
-							<span class="dashicons dashicons-update"></span> <?php esc_html_e( 'Quét Lại Sức Khỏe Toàn Site', 'sergio-ai-studio' ); ?>
+						<button type="button" class="button" id="btn_run_site_seo_audit">
+							<?php esc_html_e( 'Quét Lại Sức Khỏe Toàn Site', 'sergio-ai-studio' ); ?>
 						</button>
 					</div>
 
 					<!-- Metrics Deck -->
 					<div class="sergio-overview-cards" id="seo_health_strip">
 						<div class="card">
-							<div class="card-kicker">
-								<span class="dashicons dashicons-chart-area"></span>
-								<span><?php esc_html_e( 'Điểm SEO Trung Bình', 'sergio-ai-studio' ); ?></span>
-							</div>
+							<div class="card-kicker"><?php esc_html_e( 'Điểm SEO Trung Bình', 'sergio-ai-studio' ); ?></div>
 							<div class="card-val val-blue">
 								<span id="seo_stat_avg_score">--</span> <span class="card-val-unit">/ 100</span>
 							</div>
 							<p class="card-desc" id="seo_stat_avg_label"><?php esc_html_e( 'Sức khỏe tổng thể', 'sergio-ai-studio' ); ?></p>
 						</div>
 
-						<div class="card card-success">
-							<div class="card-kicker">
-								<span class="dashicons dashicons-yes-alt"></span>
-								<span><?php esc_html_e( 'Đạt Chuẩn Tốt (>80đ)', 'sergio-ai-studio' ); ?></span>
-							</div>
+						<div class="card">
+							<div class="card-kicker"><?php esc_html_e( 'Đạt Chuẩn Tốt (>80đ)', 'sergio-ai-studio' ); ?></div>
 							<div class="card-val val-green">
 								<span id="seo_stat_good_count">0</span> <span class="card-val-unit"><?php esc_html_e( 'trang', 'sergio-ai-studio' ); ?></span>
 							</div>
 							<p class="card-desc"><?php esc_html_e( 'Chuẩn Rank Math xanh', 'sergio-ai-studio' ); ?></p>
 						</div>
 
-						<div class="card card-warning">
-							<div class="card-kicker">
-								<span class="dashicons dashicons-warning"></span>
-								<span><?php esc_html_e( 'Cần Tối Ưu (50-79đ)', 'sergio-ai-studio' ); ?></span>
-							</div>
+						<div class="card">
+							<div class="card-kicker"><?php esc_html_e( 'Cần Tối Ưu (50-79đ)', 'sergio-ai-studio' ); ?></div>
 							<div class="card-val val-amber">
 								<span id="seo_stat_warning_count">0</span> <span class="card-val-unit"><?php esc_html_e( 'trang', 'sergio-ai-studio' ); ?></span>
 							</div>
 							<p class="card-desc"><?php esc_html_e( 'Cần tinh chỉnh On-page', 'sergio-ai-studio' ); ?></p>
 						</div>
 
-						<div class="card card-error">
-							<div class="card-kicker">
-								<span class="dashicons dashicons-dismiss"></span>
-								<span><?php esc_html_e( 'Thiếu Focus Keyword', 'sergio-ai-studio' ); ?></span>
-							</div>
+						<div class="card">
+							<div class="card-kicker"><?php esc_html_e( 'Thiếu Focus Keyword', 'sergio-ai-studio' ); ?></div>
 							<div class="card-val val-red">
 								<span id="seo_stat_missing_kw">0</span> <span class="card-val-unit"><?php esc_html_e( 'trang', 'sergio-ai-studio' ); ?></span>
 							</div>
@@ -1265,11 +1253,11 @@ class Sergio_AI_Admin {
 					<div id="seo_site_action_plan_box" class="notice notice-warning inline" style="margin-bottom: 20px; display: none; padding: 12px 16px;">
 						<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
 							<div>
-								<strong><span class="dashicons dashicons-lightning"></span> <?php esc_html_e( 'Chẩn Đoán & Kế Hoạch Tự Động Cải Thiện Toàn Site', 'sergio-ai-studio' ); ?></strong>
-								<div id="seo_action_plan_items" style="margin-top: 8px;"></div>
+								<strong><?php esc_html_e( 'Chẩn Đoán & Kế Hoạch Cải Thiện Toàn Site', 'sergio-ai-studio' ); ?></strong>
+								<div id="seo_action_plan_items" style="margin-top: 6px;"></div>
 							</div>
 							<button type="button" class="button button-primary" id="btn_batch_fix_all_missing">
-								<span class="dashicons dashicons-superhero"></span> <?php esc_html_e( 'Tự Động Tối Ưu Bằng AI', 'sergio-ai-studio' ); ?>
+								<?php esc_html_e( 'Tự Động Tối Ưu Bằng AI', 'sergio-ai-studio' ); ?>
 							</button>
 						</div>
 						<div id="seo_batch_progress_box" style="display: none; margin-top: 10px;">
@@ -1330,10 +1318,9 @@ class Sergio_AI_Admin {
 						<!-- Right: Workbench Pane -->
 						<div id="seo_workbench_pane">
 							<!-- Empty state -->
-							<div id="seo_pane_empty" class="postbox" style="text-align: center; padding: 48px 24px;">
-								<span class="dashicons dashicons-chart-area" style="font-size: 48px; width: 48px; height: 48px; color: #2271b1; margin-bottom: 12px;"></span>
-								<h3 style="font-size: 16px; margin: 0 0 8px;"><?php esc_html_e( 'Chọn Một Bài Viết Hoặc Trang Để Bắt Đầu', 'sergio-ai-studio' ); ?></h3>
-								<p class="description" style="max-width: 460px; margin: 0 auto;"><?php esc_html_e( 'Nhấp vào một bài viết hoặc trang từ danh sách bên trái để đo lường chi tiết thang điểm 100 của Rank Math và kích hoạt Gemini AI tối ưu hóa tiêu đề, mô tả và nội dung.', 'sergio-ai-studio' ); ?></p>
+							<div id="seo_pane_empty" class="postbox" style="text-align: center; padding: 48px 24px; margin: 0;">
+								<h3 style="font-size: 16px; margin: 0 0 8px; font-weight: 600;"><?php esc_html_e( 'Chọn Một Bài Viết Hoặc Trang Để Bắt Đầu', 'sergio-ai-studio' ); ?></h3>
+								<p class="description" style="max-width: 480px; margin: 0 auto; line-height: 1.5;"><?php esc_html_e( 'Nhấp vào một bài viết hoặc trang từ danh sách bên trái để đo lường chi tiết thang điểm 100 của Rank Math và kích hoạt Gemini AI tối ưu hóa tiêu đề, mô tả và nội dung.', 'sergio-ai-studio' ); ?></p>
 							</div>
 
 							<!-- Active audit workbench -->
@@ -1362,11 +1349,11 @@ class Sergio_AI_Admin {
 												</div>
 											</div>
 											<div style="display: flex; gap: 8px; flex-wrap: wrap;">
-												<button type="button" class="button button-secondary" id="btn_trigger_ai_seo">
-													<span class="dashicons dashicons-superhero"></span> <?php esc_html_e( '1. Gemini Gợi Ý SEO', 'sergio-ai-studio' ); ?>
+												<button type="button" class="button" id="btn_trigger_ai_seo">
+													<?php esc_html_e( '1. Gợi Ý Từ Khóa & Metadata', 'sergio-ai-studio' ); ?>
 												</button>
 												<button type="button" class="button button-primary" id="btn_trigger_deep_content_seo">
-													<span class="dashicons dashicons-lightning"></span> <?php esc_html_e( '2. AI Nâng Cấp Nội Dung', 'sergio-ai-studio' ); ?>
+													<?php esc_html_e( '2. Nâng Cấp Nội Dung Bằng AI', 'sergio-ai-studio' ); ?>
 												</button>
 											</div>
 										</div>
@@ -1380,9 +1367,8 @@ class Sergio_AI_Admin {
 
 										<!-- AI Optimization Results Deck -->
 										<div id="ai_seo_results_deck" class="card" style="display: none; margin: 0 0 16px; padding: 14px 16px; background: #f0f6fc; border-color: #c5d9ed;">
-											<h3 style="margin: 0 0 10px; font-size: 14px; color: #1d2327;">
-												<span class="dashicons dashicons-superhero" style="color: #2271b1;"></span>
-												<?php esc_html_e( 'Chiến Lược Tối Ưu Chuẩn Claude-SEO & Rank Math', 'sergio-ai-studio' ); ?>
+											<h3 style="margin: 0 0 10px; font-size: 14px; font-weight: 600; color: #1d2327;">
+												<?php esc_html_e( 'Chiến Lược Tối Ưu Từ Gemini AI & Rank Math', 'sergio-ai-studio' ); ?>
 											</h3>
 
 											<div id="ai_rec_intent_box" style="margin-bottom: 10px; display: none;">
@@ -1462,7 +1448,7 @@ class Sergio_AI_Admin {
 
 											<p style="margin-top: 15px;">
 												<button type="button" class="button button-primary button-large" id="btn_save_seo_to_rankmath">
-													<span class="dashicons dashicons-yes-alt"></span> <?php esc_html_e( 'Áp Dụng Vào Rank Math & Lưu Bài Viết', 'sergio-ai-studio' ); ?>
+													<?php esc_html_e( 'Áp Dụng Vào Rank Math & Lưu Bài Viết', 'sergio-ai-studio' ); ?>
 												</button>
 												<span id="save_seo_feedback" style="margin-left: 10px; font-weight: 500;"></span>
 											</p>

@@ -191,29 +191,16 @@
 .sergio-overview-cards .card {
     background: #ffffff;
     border: 1px solid #c3c4c7;
-    border-left: 4px solid #2271b1;
     border-radius: 4px;
-    padding: 18px 20px;
+    padding: 16px 18px;
     margin: 0;
     box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .sergio-overview-cards .card:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.06);
-}
-
-.sergio-overview-cards .card.card-success {
-    border-left-color: #00a32a;
-}
-
-.sergio-overview-cards .card.card-warning {
-    border-left-color: #dba617;
-}
-
-.sergio-overview-cards .card.card-error {
-    border-left-color: #d63638;
+    border-color: #8c8f94;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .sergio-overview-cards .card .card-kicker {
@@ -521,7 +508,7 @@
    SEO Workbench & Score Badges
    ========================================================================== */
 .seo-post-pick-card {
-    transition: all 0.15s ease;
+    transition: border-color 0.15s ease, background 0.15s ease;
     border: 1px solid #c3c4c7;
     border-radius: 4px;
     padding: 10px 12px;
@@ -533,14 +520,12 @@
 .seo-post-pick-card:hover {
     background: #f6f7f7;
     border-color: #8c8f94;
-    transform: translateX(2px);
 }
 
 .seo-post-pick-card.is-selected {
     background: #f0f6fc !important;
     border-color: #2271b1 !important;
-    border-left: 4px solid #2271b1;
-    box-shadow: 0 1px 3px rgba(34, 113, 177, 0.15);
+    box-shadow: none !important;
 }
 
 .pick-score-badge {
