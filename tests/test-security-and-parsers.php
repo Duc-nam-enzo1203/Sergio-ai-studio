@@ -62,6 +62,44 @@ function add_action( $hook, $callback, $priority = 10, $accepted_args = 1 ) {}
 function apply_filters( $hook, $value ) { return $value; }
 function wp_parse_args( $args, $defaults = array() ) { return array_merge( $defaults, (array) $args ); }
 function __( $text, $domain = 'default' ) { return $text; }
+function get_edit_post_link( $id, $context = 'display' ) {
+    return 'http://example.com/wp-admin/post.php?post=' . (int) $id . '&action=edit';
+}
+function get_permalink( $id = 0 ) {
+    return 'http://example.com/?p=' . (int) $id;
+}
+function get_post( $id ) {
+    if ( (int) $id === 999 ) {
+        $p = new stdClass();
+        $p->ID = 999;
+        $p->post_title = 'Sample AI Post';
+        $p->post_status = 'publish';
+        return $p;
+    }
+    return null;
+}
+function get_post_status( $id ) {
+    return (int) $id === 999 ? 'publish' : false;
+}
+function wp_trim_words( $text, $num_words = 55, $more = null ) {
+    return $text;
+}
+function wp_kses_post( $string ) {
+    return $string;
+}
+function esc_html_e( $text, $domain = 'default' ) {
+    echo esc_html( $text );
+}
+function esc_attr_e( $text, $domain = 'default' ) {
+    echo esc_attr( $text );
+}
+function esc_attr__( $text, $domain = 'default' ) {
+    return esc_attr( $text );
+}
+function esc_html__( $text, $domain = 'default' ) {
+    return esc_html( $text );
+}
+
 
 if ( ! class_exists( 'WP_Error' ) ) {
     class WP_Error {
@@ -289,6 +327,35 @@ assert_true( false !== mb_stripos( $article_meta['seo_title'], 'repo github', 0,
 assert_true( false !== mb_stripos( $article_meta['meta_description'], 'repo github', 0, 'UTF-8' ), 'Focus keyword is enforced into Meta Description' );
 assert_true( mb_strlen( $article_meta['seo_title'], 'UTF-8' ) <= 65, 'SEO Title length conforms to SERP boundary (<=65 chars)' );
 assert_true( mb_strlen( $article_meta['meta_description'], 'UTF-8' ) <= 165, 'Meta Description conforms to SERP boundary (<=165 chars)' );
+
+
+// 11. Logger Intelligence & Execution Center Tests
+// Test diagnostic on 429 Quota
+$diag_429 = Sergio_AI_Logger::diagnose_error( 'Lỗi Gemini API (429): You exceeded your current quota' );
+assert_true( 'quota_exceeded' === $diag_429['type'], 'Intelligent diagnostic detects 429 API Quota exhaustion' );
+assert_true( false !== strpos( $diag_429['suggestion'], 'gemini-2.0-flash' ), 'Quota diagnostic suggests switching to lightweight Flash model' );
+
+// Test diagnostic on Timeout
+$diag_timeout = Sergio_AI_Logger::diagnose_error( 'Hết thời gian chờ (120 giây). Kết nối Gemini API quá chậm.' );
+assert_true( 'timeout' === $diag_timeout['type'], 'Intelligent diagnostic detects API Timeout condition' );
+
+// Test diagnostic on Grounding rejection
+$diag_grounding = Sergio_AI_Logger::diagnose_error( 'Dữ kiện không đủ độ tin cậy để viết bài: Cổng kiểm chứng từ chối' );
+assert_true( 'grounding_rejected' === $diag_grounding['type'], 'Intelligent diagnostic detects Fact-checking verification gate rejection' );
+
+// Test clickable post link format in logs
+$log_msg_with_post = 'Tạo bài tự động thành công ID #999 cho chủ đề AI Agents';
+$formatted_log = Sergio_AI_Logger::format_log_message_html( $log_msg_with_post );
+assert_true( false !== strpos( $formatted_log, 'post.php?post=999' ), 'Log message converts post ID into clickable WordPress admin edit link' );
+assert_true( false !== strpos( $formatted_log, 'sergio-log-post-actions' ), 'Log message injects styled action buttons for view & edit' );
+
+// Test stage label localization
+assert_true( Sergio_AI_Logger::map_stage_label( 'fact_collection' ) === 'Nghiên cứu & Đối chứng dữ kiện', 'Stage slug maps to user-friendly Vietnamese label' );
+assert_true( Sergio_AI_Logger::map_stage_label( 'writing' ) === 'Biên tập bài viết AI', 'Writing stage maps to user-friendly Vietnamese label' );
+
+// Test module grouping
+$gen_stages = Sergio_AI_Logger::get_module_stages( 'generation' );
+assert_true( in_array( 'fact_collection', $gen_stages, true ) && in_array( 'writing', $gen_stages, true ), 'Module stages grouping maps generation stages accurately' );
 
 echo "\n🎉 ALL TESTS PASSED SUCCESSFULLY!\n";
 

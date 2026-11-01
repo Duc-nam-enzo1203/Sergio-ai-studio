@@ -916,42 +916,183 @@ jQuery(document).ready(function($) {
     });
 
     // -------------------------------------------------------------------------
-    // 8. LOGS: Filter & Clear
+    // 8. LOGS & EXECUTION MONITOR INTELLIGENCE
     // -------------------------------------------------------------------------
-    $('.filter-pill').on('click', function() {
-        var level = $(this).data('level');
-        $('.filter-pill').removeClass('is-active');
+    var currentLogView = 'sessions';
+    var activeLogLevel = '';
+    var activeLogModule = '';
+    var activeLogSearch = '';
+    var logSearchTimer = null;
+
+    function updateLogStatsUI(stats) {
+        if (!stats) return;
+        $('#log_stat_total_runs').text(stats.total_runs || 0);
+        $('#log_stat_total_logs').text(stats.total_logs || 0);
+        $('#log_stat_success_rate').text(stats.success_rate || 100);
+        $('#log_stat_articles_created').text(stats.articles_created || 0);
+        $('#log_stat_error_count').text(stats.error_count || 0);
+        $('#log_stat_warning_count').text(stats.warning_count || 0);
+
+        var $errorCard = $('#log_stat_error_count').closest('.card');
+        var $errorLabel = $('#log_stat_error_label');
+        if (stats.error_count > 0) {
+            $errorCard.addClass('card-error');
+            $errorLabel.text('Cần kiểm tra chẩn đoán lỗi bên dưới');
+        } else {
+            $errorCard.removeClass('card-error');
+            $errorLabel.text('Hệ thống hoạt động trơn tru');
+        }
+    }
+
+    function fetchLogsLive(callback) {
+        var $spinner = $('#log_refresh_spinner');
+        $spinner.addClass('is-active');
+
+        $.post(getAjaxUrl(), {
+            action: 'sergio_ai_refresh_logs',
+            nonce: getNonce(),
+            view_mode: currentLogView,
+            level: activeLogLevel,
+            module: activeLogModule,
+            search: activeLogSearch
+        })
+        .done(function(res) {
+            if (res.success && res.data) {
+                updateLogStatsUI(res.data.stats);
+                if (currentLogView === 'sessions') {
+                    $('#sergio_sessions_view').html(res.data.html);
+                } else {
+                    $('#raw_logs_tbody').html(res.data.html);
+                }
+                if (typeof callback === 'function') {
+                    callback(true, res.data);
+                }
+            } else {
+                if (typeof callback === 'function') {
+                    callback(false);
+                }
+            }
+        })
+        .fail(function() {
+            if (typeof callback === 'function') {
+                callback(false);
+            }
+        })
+        .always(function() {
+            $spinner.removeClass('is-active');
+        });
+    }
+
+    // View switcher (Sessions vs Raw)
+    $(document).on('click', '.btn-log-view-toggle', function() {
+        var targetView = $(this).data('view');
+        if (targetView === currentLogView) return;
+
+        currentLogView = targetView;
+        $('.btn-log-view-toggle').removeClass('is-active');
         $(this).addClass('is-active');
 
-        if (!level) {
-            $('.log-row-item').show();
+        if (currentLogView === 'sessions') {
+            $('#sergio_raw_logs_view').hide();
+            $('#sergio_sessions_view').show();
         } else {
-            $('.log-row-item').hide();
-            $('.log-row-item[data-level="' + level + '"]').show();
+            $('#sergio_sessions_view').hide();
+            $('#sergio_raw_logs_view').show();
+        }
+
+        fetchLogsLive();
+    });
+
+    // Level filter pills
+    $(document).on('click', '.log-level-filter', function() {
+        var level = $(this).data('level');
+        activeLogLevel = level ? String(level) : '';
+        $('.log-level-filter').removeClass('is-active button-primary').addClass('button-secondary');
+        $(this).removeClass('button-secondary').addClass('is-active button-primary');
+        fetchLogsLive();
+    });
+
+    // Module dropdown filter
+    $('#log_module_filter').on('change', function() {
+        activeLogModule = $(this).val();
+        fetchLogsLive();
+    });
+
+    // Search input (debounce 250ms)
+    $('#sergio_logs_search').on('input', function() {
+        var query = $(this).val();
+        clearTimeout(logSearchTimer);
+        logSearchTimer = setTimeout(function() {
+            activeLogSearch = query.trim();
+            fetchLogsLive();
+        }, 250);
+    });
+
+    // Refresh button
+    $('#btn_refresh_logs').on('click', function() {
+        var $btn = $(this);
+        $btn.prop('disabled', true);
+        fetchLogsLive(function() {
+            $btn.prop('disabled', false);
+        });
+    });
+
+    // Toggle Session Steps Accordion
+    $(document).on('click', '.btn-toggle-session-steps', function() {
+        var runId = $(this).data('run-id');
+        var $panel = $('.session-steps-panel-' + runId);
+        var $btn = $(this);
+
+        if ($panel.is(':visible')) {
+            $panel.slideUp(150);
+            $btn.find('.dashicons').removeClass('dashicons-arrow-up-alt2').addClass('dashicons-arrow-down-alt2');
+        } else {
+            $panel.slideDown(150);
+            $btn.find('.dashicons').removeClass('dashicons-arrow-down-alt2').addClass('dashicons-arrow-up-alt2');
         }
     });
 
-    $('#btn_clear_logs').on('click', function() {
-        var $btn = $(this);
+    // Prune Logs: 7 days, 30 days, Clear All
+    function handlePruneLogs(type, confirmMsg) {
         var $feedback = $('#clear_logs_feedback');
-        studioConfirm('Xóa các bản ghi log cũ hơn 30 ngày?', function() {
-            $btn.prop('disabled', true);
+        studioConfirm(confirmMsg, function() {
+            $feedback.css('color', '#64748b').text('Đang xử lý...');
             $.post(getAjaxUrl(), {
                 action: 'sergio_ai_clear_logs',
-                nonce: getNonce()
+                nonce: getNonce(),
+                type: type
             })
             .done(function(res) {
                 if (res.success) {
-                    $feedback.css('color', '#10b981').text(res.data.message);
-                    setTimeout(function() { window.location.reload(); }, 800);
+                    $feedback.css('color', '#00a32a').text(res.data.message);
+                    fetchLogsLive();
+                    setTimeout(function() { $feedback.fadeOut(400, function() { $(this).text('').show(); }); }, 3000);
                 } else {
-                    $feedback.css('color', '#f43f5e').text('Lỗi khi xóa log.');
+                    $feedback.css('color', '#d63638').text(res.data.message || 'Lỗi khi xóa.');
                 }
             })
-            .always(function() {
-                $btn.prop('disabled', false);
+            .fail(function() {
+                $feedback.css('color', '#d63638').text('Lỗi kết nối.');
             });
         });
+    }
+
+    $('#btn_clear_logs_7d').on('click', function() {
+        handlePruneLogs('7days', 'Dọn dẹp tất cả bản ghi nhật ký cũ hơn 7 ngày?');
+    });
+
+    $('#btn_clear_logs_30d').on('click', function() {
+        handlePruneLogs('30days', 'Dọn dẹp tất cả bản ghi nhật ký cũ hơn 30 ngày?');
+    });
+
+    $('#btn_clear_logs_all').on('click', function() {
+        handlePruneLogs('all', 'CẢNH BÁO: Hành động này sẽ xóa vĩnh viễn TOÀN BỘ lịch sử nhật ký và phiên tác vụ! Bạn có chắc chắn muốn xóa?');
+    });
+
+    // Export Logs to JSON
+    $('#btn_export_logs').on('click', function() {
+        var exportUrl = getAjaxUrl() + '?action=sergio_ai_export_logs&nonce=' + encodeURIComponent(getNonce());
+        window.open(exportUrl, '_blank');
     });
 
     // -------------------------------------------------------------------------
