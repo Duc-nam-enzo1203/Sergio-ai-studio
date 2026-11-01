@@ -56,27 +56,19 @@ jQuery(document).ready(function($) {
 
         var typeConfigs = {
             info: {
-                badge: '#eef2ff',
-                text: '#4f46e5',
-                icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />',
+                icon: '<span class="dashicons dashicons-info" style="color: #2271b1; font-size: 20px; width: 20px; height: 20px; vertical-align: middle;"></span>',
                 defaultTitle: 'Thông Báo'
             },
             success: {
-                badge: '#ecfdf5',
-                text: '#059669',
-                icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />',
+                icon: '<span class="dashicons dashicons-yes-alt" style="color: #00a32a; font-size: 20px; width: 20px; height: 20px; vertical-align: middle;"></span>',
                 defaultTitle: 'Thành Công'
             },
             warning: {
-                badge: '#fffbeb',
-                text: '#d97706',
-                icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />',
+                icon: '<span class="dashicons dashicons-warning" style="color: #dba617; font-size: 20px; width: 20px; height: 20px; vertical-align: middle;"></span>',
                 defaultTitle: 'Xác Nhận Hành Động'
             },
             error: {
-                badge: '#fff1f2',
-                text: '#e11d48',
-                icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />',
+                icon: '<span class="dashicons dashicons-dismiss" style="color: #d63638; font-size: 20px; width: 20px; height: 20px; vertical-align: middle;"></span>',
                 defaultTitle: 'Thông Báo Lỗi'
             }
         };
@@ -85,19 +77,15 @@ jQuery(document).ready(function($) {
         var modalTitle = opt.title || (opt.isConfirm ? 'Xác Nhận Hành Động' : config.defaultTitle);
 
         var buttonsHtml = opt.isConfirm
-            ? '<button type="button" class="studio-btn studio-btn-secondary studio-popup-cancel-btn" style="margin-right: 8px;">' + escapeHtml(opt.cancelText) + '</button>' +
-              '<button type="button" class="studio-btn studio-btn-primary studio-popup-action-btn">' + escapeHtml(opt.confirmText) + '</button>'
-            : '<button type="button" class="studio-btn studio-btn-primary studio-popup-action-btn">' + escapeHtml(opt.confirmText) + '</button>';
+            ? '<button type="button" class="button button-secondary studio-popup-cancel-btn">' + escapeHtml(opt.cancelText) + '</button>' +
+              '<button type="button" class="button button-primary studio-popup-action-btn">' + escapeHtml(opt.confirmText) + '</button>'
+            : '<button type="button" class="button button-primary studio-popup-action-btn">' + escapeHtml(opt.confirmText) + '</button>';
 
         var html = '<div id="studio-active-popup" class="studio-popup-backdrop" role="dialog" aria-modal="true">' +
-            '<div class="studio-popup-card studio-anim-in">' +
+            '<div class="studio-popup-card">' +
                 '<div class="studio-popup-header">' +
                     '<div class="studio-popup-title-wrap">' +
-                        '<span class="studio-popup-icon" style="background: ' + config.badge + '; color: ' + config.text + ';">' +
-                            '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">' +
-                                config.icon +
-                            '</svg>' +
-                        '</span>' +
+                        config.icon +
                         '<h3 class="studio-popup-title">' + escapeHtml(modalTitle) + '</h3>' +
                     '</div>' +
                     '<button type="button" class="studio-popup-close-btn" aria-label="Đóng">&times;</button>' +
@@ -114,8 +102,7 @@ jQuery(document).ready(function($) {
         var $popup = $(html).appendTo('body');
 
         function closePopup(confirmed) {
-            $popup.find('.studio-popup-card').removeClass('studio-anim-in').addClass('studio-anim-out');
-            setTimeout(function() {
+            $popup.fadeOut(150, function() {
                 $popup.remove();
                 if (confirmed) {
                     if (typeof opt.onConfirm === 'function') {
@@ -126,7 +113,7 @@ jQuery(document).ready(function($) {
                         opt.onCancel();
                     }
                 }
-            }, 180);
+            });
         }
 
         $popup.on('click', '.studio-popup-action-btn', function(e) {
@@ -171,20 +158,20 @@ jQuery(document).ready(function($) {
     }
 
     // -------------------------------------------------------------------------
-    // 1. TAB BENCH SWITCHING with localStorage persistence
+    // 1. WORDPRESS NATIVE TAB SWITCHING with localStorage persistence
     // -------------------------------------------------------------------------
     function activateTab(tabId) {
         if (!tabId || !$('#' + tabId).length) { return; }
-        $('.nav-tree-item').removeClass('is-active');
-        $('[data-tab="' + tabId + '"]').addClass('is-active');
-        $('.studio-tab-panel').removeClass('is-active');
-        $('#' + tabId).addClass('is-active');
+        $('.nav-tab, .nav-tree-item').removeClass('nav-tab-active is-active');
+        $('[data-tab="' + tabId + '"]').addClass('nav-tab-active is-active');
+        $('.sergio-tab-pane, .studio-tab-panel').removeClass('is-active').hide();
+        $('#' + tabId).addClass('is-active').show();
         try {
             localStorage.setItem('sergio_ai_active_tab', tabId);
         } catch(e) {}
     }
 
-    $('.nav-tree-item').on('click', function(e) {
+    $(document).on('click', '.nav-tab, .nav-tree-item', function(e) {
         e.preventDefault();
         var targetTab = $(this).data('tab');
         activateTab(targetTab);
@@ -341,15 +328,15 @@ jQuery(document).ready(function($) {
     }
 
     function addPipelineStep(text, status) {
-        var $steps = $('#pipeline_steps_list');
-        var iconSvg = status === 'done'
-            ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>'
+        var $steps = $('#pipeline_steps_list, #crawl_steps_list');
+        var iconHtml = status === 'done'
+            ? '<span class="dashicons dashicons-yes-alt" style="color: #00a32a;"></span>'
             : (status === 'fail'
-                ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
-                : '<span class="stepper-spinner" style="width:12px; height:12px;"></span>');
+                ? '<span class="dashicons dashicons-dismiss" style="color: #d63638;"></span>'
+                : '<span class="spinner is-active" style="float:none; margin:0 4px 0 0; vertical-align:middle;"></span>');
 
         var itemClass = 'stepper-item-row ' + (status === 'done' ? 'is-done' : (status === 'fail' ? 'is-failed' : 'is-active'));
-        $steps.append('<div class="' + itemClass + '">' + iconSvg + '<span>' + escapeHtml(text) + '</span></div>');
+        $steps.append('<div class="' + itemClass + '">' + iconHtml + '<span>' + escapeHtml(text) + '</span></div>');
     }
 
     function setStepperHeader($box, status, htmlOrText) {
@@ -358,29 +345,24 @@ jQuery(document).ready(function($) {
 
         var $icon = $header.find('.stepper-header-icon');
         if (!$icon.length) {
-            var $spinner = $header.find('.stepper-spinner');
-            if ($spinner.length) {
-                $spinner.wrap('<span class="stepper-header-icon"></span>');
-            } else {
-                $header.prepend('<span class="stepper-header-icon"></span>');
-            }
+            $header.prepend('<span class="stepper-header-icon"></span>');
             $icon = $header.find('.stepper-header-icon');
         }
 
         var $msg = $box.find('#pipeline_progress_msg, #crawl_progress_msg, #seo_batch_progress_text, #ai_seo_loading_msg');
         if (!$msg.length) {
-            $msg = $header.find('span:not(.stepper-header-icon, .stepper-spinner)');
+            $msg = $header.find('span:not(.stepper-header-icon)');
         }
 
         if (status === 'running') {
-            $icon.html('<span class="stepper-spinner"></span>');
-            $msg.html('<span style="color: var(--sergio-text-primary);">' + escapeHtml(htmlOrText) + '</span>');
+            $icon.html('<span class="spinner is-active" style="float:none; margin:0;"></span>');
+            $msg.html('<span>' + escapeHtml(htmlOrText) + '</span>');
         } else if (status === 'success') {
-            $icon.html('<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" style="display:inline-block; vertical-align:middle;"><polyline points="20 6 9 17 4 12"/></svg>');
-            $msg.html('<span style="color: #10b981; font-weight: 600;">' + htmlOrText + '</span>');
+            $icon.html('<span class="dashicons dashicons-yes-alt" style="color: #00a32a; font-size:20px; width:20px; height:20px; vertical-align:middle;"></span>');
+            $msg.html('<span style="color: #00a32a; font-weight: 600;">' + htmlOrText + '</span>');
         } else if (status === 'fail' || status === 'error') {
-            $icon.html('<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.5" style="display:inline-block; vertical-align:middle;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>');
-            $msg.html('<span style="color: #f43f5e; font-weight: 600;">' + htmlOrText + '</span>');
+            $icon.html('<span class="dashicons dashicons-dismiss" style="color: #d63638; font-size:20px; width:20px; height:20px; vertical-align:middle;"></span>');
+            $msg.html('<span style="color: #d63638; font-weight: 600;">' + htmlOrText + '</span>');
         }
     }
 
@@ -431,25 +413,25 @@ jQuery(document).ready(function($) {
                 addPipelineStep('Giai đoạn 4: Thiết lập Focus Keyword "' + escapeHtml(d.focus_keyword) + '" & xử lý ảnh đại diện', 'done');
 
                 var statusBadge = d.status === 'publish'
-                    ? '<span class="filter-pill" style="background: #ecfdf5; color: #059669; border-color: #a7f3d0;">Đã xuất bản</span>'
+                    ? '<span class="notice notice-success inline" style="padding: 2px 8px; font-weight: 600;">ĐÃ XUẤT BẢN</span>'
                     : (d.status === 'pending'
-                        ? '<span class="filter-pill" style="background: #fffbeb; color: #d97706; border-color: #fde68a;">Chờ duyệt</span>'
-                        : '<span class="filter-pill" style="background: #f1f5f9; color: #475569; border-color: #cbd5e1;">Bản nháp</span>');
+                        ? '<span class="notice notice-warning inline" style="padding: 2px 8px; font-weight: 600;">CHỜ DUYỆT</span>'
+                        : '<span class="notice notice-info inline" style="padding: 2px 8px; font-weight: 600;">BẢN NHÁP</span>');
 
-                var cardHtml = '<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; flex-wrap: wrap;">' +
-                        '<div style="font-size: 16px; font-weight: 700; color: #0f172a;">' + escapeHtml(d.title) + '</div>' +
+                var cardHtml = '<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 12px; flex-wrap: wrap;">' +
+                        '<div style="font-size: 16px; font-weight: 600; color: #1d2327;">' + escapeHtml(d.title) + '</div>' +
                         statusBadge +
                     '</div>' +
-                    '<div style="display: flex; gap: 20px; margin-bottom: 16px; font-size: 13px; color: #64748b; flex-wrap: wrap; align-items: center;">' +
-                        '<span>Từ khóa chính: <strong style="color: #0f172a;">' + escapeHtml(d.focus_keyword) + '</strong></span>' +
-                        '<span>Điểm SEO: <strong style="color: #059669; background: #ecfdf5; padding: 2px 8px; border-radius: 4px; border: 1px solid #a7f3d0;">' + (d.seo_score ? escapeHtml(d.seo_score) + '/100 (Xanh Rank Math)' : 'Tối ưu') + '</strong></span>' +
-                        '<span>Độ dài: <strong style="color: #0f172a;">~' + escapeHtml(d.word_count) + ' từ</strong></span>' +
-                        '<span>Nguồn kiểm chứng: <strong style="color: #059669;">' + escapeHtml(d.sources_count) + ' nguồn uy tín</strong></span>' +
-                    '</div>' +
-                    '<div style="display: flex; gap: 10px; flex-wrap: wrap;">' +
-                        '<a href="' + safeUrl(d.edit_url) + '" target="_blank" class="studio-btn studio-btn-primary">Chỉnh Sửa Bài Viết</a>' +
-                        '<a href="' + safeUrl(d.view_url) + '" target="_blank" class="studio-btn studio-btn-secondary">Xem Bài Viết</a>' +
-                    '</div>';
+                    '<p style="margin: 0 0 12px; font-size: 13px; color: #50575e;">' +
+                        '<span>Từ khóa chính: <strong style="color: #1d2327;">' + escapeHtml(d.focus_keyword) + '</strong></span> &bull; ' +
+                        '<span>Điểm SEO: <strong style="color: #00a32a;">' + (d.seo_score ? escapeHtml(d.seo_score) + '/100 (Rank Math)' : 'Tối ưu') + '</strong></span> &bull; ' +
+                        '<span>Độ dài: <strong style="color: #1d2327;">~' + escapeHtml(d.word_count) + ' từ</strong></span> &bull; ' +
+                        '<span>Nguồn kiểm chứng: <strong style="color: #00a32a;">' + escapeHtml(d.sources_count) + ' nguồn uy tín</strong></span>' +
+                    '</p>' +
+                    '<p style="margin: 0; display: flex; gap: 8px; flex-wrap: wrap;">' +
+                        '<a href="' + safeUrl(d.edit_url) + '" target="_blank" class="button button-primary button-large"><span class="dashicons dashicons-edit"></span> Chỉnh Sửa Bài Viết</a>' +
+                        '<a href="' + safeUrl(d.view_url) + '" target="_blank" class="button button-secondary button-large"><span class="dashicons dashicons-visibility"></span> Xem Bài Viết</a>' +
+                    '</p>';
 
                 $resCard.html(cardHtml).slideDown(200);
             } else {
@@ -640,8 +622,8 @@ jQuery(document).ready(function($) {
                         '<span>Nguồn: <strong style="color: #059669;">' + escapeHtml(d.sources_count) + ' nguồn</strong></span>' +
                     '</div>' +
                     '<div style="display: flex; gap: 10px; flex-wrap: wrap;">' +
-                        '<a href="' + safeUrl(d.edit_url) + '" target="_blank" class="studio-btn studio-btn-primary">Chỉnh Sửa Bài Viết</a>' +
-                        '<a href="' + safeUrl(d.view_url) + '" target="_blank" class="studio-btn studio-btn-secondary">Xem Bài Viết</a>' +
+                        '<a href="' + safeUrl(d.edit_url) + '" target="_blank" class="button button-primary">Chỉnh Sửa Bài Viết</a>' +
+                        '<a href="' + safeUrl(d.view_url) + '" target="_blank" class="button button-secondary">Xem Bài Viết</a>' +
                     '</div>';
 
                 $('#fact_pack_preview_box').slideUp(150);
@@ -730,7 +712,7 @@ jQuery(document).ready(function($) {
                             : '<span class="status-badge-inline status-failed">Lỗi</span>';
 
                         var actionCol = item.status === 'success'
-                            ? '<a href="' + safeUrl(item.edit_url) + '" target="_blank" class="studio-btn studio-btn-secondary btn-sm">Xem Nháp</a>'
+                            ? '<a href="' + safeUrl(item.edit_url) + '" target="_blank" class="button button-secondary button-small">Xem Nháp</a>'
                             : '<span style="color:#f43f5e; font-size:12px;">' + escapeHtml(item.message) + '</span>';
 
                         var row = '<tr>' +
@@ -1014,11 +996,11 @@ jQuery(document).ready(function($) {
             var statusCls = 'item-' + item.status;
             var iconSvg = '';
             if (item.status === 'pass') {
-                iconSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
+                iconSvg = '<span class="dashicons dashicons-yes-alt" style="color: #00a32a;"></span>';
             } else if (item.status === 'warning') {
-                iconSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+                iconSvg = '<span class="dashicons dashicons-warning" style="color: #dba617;"></span>';
             } else {
-                iconSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+                iconSvg = '<span class="dashicons dashicons-dismiss" style="color: #d63638;"></span>';
             }
 
             var html = '<div class="checklist-item-row ' + statusCls + '">' +
@@ -1260,7 +1242,7 @@ jQuery(document).ready(function($) {
                         var angleText = item.angle ? ' (' + item.angle + ')' : '';
                         var row = '<div class="ai-suggest-option-card btn-apply-ai-title" data-title="' + escapeHtml(titleText) + '">' +
                             '<span class="ai-suggest-option-text">' + escapeHtml(titleText) + '<small style="color:#64748b;">' + escapeHtml(angleText) + '</small></span>' +
-                            '<button type="button" class="studio-btn studio-btn-secondary btn-sm" style="flex-shrink:0;">Dùng tiêu đề này</button>' +
+                            '<button type="button" class="button button-secondary button-small" style="flex-shrink:0;">Dùng tiêu đề này</button>' +
                         '</div>';
                         $titles.append(row);
                     });
@@ -1274,7 +1256,7 @@ jQuery(document).ready(function($) {
                         var descText = item.description || item;
                         var row = '<div class="ai-suggest-option-card btn-apply-ai-desc" data-desc="' + escapeHtml(descText) + '">' +
                             '<span class="ai-suggest-option-text">' + escapeHtml(descText) + '</span>' +
-                            '<button type="button" class="studio-btn studio-btn-secondary btn-sm" style="flex-shrink:0;">Dùng mô tả này</button>' +
+                            '<button type="button" class="button button-secondary button-small" style="flex-shrink:0;">Dùng mô tả này</button>' +
                         '</div>';
                         $descs.append(row);
                     });
