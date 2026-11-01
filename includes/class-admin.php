@@ -626,7 +626,7 @@ class Sergio_AI_Admin {
 
 						<div class="sergio-grid-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
 							<div class="postbox">
-								<div class="postbox-header"><h2 class="hndle"><span><span class="dashicons dashicons-clock"></span> <?php esc_html_e( 'Chu Kỳ & Số Lượng Bài Viết', 'sergio-ai-studio' ); ?></span></h2></div>
+								<div class="postbox-header"><h2 class="hndle"><span><?php esc_html_e( 'Chu Kỳ & Số Lượng Bài Viết', 'sergio-ai-studio' ); ?></span></h2></div>
 								<div class="inside">
 									<table class="form-table" role="presentation">
 										<tbody>
@@ -691,24 +691,23 @@ class Sergio_AI_Admin {
 										</tbody>
 									</table>
 
-									<div class="notice notice-info inline" style="margin: 10px 0 0;">
-										<p>
-											<strong><?php esc_html_e( 'Trạng thái WP-Cron:', 'sergio-ai-studio' ); ?></strong>
-											<?php if ( $scheduler_enabled && $next_run_time ) : ?>
-												<span style="color: #059669; font-weight: 600;"><?php printf( esc_html__( 'Đang chạy — Lần tới: %s', 'sergio-ai-studio' ), esc_html( $next_run_time ) ); ?></span>
-											<?php elseif ( $scheduler_enabled ) : ?>
-												<span style="color: #059669; font-weight: 600;"><?php esc_html_e( 'Đang kích hoạt', 'sergio-ai-studio' ); ?></span>
-											<?php else : ?>
-												<span style="color: #64748b;"><?php esc_html_e( 'Lịch trình hiện đang tắt', 'sergio-ai-studio' ); ?></span>
-											<?php endif; ?>
-											&bull; <?php printf( esc_html__( 'Hôm nay: %d bài đã tạo.', 'sergio-ai-studio' ), (int) $posts_today ); ?>
-										</p>
+									<div style="margin-top: 15px; padding: 10px 14px; background: #f6f7f7; border: 1px solid #c3c4c7; border-radius: 4px; font-size: 13px; line-height: 1.5;">
+										<strong><?php esc_html_e( 'Trạng thái WP-Cron:', 'sergio-ai-studio' ); ?></strong>
+										<?php if ( $scheduler_enabled && $next_run_time ) : ?>
+											<span style="color: #007017; font-weight: 600;"><?php printf( esc_html__( 'Đang chạy — Lần tới: %s', 'sergio-ai-studio' ), esc_html( $next_run_time ) ); ?></span>
+										<?php elseif ( $scheduler_enabled ) : ?>
+											<span style="color: #007017; font-weight: 600;"><?php esc_html_e( 'Đang kích hoạt', 'sergio-ai-studio' ); ?></span>
+										<?php else : ?>
+											<span style="color: #64748b;"><?php esc_html_e( 'Lịch trình hiện đang tắt', 'sergio-ai-studio' ); ?></span>
+										<?php endif; ?>
+										<span style="color: #8c8f94; margin: 0 6px;">&bull;</span>
+										<span><?php printf( esc_html__( 'Hôm nay: %d bài đã tạo.', 'sergio-ai-studio' ), (int) $posts_today ); ?></span>
 									</div>
 								</div>
 							</div>
 
 							<div class="postbox">
-								<div class="postbox-header"><h2 class="hndle"><span><span class="dashicons dashicons-superhero"></span> <?php esc_html_e( 'Chiến Lược Chủ Đề & Định Dạng', 'sergio-ai-studio' ); ?></span></h2></div>
+								<div class="postbox-header"><h2 class="hndle"><span><?php esc_html_e( 'Chiến Lược Chủ Đề & Định Dạng', 'sergio-ai-studio' ); ?></span></h2></div>
 								<div class="inside">
 									<table class="form-table" role="presentation">
 										<tbody>
@@ -846,8 +845,8 @@ class Sergio_AI_Admin {
 							<div class="postbox-header"><h2 class="hndle"><span><?php esc_html_e( 'Chạy Thử Nghiệm Ngay Lập Tức', 'sergio-ai-studio' ); ?></span></h2></div>
 							<div class="inside">
 								<p><?php printf( esc_html__( 'Kích hoạt ngay 1 đợt xử lý (sẽ tạo %d bài theo đúng quy tắc đã cấu hình). Không cần chờ đến giờ chạy tiếp theo.', 'sergio-ai-studio' ), (int) $posts_per_run ); ?></p>
-								<div class="card" style="margin: 10px 0 15px; padding: 12px;">
-									<p style="margin: 0 0 4px; font-weight: 600;">
+								<div style="margin: 12px 0 16px; padding: 10px 14px; background: #f6f7f7; border: 1px solid #c3c4c7; border-radius: 4px; font-size: 13px;">
+									<p style="margin: 0 0 6px; font-weight: 600;">
 										<?php esc_html_e( 'Chế độ hiện tại:', 'sergio-ai-studio' ); ?>
 										<?php
 										if ( 'queue_only' === $topic_mode ) {
@@ -861,7 +860,7 @@ class Sergio_AI_Admin {
 									</p>
 									<p class="description" style="margin: 0;">
 										<?php printf( esc_html__( 'Quy mô đợt: %d bài viết / phiên', 'sergio-ai-studio' ), (int) $posts_per_run ); ?>
-										&bull;
+										<span style="color: #8c8f94; margin: 0 6px;">&bull;</span>
 										<?php
 										$img_opt_label = ( 'banner' === $schedule_image_opt ) ? __( 'Banner GD', 'sergio-ai-studio' ) : ( ( 'none' === $schedule_image_opt ) ? __( 'Không tạo ảnh', 'sergio-ai-studio' ) : __( 'Ảnh từ nguồn tin', 'sergio-ai-studio' ) );
 										printf( esc_html__( 'Ảnh: %s', 'sergio-ai-studio' ), esc_html( $img_opt_label ) );
@@ -869,8 +868,7 @@ class Sergio_AI_Admin {
 									</p>
 								</div>
 								<p>
-									<button type="button" class="button button-secondary button-large" id="btn_run_cron_now">
-										<span class="dashicons dashicons-controls-play"></span>
+									<button type="button" class="button button-primary button-large" id="btn_run_cron_now">
 										<span><?php printf( esc_html__( 'Chạy Thử Ngay %d Bài (Run Batch Now)', 'sergio-ai-studio' ), (int) $posts_per_run ); ?></span>
 									</button>
 								</p>
@@ -891,10 +889,10 @@ class Sergio_AI_Admin {
 									<tr>
 										<th style="width: 50px;">ID</th>
 										<th><?php esc_html_e( 'Chủ Đề Nghiên Cứu', 'sergio-ai-studio' ); ?></th>
-										<th style="width: 110px;"><?php esc_html_e( 'Trạng Thái', 'sergio-ai-studio' ); ?></th>
-										<th style="width: 70px; text-align: center;"><?php esc_html_e( 'Lần Thử', 'sergio-ai-studio' ); ?></th>
-										<th style="width: 150px;"><?php esc_html_e( 'Thời Gian Tạo', 'sergio-ai-studio' ); ?></th>
-										<th style="width: 120px; text-align: center;"><?php esc_html_e( 'Thao Tác', 'sergio-ai-studio' ); ?></th>
+										<th style="width: 120px;"><?php esc_html_e( 'Trạng Thái', 'sergio-ai-studio' ); ?></th>
+										<th style="width: 80px; text-align: center;"><?php esc_html_e( 'Lần Thử', 'sergio-ai-studio' ); ?></th>
+										<th style="width: 160px;"><?php esc_html_e( 'Thời Gian Tạo', 'sergio-ai-studio' ); ?></th>
+										<th style="width: 130px; text-align: center;"><?php esc_html_e( 'Thao Tác', 'sergio-ai-studio' ); ?></th>
 									</tr>
 								</thead>
 								<tbody>
@@ -907,36 +905,36 @@ class Sergio_AI_Admin {
 									<?php else : ?>
 										<?php foreach ( $queue_items as $q ) : ?>
 											<tr id="queue-row-<?php echo esc_attr( $q['id'] ); ?>">
-												<td>#<?php echo esc_html( $q['id'] ); ?></td>
-												<td>
+												<td style="vertical-align: middle;">#<?php echo esc_html( $q['id'] ); ?></td>
+												<td style="vertical-align: middle;">
 													<strong><?php echo esc_html( $q['topic'] ); ?></strong>
 													<?php if ( ! empty( $q['last_error'] ) ) : ?>
 														<div class="item-error-subtext" style="color: #b32d2e; font-size: 11px; margin-top: 3px;"><?php echo esc_html( $q['last_error'] ); ?></div>
 													<?php endif; ?>
 												</td>
-												<td>
+												<td style="vertical-align: middle;">
 													<?php if ( 'completed' === $q['status'] ) : ?>
-														<span class="notice notice-success inline" style="padding: 2px 6px; margin: 0;"><?php echo esc_html( strtoupper( $q['status'] ) ); ?></span>
+														<span class="sergio-queue-badge sergio-log-badge badge-success"><?php esc_html_e( 'HOÀN TẤT', 'sergio-ai-studio' ); ?></span>
 													<?php elseif ( 'failed' === $q['status'] ) : ?>
-														<span class="notice notice-error inline" style="padding: 2px 6px; margin: 0;"><?php echo esc_html( strtoupper( $q['status'] ) ); ?></span>
+														<span class="sergio-queue-badge sergio-log-badge badge-error"><?php esc_html_e( 'THẤT BẠI', 'sergio-ai-studio' ); ?></span>
 													<?php else : ?>
-														<span class="notice notice-info inline" style="padding: 2px 6px; margin: 0;"><?php echo esc_html( strtoupper( $q['status'] ) ); ?></span>
+														<span class="sergio-queue-badge sergio-log-badge badge-info"><?php esc_html_e( 'CHỜ XỬ LÝ', 'sergio-ai-studio' ); ?></span>
 													<?php endif; ?>
 												</td>
-												<td style="text-align: center; color: #64748b;"><?php echo (int) ( $q['attempts'] ?? 0 ); ?>/3</td>
-												<td><?php echo esc_html( $q['created_at'] ); ?></td>
-												<td style="text-align: center; white-space: nowrap;">
+												<td style="text-align: center; color: #64748b; vertical-align: middle;"><?php echo (int) ( $q['attempts'] ?? 0 ); ?>/3</td>
+												<td style="vertical-align: middle;"><?php echo esc_html( $q['created_at'] ); ?></td>
+												<td style="text-align: center; white-space: nowrap; vertical-align: middle;">
 													<?php if ( 'failed' === $q['status'] ) : ?>
 														<button type="button" class="button button-small sergio-btn-retry-queue" data-id="<?php echo esc_attr( $q['id'] ); ?>" title="<?php esc_attr_e( 'Thử lại chủ đề này', 'sergio-ai-studio' ); ?>">
-															<span class="dashicons dashicons-update"></span>
+															<?php esc_html_e( 'Thử lại', 'sergio-ai-studio' ); ?>
 														</button>
 													<?php elseif ( 'pending' === $q['status'] ) : ?>
 														<button type="button" class="button button-small sergio-btn-priority-queue" data-id="<?php echo esc_attr( $q['id'] ); ?>" title="<?php esc_attr_e( 'Đẩy lên đầu hàng đợi ưu tiên', 'sergio-ai-studio' ); ?>">
-															<span class="dashicons dashicons-arrow-up-alt"></span>
+															<?php esc_html_e( 'Ưu tiên', 'sergio-ai-studio' ); ?>
 														</button>
 													<?php endif; ?>
 													<button type="button" class="button button-small button-link-delete sergio-btn-del-queue" data-id="<?php echo esc_attr( $q['id'] ); ?>" title="<?php esc_attr_e( 'Xóa mục này', 'sergio-ai-studio' ); ?>">
-														<span class="dashicons dashicons-trash"></span>
+														<?php esc_html_e( 'Xóa', 'sergio-ai-studio' ); ?>
 													</button>
 												</td>
 											</tr>

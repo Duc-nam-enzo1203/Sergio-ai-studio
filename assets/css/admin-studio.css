@@ -1077,3 +1077,9 @@
     color: #0c5460 !important;
     border-color: #bee5eb !important;
 }
+
+.sergio-log-badge.badge-success {
+    background: #edfaef !important;
+    color: #1a6828 !important;
+    border-color: #c3e6cb !important;
+}

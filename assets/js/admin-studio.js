@@ -869,15 +869,13 @@ jQuery(document).ready(function($) {
         .done(function(res) {
             if (res.success) {
                 var $row = $('#queue-row-' + itemId);
-                $row.find('.status-badge-inline')
-                    .removeClass('status-failed')
-                    .addClass('status-pending')
-                    .text('PENDING');
+                $row.find('.sergio-queue-badge')
+                    .removeClass('badge-error badge-success')
+                    .addClass('badge-info')
+                    .text('CHỜ XỬ LÝ');
                 $row.find('.item-error-subtext').remove();
                 $btn.replaceWith(
-                    '<button type="button" class="studio-icon-btn sergio-btn-priority-queue" data-id="' + itemId + '" title="Đẩy lên đầu hàng đợi ưu tiên" style="color: #059669;">' +
-                    '<svg class="sergio-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>' +
-                    '</button>'
+                    '<button type="button" class="button button-small sergio-btn-priority-queue" data-id="' + itemId + '" title="Đẩy lên đầu hàng đợi ưu tiên">Ưu tiên</button>'
                 );
                 studioModal({ title: 'Thành Công', message: res.data.message, type: 'success' });
             } else {
