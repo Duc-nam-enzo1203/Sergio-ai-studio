@@ -8,6 +8,13 @@
 /* ==========================================================================
    Page Wrap & Header Branding
    ========================================================================== */
+.sergio-ai-studio-wrap,
+.sergio-ai-studio-wrap *,
+.sergio-ai-studio-wrap *::before,
+.sergio-ai-studio-wrap *::after {
+    box-sizing: border-box;
+}
+
 .sergio-ai-studio-wrap {
     margin-top: 16px;
     max-width: 1400px;
@@ -289,8 +296,7 @@
 .sergio-ai-studio-wrap input[type="text"],
 .sergio-ai-studio-wrap input[type="password"],
 .sergio-ai-studio-wrap input[type="search"],
-.sergio-ai-studio-wrap input[type="number"],
-.sergio-ai-studio-wrap select {
+.sergio-ai-studio-wrap input[type="number"] {
     min-height: 36px;
     line-height: 34px;
     padding: 0 10px;
@@ -298,6 +304,23 @@
     border: 1px solid #8c8f94;
     color: #2c3338;
     box-shadow: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sergio-ai-studio-wrap select {
+    min-height: 36px;
+    line-height: 34px;
+    padding: 0 34px 0 12px !important;
+    border-radius: 4px;
+    border: 1px solid #8c8f94;
+    color: #2c3338;
+    background-color: #ffffff;
+    box-shadow: none;
+    max-width: 100%;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    vertical-align: middle;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 

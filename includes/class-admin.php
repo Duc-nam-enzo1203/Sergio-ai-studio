@@ -160,18 +160,25 @@ class Sergio_AI_Admin {
 			return;
 		}
 
+		$css_ver = file_exists( SERGIO_AI_STUDIO_DIR . 'assets/css/admin-studio.css' )
+			? (string) filemtime( SERGIO_AI_STUDIO_DIR . 'assets/css/admin-studio.css' )
+			: SERGIO_AI_STUDIO_VERSION;
+		$js_ver  = file_exists( SERGIO_AI_STUDIO_DIR . 'assets/js/admin-studio.js' )
+			? (string) filemtime( SERGIO_AI_STUDIO_DIR . 'assets/js/admin-studio.js' )
+			: SERGIO_AI_STUDIO_VERSION;
+
 		wp_enqueue_style(
 			'sergio-ai-studio-admin-css',
 			SERGIO_AI_STUDIO_URL . 'assets/css/admin-studio.css',
 			array(),
-			SERGIO_AI_STUDIO_VERSION
+			$css_ver
 		);
 
 		wp_enqueue_script(
 			'sergio-ai-studio-admin-js',
 			SERGIO_AI_STUDIO_URL . 'assets/js/admin-studio.js',
 			array( 'jquery' ),
-			SERGIO_AI_STUDIO_VERSION,
+			$js_ver,
 			true
 		);
 
