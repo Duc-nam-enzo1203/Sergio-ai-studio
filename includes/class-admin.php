@@ -133,7 +133,13 @@ class Sergio_AI_Admin {
 		}
 
 		$clean['gemini_model_primary']  = isset( $input['gemini_model_primary'] ) ? sanitize_text_field( wp_unslash( $input['gemini_model_primary'] ) ) : 'gemini-2.5-flash';
-		$clean['gemini_model_fallback'] = isset( $input['gemini_model_fallback'] ) ? sanitize_text_field( wp_unslash( $input['gemini_model_fallback'] ) ) : 'gemini-2.5-flash-lite';
+		$clean['gemini_model_fallback'] = isset( $input['gemini_model_fallback'] ) ? sanitize_text_field( wp_unslash( $input['gemini_model_fallback'] ) ) : 'gemini-3.5-flash-lite';
+		if ( 'gemini-2.5-flash-lite' === $clean['gemini_model_primary'] ) {
+			$clean['gemini_model_primary'] = 'gemini-3.5-flash-lite';
+		}
+		if ( 'gemini-2.5-flash-lite' === $clean['gemini_model_fallback'] ) {
+			$clean['gemini_model_fallback'] = 'gemini-3.5-flash-lite';
+		}
 		$clean['default_language']      = isset( $input['default_language'] ) ? sanitize_text_field( wp_unslash( $input['default_language'] ) ) : 'vi';
 		$clean['default_post_status']   = in_array( $input['default_post_status'] ?? '', array( 'draft', 'publish' ), true ) ? $input['default_post_status'] : 'draft';
 
@@ -198,7 +204,13 @@ class Sergio_AI_Admin {
 		$masked_key    = Sergio_AI_Security::mask_key( $raw_api_key );
 		$has_key       = $is_config_key || ! empty( $raw_api_key );
 		$primary_model = $options['gemini_model_primary']  ?? 'gemini-2.5-flash';
-		$fallback_model= $options['gemini_model_fallback'] ?? 'gemini-2.5-flash-lite';
+		$fallback_model= $options['gemini_model_fallback'] ?? 'gemini-3.5-flash-lite';
+		if ( 'gemini-2.5-flash-lite' === $primary_model ) {
+			$primary_model = 'gemini-3.5-flash-lite';
+		}
+		if ( 'gemini-2.5-flash-lite' === $fallback_model ) {
+			$fallback_model = 'gemini-3.5-flash-lite';
+		}
 		$language      = $options['default_language']       ?? 'vi';
 
 		// Load models.
@@ -557,8 +569,8 @@ class Sergio_AI_Admin {
 												<?php endforeach; ?>
 											<?php else : ?>
 												<option value="gemini-2.5-flash" <?php selected( $primary_model, 'gemini-2.5-flash' ); ?>>Gemini 2.5 Flash</option>
+												<option value="gemini-3.5-flash-lite" <?php selected( $primary_model, 'gemini-3.5-flash-lite' ); ?>>Gemini 3.5 Flash Lite</option>
 												<option value="gemini-2.5-pro" <?php selected( $primary_model, 'gemini-2.5-pro' ); ?>>Gemini 2.5 Pro</option>
-												<option value="gemini-2.5-flash-lite" <?php selected( $primary_model, 'gemini-2.5-flash-lite' ); ?>>Gemini 2.5 Flash Lite</option>
 											<?php endif; ?>
 										</select>
 										<span class="studio-hint-text"><?php esc_html_e( 'Dùng cho nghiên cứu dữ kiện và biên soạn nội dung.', 'sergio-ai-studio' ); ?></span>
@@ -574,7 +586,7 @@ class Sergio_AI_Admin {
 													</option>
 												<?php endforeach; ?>
 											<?php else : ?>
-												<option value="gemini-2.5-flash-lite" <?php selected( $fallback_model, 'gemini-2.5-flash-lite' ); ?>>Gemini 2.5 Flash Lite</option>
+												<option value="gemini-3.5-flash-lite" <?php selected( $fallback_model, 'gemini-3.5-flash-lite' ); ?>>Gemini 3.5 Flash Lite</option>
 												<option value="gemini-2.5-flash" <?php selected( $fallback_model, 'gemini-2.5-flash' ); ?>>Gemini 2.5 Flash</option>
 											<?php endif; ?>
 										</select>

@@ -1506,3 +1506,143 @@
     color: #64748b;
     margin: 0;
 }
+
+/* ==========================================================================
+   Studio Modal Popup System (Clean Light Studio)
+   Replaces native browser alert() with beautiful responsive modal popup
+   ========================================================================== */
+.studio-popup-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.studio-popup-card {
+    background: #ffffff;
+    width: 100%;
+    max-width: 460px;
+    border-radius: 10px;
+    border: 1px solid var(--sergio-border, #e2e8f0);
+    box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-family: var(--sergio-font, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif);
+    color: var(--sergio-text-primary, #0f172a);
+    box-sizing: border-box;
+}
+
+.studio-popup-card.studio-anim-in {
+    animation: studioPopupZoomIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.studio-popup-card.studio-anim-out {
+    animation: studioPopupZoomOut 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes studioPopupZoomIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@keyframes studioPopupZoomOut {
+    from {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.95) translateY(8px);
+    }
+}
+
+.studio-popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px 14px 20px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.studio-popup-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.studio-popup-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.studio-popup-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--sergio-text-primary, #0f172a);
+    letter-spacing: -0.01em;
+}
+
+.studio-popup-close-btn {
+    background: transparent;
+    border: none;
+    font-size: 22px;
+    line-height: 1;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+}
+
+.studio-popup-close-btn:hover {
+    color: #0f172a;
+    background: #f1f5f9;
+}
+
+.studio-popup-body {
+    padding: 18px 20px;
+}
+
+.studio-popup-message {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: #334155;
+    word-break: break-word;
+}
+
+.studio-popup-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 12px 20px 16px 20px;
+    background: #fafbfc;
+    border-top: 1px solid #f1f5f9;
+}
+
+.studio-popup-action-btn {
+    min-width: 90px;
+}

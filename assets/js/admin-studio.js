@@ -37,6 +37,140 @@ jQuery(document).ready(function($) {
     }
 
     // -------------------------------------------------------------------------
+    // Studio Modal Popup System (Clean Light Studio)
+    // Replaces blocking alert() & confirm() with modern responsive modal popups
+    // -------------------------------------------------------------------------
+    function studioModal(options) {
+        var opt = $.extend({
+            title: '',
+            message: '',
+            type: 'info', // 'info' | 'success' | 'warning' | 'error'
+            confirmText: 'Đóng',
+            cancelText: 'Hủy Bỏ',
+            isConfirm: false,
+            onConfirm: null,
+            onCancel: null
+        }, typeof options === 'string' ? { message: options } : options);
+
+        $('#studio-active-popup').remove();
+
+        var typeConfigs = {
+            info: {
+                badge: '#eef2ff',
+                text: '#4f46e5',
+                icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />',
+                defaultTitle: 'Thông Báo'
+            },
+            success: {
+                badge: '#ecfdf5',
+                text: '#059669',
+                icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />',
+                defaultTitle: 'Thành Công'
+            },
+            warning: {
+                badge: '#fffbeb',
+                text: '#d97706',
+                icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />',
+                defaultTitle: 'Xác Nhận Hành Động'
+            },
+            error: {
+                badge: '#fff1f2',
+                text: '#e11d48',
+                icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />',
+                defaultTitle: 'Thông Báo Lỗi'
+            }
+        };
+
+        var config = typeConfigs[opt.type] || typeConfigs.info;
+        var modalTitle = opt.title || (opt.isConfirm ? 'Xác Nhận Hành Động' : config.defaultTitle);
+
+        var buttonsHtml = opt.isConfirm
+            ? '<button type="button" class="studio-btn studio-btn-secondary studio-popup-cancel-btn" style="margin-right: 8px;">' + escapeHtml(opt.cancelText) + '</button>' +
+              '<button type="button" class="studio-btn studio-btn-primary studio-popup-action-btn">' + escapeHtml(opt.confirmText) + '</button>'
+            : '<button type="button" class="studio-btn studio-btn-primary studio-popup-action-btn">' + escapeHtml(opt.confirmText) + '</button>';
+
+        var html = '<div id="studio-active-popup" class="studio-popup-backdrop" role="dialog" aria-modal="true">' +
+            '<div class="studio-popup-card studio-anim-in">' +
+                '<div class="studio-popup-header">' +
+                    '<div class="studio-popup-title-wrap">' +
+                        '<span class="studio-popup-icon" style="background: ' + config.badge + '; color: ' + config.text + ';">' +
+                            '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">' +
+                                config.icon +
+                            '</svg>' +
+                        '</span>' +
+                        '<h3 class="studio-popup-title">' + escapeHtml(modalTitle) + '</h3>' +
+                    '</div>' +
+                    '<button type="button" class="studio-popup-close-btn" aria-label="Đóng">&times;</button>' +
+                '</div>' +
+                '<div class="studio-popup-body">' +
+                    '<p class="studio-popup-message">' + escapeHtml(opt.message).replace(/\n/g, '<br>') + '</p>' +
+                '</div>' +
+                '<div class="studio-popup-footer">' +
+                    buttonsHtml +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+        var $popup = $(html).appendTo('body');
+
+        function closePopup(confirmed) {
+            $popup.find('.studio-popup-card').removeClass('studio-anim-in').addClass('studio-anim-out');
+            setTimeout(function() {
+                $popup.remove();
+                if (confirmed) {
+                    if (typeof opt.onConfirm === 'function') {
+                        opt.onConfirm();
+                    }
+                } else {
+                    if (typeof opt.onCancel === 'function') {
+                        opt.onCancel();
+                    }
+                }
+            }, 180);
+        }
+
+        $popup.on('click', '.studio-popup-action-btn', function(e) {
+            e.preventDefault();
+            closePopup(true);
+        });
+
+        $popup.on('click', '.studio-popup-close-btn, .studio-popup-cancel-btn', function(e) {
+            e.preventDefault();
+            closePopup(false);
+        });
+
+        $popup.on('click', function(e) {
+            if ($(e.target).hasClass('studio-popup-backdrop')) {
+                closePopup(false);
+            }
+        });
+
+        $(document).off('keydown.studioPopup').on('keydown.studioPopup', function(e) {
+            if (e.key === 'Escape' || e.keyCode === 27) {
+                $(document).off('keydown.studioPopup');
+                closePopup(false);
+            }
+        });
+
+        setTimeout(function() {
+            $popup.find('.studio-popup-action-btn').focus();
+        }, 50);
+    }
+
+    function studioConfirm(message, onConfirm, onCancel, title) {
+        studioModal({
+            isConfirm: true,
+            title: title || 'Xác Nhận Hành Động',
+            message: message,
+            type: 'warning',
+            confirmText: 'Đồng Ý',
+            cancelText: 'Hủy Bỏ',
+            onConfirm: onConfirm,
+            onCancel: onCancel
+        });
+    }
+
+    // -------------------------------------------------------------------------
     // 1. TAB BENCH SWITCHING with localStorage persistence
     // -------------------------------------------------------------------------
     function activateTab(tabId) {
@@ -193,7 +327,7 @@ jQuery(document).ready(function($) {
         var lang = $('#writer_language').val();
 
         if (!seedQuery) {
-            alert('Vui lòng nhập chủ đề hoặc ý định tìm kiếm!');
+            studioModal({ title: 'Thiếu Dữ Liệu', message: 'Vui lòng nhập chủ đề hoặc ý định tìm kiếm!', type: 'warning' });
             $('#writer_seed_query').focus();
             return;
         }
@@ -285,7 +419,7 @@ jQuery(document).ready(function($) {
         var maxChars = $('#crawl_max_chars').val();
 
         if (!rawUrls) {
-            alert('Vui lòng nhập ít nhất một URL cần crawl!');
+            studioModal({ title: 'Thiếu Dữ Liệu', message: 'Vui lòng nhập ít nhất một URL cần crawl!', type: 'warning' });
             $('#crawl_urls').focus();
             return;
         }
@@ -372,7 +506,7 @@ jQuery(document).ready(function($) {
         var catId = $('#queue_category_select').val();
 
         if (!topics) {
-            alert('Vui lòng nhập ít nhất một chủ đề!');
+            studioModal({ title: 'Thiếu Dữ Liệu', message: 'Vui lòng nhập ít nhất một chủ đề!', type: 'warning' });
             $('#queue_topics_input').focus();
             return;
         }
@@ -407,25 +541,27 @@ jQuery(document).ready(function($) {
     $(document).on('click', '.sergio-btn-del-queue', function() {
         var $btn = $(this);
         var itemId = $btn.data('id');
-        if (!itemId || !confirm('Xác nhận xóa chủ đề này khỏi hàng đợi?')) { return; }
+        if (!itemId) { return; }
 
-        $btn.prop('disabled', true);
-        $.post(getAjaxUrl(), {
-            action: 'sergio_ai_delete_queue_item',
-            nonce: getNonce(),
-            id: itemId
-        })
-        .done(function(res) {
-            if (res.success) {
-                $('#queue-row-' + itemId).fadeOut(250, function() { $(this).remove(); });
-            } else {
-                alert(res.data ? res.data.message : 'Lỗi khi xóa.');
+        studioConfirm('Xác nhận xóa chủ đề này khỏi hàng đợi?', function() {
+            $btn.prop('disabled', true);
+            $.post(getAjaxUrl(), {
+                action: 'sergio_ai_delete_queue_item',
+                nonce: getNonce(),
+                id: itemId
+            })
+            .done(function(res) {
+                if (res.success) {
+                    $('#queue-row-' + itemId).fadeOut(250, function() { $(this).remove(); });
+                } else {
+                    studioModal({ title: 'Lỗi', message: res.data ? res.data.message : 'Lỗi khi xóa chủ đề.', type: 'error' });
+                    $btn.prop('disabled', false);
+                }
+            })
+            .fail(function() {
+                studioModal({ title: 'Lỗi Kết Nối', message: 'Không thể kết nối đến máy chủ.', type: 'error' });
                 $btn.prop('disabled', false);
-            }
-        })
-        .fail(function() {
-            alert('Lỗi kết nối.');
-            $btn.prop('disabled', false);
+            });
         });
     });
 
@@ -483,23 +619,23 @@ jQuery(document).ready(function($) {
     $('#btn_clear_logs').on('click', function() {
         var $btn = $(this);
         var $feedback = $('#clear_logs_feedback');
-        if (!confirm('Xóa các bản ghi log cũ hơn 30 ngày?')) { return; }
-
-        $btn.prop('disabled', true);
-        $.post(getAjaxUrl(), {
-            action: 'sergio_ai_clear_logs',
-            nonce: getNonce()
-        })
-        .done(function(res) {
-            if (res.success) {
-                $feedback.css('color', '#10b981').text(res.data.message);
-                setTimeout(function() { window.location.reload(); }, 800);
-            } else {
-                $feedback.css('color', '#f43f5e').text('Lỗi khi xóa log.');
-            }
-        })
-        .always(function() {
-            $btn.prop('disabled', false);
+        studioConfirm('Xóa các bản ghi log cũ hơn 30 ngày?', function() {
+            $btn.prop('disabled', true);
+            $.post(getAjaxUrl(), {
+                action: 'sergio_ai_clear_logs',
+                nonce: getNonce()
+            })
+            .done(function(res) {
+                if (res.success) {
+                    $feedback.css('color', '#10b981').text(res.data.message);
+                    setTimeout(function() { window.location.reload(); }, 800);
+                } else {
+                    $feedback.css('color', '#f43f5e').text('Lỗi khi xóa log.');
+                }
+            })
+            .always(function() {
+                $btn.prop('disabled', false);
+            });
         });
     });
 
@@ -692,11 +828,11 @@ jQuery(document).ready(function($) {
                 updateAuditUI(res.data.audit);
             } else {
                 var err = (res.data && res.data.message) ? res.data.message : 'Lỗi phân tích bài viết.';
-                alert(err);
+                studioModal({ title: 'Lỗi Phân Tích', message: err, type: 'error' });
             }
         })
         .fail(function() {
-            alert('Lỗi kết nối khi audit bài viết.');
+            studioModal({ title: 'Lỗi Kết Nối', message: 'Lỗi kết nối khi audit bài viết.', type: 'error' });
         });
     });
 
@@ -825,7 +961,7 @@ jQuery(document).ready(function($) {
                 $deck.slideDown(200);
             } else {
                 var err = (res.data && res.data.message) ? res.data.message : 'Lỗi khi tối ưu bằng AI.';
-                alert(err);
+                studioModal({ title: 'Lỗi AI Tối Ưu', message: err, type: 'error' });
             }
         })
         .fail(function(xhr) {
@@ -838,7 +974,7 @@ jQuery(document).ready(function($) {
                     if (parsed && parsed.data && parsed.data.message) { msg = parsed.data.message; }
                 } catch(e) {}
             }
-            alert(msg);
+            studioModal({ title: 'Lỗi Kết Nối', message: msg, type: 'error' });
         })
         .always(function() {
             $btn.prop('disabled', false);
@@ -852,45 +988,43 @@ jQuery(document).ready(function($) {
         var $btn = $(this);
         var kw = $('#edit_seo_focus_kw').val().trim();
         if (!kw) {
-            alert('Vui lòng nhập Focus Keyword (hoặc bấm nút "1. Gemini Gợi Ý SEO" trước) để AI có từ khóa mục tiêu tối ưu nội dung!');
+            studioModal({ title: 'Thiếu Focus Keyword', message: 'Vui lòng nhập Focus Keyword (hoặc bấm nút "1. Gemini Gợi Ý SEO" trước) để AI có từ khóa mục tiêu tối ưu nội dung!', type: 'warning' });
             $('#edit_seo_focus_kw').focus();
             return;
         }
 
-        if (!confirm('AI sẽ tự động tối ưu hóa nội dung: đưa từ khóa vào mở đầu, tối ưu các thẻ H2/H3, chèn thẻ alt hình ảnh và mở rộng chiều sâu để bài đạt từ 85 - 95+ điểm Rank Math. Bạn có muốn thực hiện ngay?')) {
-            return;
-        }
+        studioConfirm('AI sẽ tự động tối ưu hóa nội dung: đưa từ khóa vào mở đầu, tối ưu các thẻ H2/H3, chèn thẻ alt hình ảnh và mở rộng chiều sâu đạt chuẩn On-Page Studio. Bạn có muốn thực hiện ngay?', function() {
+            var $box = $('#ai_seo_loading_box');
+            $btn.prop('disabled', true);
+            $('#ai_seo_loading_msg').text('Gemini đang tái cấu trúc nội dung HTML: chèn từ khóa vào đoạn mở đầu, tối ưu H2/H3 và bổ sung thẻ ALT ảnh...');
+            $box.slideDown(150);
 
-        var $box = $('#ai_seo_loading_box');
-        $btn.prop('disabled', true);
-        $('#ai_seo_loading_msg').text('Gemini đang tái cấu trúc nội dung HTML: chèn từ khóa vào đoạn mở đầu, tối ưu H2/H3 và bổ sung thẻ ALT ảnh...');
-        $box.slideDown(150);
-
-        $.post(getAjaxUrl(), {
-            action: 'sergio_ai_deep_optimize_content',
-            nonce: getNonce(),
-            post_id: currentAuditedPostId,
-            focus_keyword: kw
-        })
-        .done(function(res) {
-            if (res.success && res.data && res.data.audit) {
-                updateAuditUI(res.data.audit);
-                alert('Tuyệt vời! Nội dung đã được tái cấu trúc đạt chuẩn Rank Math. Điểm On-page mới: ' + res.data.audit.score + ' / 100');
-            } else {
-                var err = (res.data && res.data.message) ? res.data.message : 'Lỗi khi nâng cấp nội dung.';
-                alert(err);
-            }
-        })
-        .fail(function(xhr) {
-            var msg = 'Lỗi kết nối khi tối ưu nội dung.';
-            if (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
-                msg = xhr.responseJSON.data.message;
-            }
-            alert(msg);
-        })
-        .always(function() {
-            $btn.prop('disabled', false);
-            $box.slideUp(150);
+            $.post(getAjaxUrl(), {
+                action: 'sergio_ai_deep_optimize_content',
+                nonce: getNonce(),
+                post_id: currentAuditedPostId,
+                focus_keyword: kw
+            })
+            .done(function(res) {
+                if (res.success && res.data && res.data.audit) {
+                    updateAuditUI(res.data.audit);
+                    studioModal({ title: 'Tối Ưu Thành Công', message: 'Tuyệt vời! Nội dung đã được tái cấu trúc đạt chuẩn On-Page Studio. Điểm On-page mới: ' + res.data.audit.score + ' / 100', type: 'success' });
+                } else {
+                    var err = (res.data && res.data.message) ? res.data.message : 'Lỗi khi nâng cấp nội dung.';
+                    studioModal({ title: 'Lỗi Nâng Cấp', message: err, type: 'error' });
+                }
+            })
+            .fail(function(xhr) {
+                var msg = 'Lỗi kết nối khi tối ưu nội dung.';
+                if (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+                    msg = xhr.responseJSON.data.message;
+                }
+                studioModal({ title: 'Lỗi Kết Nối', message: msg, type: 'error' });
+            })
+            .always(function() {
+                $btn.prop('disabled', false);
+                $box.slideUp(150);
+            });
         });
     });
 
@@ -1012,78 +1146,77 @@ jQuery(document).ready(function($) {
         var targetIds = isDeep ? siteLowScoreIds : siteMissingPostIds;
 
         if (!targetIds || targetIds.length === 0) {
-            alert('Không có bài viết hoặc trang nào cần xử lý.');
+            studioModal({ title: 'Thông Báo', message: 'Không có bài viết hoặc trang nào cần xử lý.', type: 'info' });
             return;
         }
 
         var confirmMsg = isDeep
-            ? 'Hệ thống sẽ dùng Claude-SEO Framework tái cấu trúc nội dung và metadata cho ' + targetIds.length + ' trang đạt chuẩn 85+ điểm. Quá trình có thể mất từ 30-60 giây. Bắt đầu ngay?'
+            ? 'Hệ thống sẽ dùng Claude-SEO Framework tái cấu trúc nội dung và metadata cho ' + targetIds.length + ' trang đạt chuẩn On-Page Studio. Quá trình có thể mất từ 30-60 giây. Bắt đầu ngay?'
             : 'Hệ thống sẽ dùng AI tạo Focus Keyword, Tiêu đề SEO, Mô tả Meta cho ' + targetIds.length + ' trang. Bắt đầu ngay?';
 
-        if (!confirm(confirmMsg)) { return; }
+        studioConfirm(confirmMsg, function() {
+            var $prog = $('#seo_batch_progress_box');
+            $prog.slideDown(150);
+            $('#seo_batch_progress_text').text('Gemini đang tiến hành tối ưu tự động (' + targetIds.length + ' trang)...');
 
-        var $prog = $('#seo_batch_progress_box');
-        $prog.slideDown(150);
-        $('#seo_batch_progress_text').text('Gemini đang tiến hành tối ưu tự động (' + targetIds.length + ' trang)...');
-
-        $.post(getAjaxUrl(), {
-            action: 'sergio_ai_batch_fix_seo',
-            nonce: getNonce(),
-            post_ids: targetIds,
-            deep_content: isDeep ? 1 : 0
-        })
-        .done(function(res) {
-            if (res.success) {
-                alert(res.data.message || 'Tối ưu hoàn tất!');
-                runSiteSeoAudit();
-            } else {
-                alert(res.data ? res.data.message : 'Lỗi khi tối ưu hàng loạt.');
-            }
-        })
-        .fail(function() {
-            alert('Lỗi kết nối khi tối ưu hàng loạt.');
-        })
-        .always(function() {
-            $prog.slideUp(150);
+            $.post(getAjaxUrl(), {
+                action: 'sergio_ai_batch_fix_seo',
+                nonce: getNonce(),
+                post_ids: targetIds,
+                deep_content: isDeep ? 1 : 0
+            })
+            .done(function(res) {
+                if (res.success) {
+                    studioModal({ title: 'Thành Công', message: res.data.message || 'Tối ưu hoàn tất!', type: 'success' });
+                    runSiteSeoAudit();
+                } else {
+                    studioModal({ title: 'Lỗi', message: res.data ? res.data.message : 'Lỗi khi tối ưu hàng loạt.', type: 'error' });
+                }
+            })
+            .fail(function() {
+                studioModal({ title: 'Lỗi Kết Nối', message: 'Lỗi kết nối khi tối ưu hàng loạt.', type: 'error' });
+            })
+            .always(function() {
+                $prog.slideUp(150);
+            });
         });
     });
 
     $('#btn_batch_fix_all_missing').on('click', function() {
         if (!siteMissingPostIds || siteMissingPostIds.length === 0) {
-            alert('Không có bài viết hoặc trang nào cần tối ưu.');
+            studioModal({ title: 'Thông Báo', message: 'Không có bài viết hoặc trang nào cần tối ưu.', type: 'info' });
             return;
         }
 
-        if (!confirm('Hệ thống sẽ dùng Gemini AI tự động phân tích và tạo Focus Keyword, Tiêu đề SEO, Mô tả Meta cho ' + siteMissingPostIds.length + ' trang đang thiếu. Quá trình này có thể mất từ 15-45 giây. Bắt đầu ngay?')) {
-            return;
-        }
+        var confirmMsg = 'Hệ thống sẽ dùng Gemini AI tự động phân tích và tạo Focus Keyword, Tiêu đề SEO, Mô tả Meta cho ' + siteMissingPostIds.length + ' trang đang thiếu. Quá trình này có thể mất từ 15-45 giây. Bắt đầu ngay?';
+        studioConfirm(confirmMsg, function() {
+            var $btn = $('#btn_batch_fix_all_missing');
+            var $prog = $('#seo_batch_progress_box');
+            $btn.prop('disabled', true);
+            $prog.slideDown(150);
+            $('#seo_batch_progress_text').text('Gemini đang tiến hành tối ưu tự động hàng loạt...');
 
-        var $btn = $(this);
-        var $prog = $('#seo_batch_progress_box');
-        $btn.prop('disabled', true);
-        $prog.slideDown(150);
-        $('#seo_batch_progress_text').text('Gemini đang tiến hành tối ưu tự động hàng loạt...');
-
-        $.post(getAjaxUrl(), {
-            action: 'sergio_ai_batch_fix_seo',
-            nonce: getNonce(),
-            post_ids: siteMissingPostIds,
-            deep_content: 0
-        })
-        .done(function(res) {
-            if (res.success) {
-                alert(res.data.message || 'Tối ưu hàng loạt thành công!');
-                runSiteSeoAudit();
-            } else {
-                alert(res.data ? res.data.message : 'Lỗi khi tối ưu hàng loạt.');
-            }
-        })
-        .fail(function() {
-            alert('Lỗi kết nối khi tối ưu hàng loạt.');
-        })
-        .always(function() {
-            $btn.prop('disabled', false);
-            $prog.slideUp(150);
+            $.post(getAjaxUrl(), {
+                action: 'sergio_ai_batch_fix_seo',
+                nonce: getNonce(),
+                post_ids: siteMissingPostIds,
+                deep_content: 0
+            })
+            .done(function(res) {
+                if (res.success) {
+                    studioModal({ title: 'Thành Công', message: res.data.message || 'Tối ưu hàng loạt thành công!', type: 'success' });
+                    runSiteSeoAudit();
+                } else {
+                    studioModal({ title: 'Lỗi', message: res.data ? res.data.message : 'Lỗi khi tối ưu hàng loạt.', type: 'error' });
+                }
+            })
+            .fail(function() {
+                studioModal({ title: 'Lỗi Kết Nối', message: 'Lỗi kết nối khi tối ưu hàng loạt.', type: 'error' });
+            })
+            .always(function() {
+                $btn.prop('disabled', false);
+                $prog.slideUp(150);
+            });
         });
     });
 

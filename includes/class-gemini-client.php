@@ -83,7 +83,15 @@ class Sergio_AI_Gemini_Client {
 
         $this->fallback_model = isset( $options['gemini_model_fallback'] ) && ! empty( $options['gemini_model_fallback'] )
             ? $options['gemini_model_fallback']
-            : 'gemini-2.5-flash-lite';
+            : 'gemini-3.5-flash-lite';
+
+        // Auto-migrate deprecated models (Google deprecated gemini-2.5-flash-lite in favor of gemini-3.5-flash-lite)
+        if ( 'gemini-2.5-flash-lite' === $this->model ) {
+            $this->model = 'gemini-3.5-flash-lite';
+        }
+        if ( 'gemini-2.5-flash-lite' === $this->fallback_model ) {
+            $this->fallback_model = 'gemini-3.5-flash-lite';
+        }
 
         $this->logger = $logger ? $logger : new Sergio_AI_Logger();
 
@@ -233,6 +241,9 @@ class Sergio_AI_Gemini_Client {
 
         $target_model = ! empty( $override_model ) ? $override_model : $this->model;
         $clean_model  = str_replace( 'models/', '', $target_model );
+        if ( 'gemini-2.5-flash-lite' === $clean_model ) {
+            $clean_model = 'gemini-3.5-flash-lite';
+        }
 
         $endpoint = self::API_BASE . '/models/' . $clean_model . ':generateContent';
 
@@ -283,6 +294,9 @@ class Sergio_AI_Gemini_Client {
             $fallback = ! empty( $this->fallback_model ) && $this->fallback_model !== $clean_model
                 ? $this->fallback_model
                 : '';
+            if ( 'gemini-2.5-flash-lite' === $fallback ) {
+                $fallback = 'gemini-3.5-flash-lite';
+            }
 
             if ( ! empty( $fallback ) ) {
                 $this->logger->warning(

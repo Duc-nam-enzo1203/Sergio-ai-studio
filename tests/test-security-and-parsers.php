@@ -87,3 +87,4 @@ $parsed = json_decode( $cleaned_json, true );
 assert_true( is_array( $parsed ) && 'verified' === $parsed['status'], 'Parse fact JSON with markdown code block correctly' );
 
 echo "\n🎉 ALL TESTS PASSED SUCCESSFULLY!\n";
+

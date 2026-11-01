@@ -23,3 +23,4 @@
     <rule ref="WordPress.Security.EscapeOutput"/>
     <rule ref="WordPress.Security.NonceVerification"/>
 </ruleset>
+
