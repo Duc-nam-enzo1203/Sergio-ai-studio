@@ -588,6 +588,24 @@ class Sergio_AI_Logger {
 	 *
 	 * @return int|false
 	 */
+	/**
+	 * Delete specific logs by IDs
+	 *
+	 * @param array $ids
+	 * @return int|false
+	 */
+	public static function delete_logs( array $ids ) {
+		global $wpdb;
+		$table = Sergio_AI_DB::table( 'logs' );
+		$ids   = array_map( 'absint', $ids );
+		$ids   = array_filter( $ids );
+		if ( empty( $ids ) ) {
+			return 0;
+		}
+		$in = implode( ',', $ids );
+		return $wpdb->query( "DELETE FROM {$table} WHERE id IN ({$in})" );
+	}
+
 	public static function clear_all_logs() {
 		global $wpdb;
 		$table = Sergio_AI_DB::table( 'logs' );

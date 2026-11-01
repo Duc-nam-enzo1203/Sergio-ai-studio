@@ -983,27 +983,35 @@ jQuery(document).ready(function($) {
     });
 
     // -------------------------------------------------------------------------
-    // 8. LOGS: SIMPLE TABLE & FILTERS
+    // 8. LOGS: NATIVE WORDPRESS LIST TABLE & FILTERS
     // -------------------------------------------------------------------------
-    var activeLogLevel = '';
-    var activeLogModule = '';
-    var activeLogSearch = '';
-    var logSearchTimer = null;
-
     function fetchLogsLive(callback) {
         var $spinner = $('#log_refresh_spinner');
         $spinner.addClass('is-active');
 
+        var level = $('#filter-by-level').val() || '';
+        var module = $('#filter-by-stage').val() || '';
+        var search = $('#log-search-input').val() || '';
+
         $.post(getAjaxUrl(), {
             action: 'sergio_ai_refresh_logs',
             nonce: getNonce(),
-            level: activeLogLevel,
-            module: activeLogModule,
-            search: activeLogSearch
+            level: level,
+            module: module,
+            search: search
         })
         .done(function(res) {
             if (res.success && res.data) {
                 $('#raw_logs_tbody').html(res.data.html);
+                var numText = (res.data.count || 0) + ' mục';
+                $('#log_displaying_num, #log_displaying_num_bottom').text(numText);
+                $('#cb-select-all-1, #cb-select-all-2').prop('checked', false);
+                if (res.data.stats) {
+                    $('.log-subsubsub-link[data-level=""] .count').text('(' + res.data.stats.total_logs + ')');
+                    $('.log-subsubsub-link[data-level="info"] .count').text('(' + res.data.stats.info_count + ')');
+                    $('.log-subsubsub-link[data-level="warning"] .count').text('(' + res.data.stats.warning_count + ')');
+                    $('.log-subsubsub-link[data-level="error"] .count').text('(' + res.data.stats.error_count + ')');
+                }
                 if (typeof callback === 'function') {
                     callback(true);
                 }
@@ -1023,68 +1031,111 @@ jQuery(document).ready(function($) {
         });
     }
 
-    // Level filter pills
-    $(document).on('click', '.log-level-filter', function() {
-        var level = $(this).data('level');
-        activeLogLevel = level ? String(level) : '';
-        $('.log-level-filter').removeClass('is-active button-primary').addClass('button-secondary');
-        $(this).removeClass('button-secondary').addClass('is-active button-primary');
+    // Checkbox select all (Header & Footer)
+    $(document).on('change', '#cb-select-all-1, #cb-select-all-2', function() {
+        var isChecked = $(this).prop('checked');
+        $('#cb-select-all-1, #cb-select-all-2').prop('checked', isChecked);
+        $('input[name="log_ids[]"]').prop('checked', isChecked);
+    });
+
+    // Subsubsub level filter links
+    $(document).on('click', '.log-subsubsub-link', function(e) {
+        e.preventDefault();
+        var lvl = $(this).data('level');
+        $('.log-subsubsub-link').removeClass('current').removeAttr('aria-current');
+        $(this).addClass('current').attr('aria-current', 'page');
+        $('#filter-by-level').val(lvl);
         fetchLogsLive();
     });
 
-    // Module dropdown filter
-    $('#log_module_filter').on('change', function() {
-        activeLogModule = $(this).val();
+    // Filter button [Lọc]
+    $(document).on('click', '#post-query-submit', function(e) {
+        e.preventDefault();
+        var lvl = $('#filter-by-level').val() || '';
+        $('.log-subsubsub-link').removeClass('current').removeAttr('aria-current');
+        $('.log-subsubsub-link[data-level="' + lvl + '"]').addClass('current').attr('aria-current', 'page');
         fetchLogsLive();
     });
 
-    // Search input (debounce 250ms)
-    $('#sergio_logs_search').on('input', function() {
-        var query = $(this).val();
-        clearTimeout(logSearchTimer);
-        logSearchTimer = setTimeout(function() {
-            activeLogSearch = query.trim();
+    // Search button and Enter key
+    $(document).on('click', '#search-submit', function(e) {
+        e.preventDefault();
+        fetchLogsLive();
+    });
+
+    $('#log-search-input').on('keydown', function(e) {
+        if (e.keyCode === 13) {
+            e.preventDefault();
             fetchLogsLive();
-        }, 250);
+        }
     });
 
-    // Refresh button
-    $('#btn_refresh_logs').on('click', function() {
-        var $btn = $(this);
-        $btn.prop('disabled', true);
-        fetchLogsLive(function() {
-            $btn.prop('disabled', false);
-        });
-    });
+    // Bulk actions: [Apply]
+    $(document).on('click', '#doaction, #doaction2', function(e) {
+        e.preventDefault();
+        var whichSelect = (this.id === 'doaction2') ? '#bulk-action-selector-bottom' : '#bulk-action-selector-top';
+        var action = $(whichSelect).val();
 
-    // Clear logs button
-    $('#btn_clear_logs').on('click', function() {
-        var $btn = $(this);
-        var $feedback = $('#clear_logs_feedback');
-        studioConfirm('Xác nhận xóa toàn bộ nhật ký hoạt động?', function() {
-            $btn.prop('disabled', true);
-            $feedback.css('color', '#64748b').text('Đang xóa...');
-            $.post(getAjaxUrl(), {
-                action: 'sergio_ai_clear_logs',
-                nonce: getNonce(),
-                type: 'all'
-            })
-            .done(function(res) {
-                if (res.success) {
-                    $feedback.css('color', '#00a32a').text(res.data.message);
-                    fetchLogsLive();
-                    setTimeout(function() { $feedback.fadeOut(400, function() { $(this).text('').show(); }); }, 3000);
-                } else {
-                    $feedback.css('color', '#d63638').text(res.data.message || 'Lỗi khi xóa.');
-                }
-            })
-            .fail(function() {
-                $feedback.css('color', '#d63638').text('Lỗi kết nối.');
-            })
-            .always(function() {
-                $btn.prop('disabled', false);
+        if (action === '-1') {
+            return;
+        }
+
+        if (action === 'delete') {
+            var selectedIds = [];
+            $('input[name="log_ids[]"]:checked').each(function() {
+                selectedIds.push($(this).val());
             });
-        });
+
+            if (selectedIds.length === 0) {
+                studioModal({ title: 'Thông Báo', message: 'Vui lòng chọn ít nhất một mục để xóa.', type: 'warning' });
+                return;
+            }
+
+            studioConfirm('Xác nhận xóa ' + selectedIds.length + ' mục đã chọn?', function() {
+                var $feedback = $('#clear_logs_feedback');
+                $feedback.css('color', '#64748b').text('Đang xóa...');
+                $.post(getAjaxUrl(), {
+                    action: 'sergio_ai_clear_logs',
+                    nonce: getNonce(),
+                    type: 'delete',
+                    ids: selectedIds
+                })
+                .done(function(res) {
+                    if (res.success) {
+                        $feedback.css('color', '#00a32a').text(res.data.message);
+                        fetchLogsLive();
+                        setTimeout(function() { $feedback.fadeOut(400, function() { $(this).text('').show(); }); }, 3000);
+                    } else {
+                        $feedback.css('color', '#d63638').text(res.data.message || 'Lỗi khi xóa.');
+                    }
+                })
+                .fail(function() {
+                    $feedback.css('color', '#d63638').text('Lỗi kết nối.');
+                });
+            });
+        } else if (action === 'clear_all') {
+            studioConfirm('CẢNH BÁO: Bạn có chắc chắn muốn xóa TOÀN BỘ nhật ký không?', function() {
+                var $feedback = $('#clear_logs_feedback');
+                $feedback.css('color', '#64748b').text('Đang xóa...');
+                $.post(getAjaxUrl(), {
+                    action: 'sergio_ai_clear_logs',
+                    nonce: getNonce(),
+                    type: 'all'
+                })
+                .done(function(res) {
+                    if (res.success) {
+                        $feedback.css('color', '#00a32a').text(res.data.message);
+                        fetchLogsLive();
+                        setTimeout(function() { $feedback.fadeOut(400, function() { $(this).text('').show(); }); }, 3000);
+                    } else {
+                        $feedback.css('color', '#d63638').text(res.data.message || 'Lỗi khi xóa.');
+                    }
+                })
+                .fail(function() {
+                    $feedback.css('color', '#d63638').text('Lỗi kết nối.');
+                });
+            });
+        }
     });
     // -------------------------------------------------------------------------
     // 9. SCHEDULER DYNAMIC CONTROLS

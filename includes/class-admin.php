@@ -1486,64 +1486,112 @@ class Sergio_AI_Admin {
 				<!-- TAB 7: NHẬT KÝ                       -->
 				<!-- ===================================== -->
 				<div id="tab-logs" class="sergio-tab-pane <?php echo 'logs' === $active_tab ? 'is-active' : ''; ?>">
-					<div class="postbox">
-						<div class="postbox-header" style="display: flex; justify-content: space-between; align-items: center;">
-							<h2 class="hndle"><span><?php esc_html_e( 'Nhật Ký Hoạt Động', 'sergio-ai-studio' ); ?></span></h2>
-							<div style="display: flex; align-items: center; gap: 8px;">
-								<button type="button" class="button button-small" id="btn_refresh_logs">
-									<?php esc_html_e( 'Làm mới', 'sergio-ai-studio' ); ?>
-								</button>
-								<button type="button" class="button button-link-delete button-small" id="btn_clear_logs">
-									<?php esc_html_e( 'Xóa nhật ký', 'sergio-ai-studio' ); ?>
-								</button>
-								<span id="clear_logs_feedback" style="margin-left: 6px; font-size: 12px;"></span>
-							</div>
+
+					<!-- Subsubsub Filter Links -->
+					<ul class="subsubsub">
+						<li class="all"><a href="#tab-logs" class="current log-subsubsub-link" data-level="" aria-current="page"><?php esc_html_e( 'Tất cả', 'sergio-ai-studio' ); ?> <span class="count">(<?php echo (int) $log_stats['total_logs']; ?>)</span></a> |</li>
+						<li class="info"><a href="#tab-logs" class="log-subsubsub-link" data-level="info">INFO <span class="count">(<?php echo (int) $log_stats['info_count']; ?>)</span></a> |</li>
+						<li class="warning"><a href="#tab-logs" class="log-subsubsub-link" data-level="warning"><?php esc_html_e( 'Cảnh báo', 'sergio-ai-studio' ); ?> <span class="count">(<?php echo (int) $log_stats['warning_count']; ?>)</span></a> |</li>
+						<li class="error"><a href="#tab-logs" class="log-subsubsub-link" data-level="error"><?php esc_html_e( 'Lỗi', 'sergio-ai-studio' ); ?> <span class="count">(<?php echo (int) $log_stats['error_count']; ?>)</span></a></li>
+					</ul>
+
+					<!-- Search Box -->
+					<p class="search-box">
+						<label class="screen-reader-text" for="log-search-input"><?php esc_html_e( 'Tìm kiếm nhật ký:', 'sergio-ai-studio' ); ?></label>
+						<input type="search" id="log-search-input" name="s" value="" placeholder="<?php esc_attr_e( 'Tìm theo từ khóa, ID...', 'sergio-ai-studio' ); ?>">
+						<input type="button" id="search-submit" class="button" value="<?php esc_attr_e( 'Tìm nhật ký', 'sergio-ai-studio' ); ?>">
+					</p>
+
+					<!-- Top Navigation Bar: Bulk Actions & Dropdown Filters (Native WP Style) -->
+					<div class="tablenav top">
+						<div class="alignleft actions bulkactions">
+							<label for="bulk-action-selector-top" class="screen-reader-text"><?php esc_html_e( 'Chọn hành động hàng loạt', 'sergio-ai-studio' ); ?></label>
+							<select name="action" id="bulk-action-selector-top">
+								<option value="-1"><?php esc_html_e( 'Hành động', 'sergio-ai-studio' ); ?></option>
+								<option value="delete"><?php esc_html_e( 'Xóa', 'sergio-ai-studio' ); ?></option>
+								<option value="clear_all"><?php esc_html_e( 'Xóa tất cả nhật ký', 'sergio-ai-studio' ); ?></option>
+							</select>
+							<input type="button" id="doaction" class="button action" value="<?php esc_attr_e( 'Áp dụng', 'sergio-ai-studio' ); ?>">
 						</div>
-						<div class="inside" style="padding: 12px;">
-							<!-- Toolbar Filters -->
-							<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; flex-wrap: wrap;">
-								<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-									<!-- Level Filter -->
-									<div class="button-group">
-										<button type="button" class="button button-small button-primary is-active log-level-filter" data-level=""><?php esc_html_e( 'Tất Cả', 'sergio-ai-studio' ); ?></button>
-										<button type="button" class="button button-small button-secondary log-level-filter" data-level="info">INFO</button>
-										<button type="button" class="button button-small button-secondary log-level-filter" data-level="warning">WARN</button>
-										<button type="button" class="button button-small button-secondary log-level-filter" data-level="error">ERROR</button>
-									</div>
 
-									<!-- Stage Filter -->
-									<select id="log_module_filter" style="height: 30px; min-height: 30px; line-height: 28px; padding-top: 0; padding-bottom: 0;">
-										<option value=""><?php esc_html_e( 'Tất cả giai đoạn', 'sergio-ai-studio' ); ?></option>
-										<option value="generation"><?php esc_html_e( 'Viết bài & Nghiên cứu', 'sergio-ai-studio' ); ?></option>
-										<option value="scheduler"><?php esc_html_e( 'Lập lịch tự động', 'sergio-ai-studio' ); ?></option>
-										<option value="seo"><?php esc_html_e( 'Tối ưu SEO', 'sergio-ai-studio' ); ?></option>
-										<option value="image"><?php esc_html_e( 'Xử lý ảnh', 'sergio-ai-studio' ); ?></option>
-										<option value="rewrite"><?php esc_html_e( 'Viết lại bài', 'sergio-ai-studio' ); ?></option>
-									</select>
-								</div>
+						<div class="alignleft actions">
+							<label for="filter-by-level" class="screen-reader-text"><?php esc_html_e( 'Lọc theo cấp độ', 'sergio-ai-studio' ); ?></label>
+							<select name="level" id="filter-by-level">
+								<option value=""><?php esc_html_e( 'Tất cả cấp độ', 'sergio-ai-studio' ); ?></option>
+								<option value="info">INFO</option>
+								<option value="warning"><?php esc_html_e( 'Cảnh báo (WARN)', 'sergio-ai-studio' ); ?></option>
+								<option value="error"><?php esc_html_e( 'Lỗi (ERROR)', 'sergio-ai-studio' ); ?></option>
+							</select>
 
-								<div>
-									<input type="search" id="sergio_logs_search" class="regular-text" placeholder="<?php esc_attr_e( 'Tìm kiếm nhật ký...', 'sergio-ai-studio' ); ?>" style="width: 220px; height: 30px; margin: 0;" />
-									<span id="log_refresh_spinner" class="spinner" style="float: none; margin: 0 4px;"></span>
-								</div>
-							</div>
+							<label for="filter-by-stage" class="screen-reader-text"><?php esc_html_e( 'Lọc theo giai đoạn', 'sergio-ai-studio' ); ?></label>
+							<select name="stage" id="filter-by-stage">
+								<option value=""><?php esc_html_e( 'Tất cả giai đoạn', 'sergio-ai-studio' ); ?></option>
+								<option value="generation"><?php esc_html_e( 'Viết bài & Nghiên cứu', 'sergio-ai-studio' ); ?></option>
+								<option value="scheduler"><?php esc_html_e( 'Lập lịch tự động', 'sergio-ai-studio' ); ?></option>
+								<option value="seo"><?php esc_html_e( 'Tối ưu SEO', 'sergio-ai-studio' ); ?></option>
+								<option value="image"><?php esc_html_e( 'Xử lý ảnh', 'sergio-ai-studio' ); ?></option>
+								<option value="rewrite"><?php esc_html_e( 'Viết lại bài', 'sergio-ai-studio' ); ?></option>
+							</select>
 
-							<!-- Bảng đơn giản duy nhất -->
-							<table class="widefat striped" id="logs_table">
-								<thead>
-									<tr>
-										<th style="width: 150px;"><?php esc_html_e( 'Thời Gian', 'sergio-ai-studio' ); ?></th>
-										<th style="width: 80px;"><?php esc_html_e( 'Cấp Độ', 'sergio-ai-studio' ); ?></th>
-										<th style="width: 170px;"><?php esc_html_e( 'Giai Đoạn', 'sergio-ai-studio' ); ?></th>
-										<th><?php esc_html_e( 'Thông Điệp & Dữ Liệu', 'sergio-ai-studio' ); ?></th>
-									</tr>
-								</thead>
-								<tbody id="raw_logs_tbody">
-									<?php echo self::render_raw_logs_rows_html( $logs ); ?>
-								</tbody>
-							</table>
+							<input type="button" id="post-query-submit" class="button" value="<?php esc_attr_e( 'Lọc', 'sergio-ai-studio' ); ?>">
+							<span id="log_refresh_spinner" class="spinner" style="float: none; margin: 0 4px; vertical-align: middle;"></span>
+							<span id="clear_logs_feedback" style="margin-left: 6px; font-size: 13px;"></span>
 						</div>
+
+						<div class="tablenav-pages">
+							<span class="displaying-num" id="log_displaying_num"><?php printf( esc_html__( '%d mục', 'sergio-ai-studio' ), count( $logs ) ); ?></span>
+						</div>
+						<br class="clear">
 					</div>
+
+					<!-- WP List Table -->
+					<table class="wp-list-table widefat fixed striped posts" id="logs_table">
+						<thead>
+							<tr>
+								<td id="cb" class="manage-column column-cb check-column">
+									<label class="screen-reader-text" for="cb-select-all-1"><?php esc_html_e( 'Chọn tất cả', 'sergio-ai-studio' ); ?></label>
+									<input id="cb-select-all-1" type="checkbox">
+								</td>
+								<th scope="col" id="date" class="manage-column column-date" style="width: 160px;"><?php esc_html_e( 'Thời Gian', 'sergio-ai-studio' ); ?></th>
+								<th scope="col" id="level" class="manage-column column-level" style="width: 90px;"><?php esc_html_e( 'Cấp Độ', 'sergio-ai-studio' ); ?></th>
+								<th scope="col" id="stage" class="manage-column column-stage" style="width: 180px;"><?php esc_html_e( 'Giai Đoạn', 'sergio-ai-studio' ); ?></th>
+								<th scope="col" id="message" class="manage-column column-primary"><?php esc_html_e( 'Thông Điệp & Dữ Liệu', 'sergio-ai-studio' ); ?></th>
+							</tr>
+						</thead>
+						<tbody id="raw_logs_tbody">
+							<?php echo self::render_raw_logs_rows_html( $logs ); ?>
+						</tbody>
+						<tfoot>
+							<tr>
+								<td class="manage-column column-cb check-column">
+									<label class="screen-reader-text" for="cb-select-all-2"><?php esc_html_e( 'Chọn tất cả', 'sergio-ai-studio' ); ?></label>
+									<input id="cb-select-all-2" type="checkbox">
+								</td>
+								<th scope="col" class="manage-column column-date"><?php esc_html_e( 'Thời Gian', 'sergio-ai-studio' ); ?></th>
+								<th scope="col" class="manage-column column-level"><?php esc_html_e( 'Cấp Độ', 'sergio-ai-studio' ); ?></th>
+								<th scope="col" class="manage-column column-stage"><?php esc_html_e( 'Giai Đoạn', 'sergio-ai-studio' ); ?></th>
+								<th scope="col" class="manage-column column-primary"><?php esc_html_e( 'Thông Điệp & Dữ Liệu', 'sergio-ai-studio' ); ?></th>
+							</tr>
+						</tfoot>
+					</table>
+
+					<!-- Bottom Navigation Bar -->
+					<div class="tablenav bottom">
+						<div class="alignleft actions bulkactions">
+							<label for="bulk-action-selector-bottom" class="screen-reader-text"><?php esc_html_e( 'Chọn hành động hàng loạt', 'sergio-ai-studio' ); ?></label>
+							<select name="action2" id="bulk-action-selector-bottom">
+								<option value="-1"><?php esc_html_e( 'Hành động', 'sergio-ai-studio' ); ?></option>
+								<option value="delete"><?php esc_html_e( 'Xóa', 'sergio-ai-studio' ); ?></option>
+								<option value="clear_all"><?php esc_html_e( 'Xóa tất cả nhật ký', 'sergio-ai-studio' ); ?></option>
+							</select>
+							<input type="button" id="doaction2" class="button action" value="<?php esc_attr_e( 'Áp dụng', 'sergio-ai-studio' ); ?>">
+						</div>
+						<div class="tablenav-pages">
+							<span class="displaying-num" id="log_displaying_num_bottom"><?php printf( esc_html__( '%d mục', 'sergio-ai-studio' ), count( $logs ) ); ?></span>
+						</div>
+						<br class="clear">
+					</div>
+
 				</div>
 </div><!-- .sergio-tab-content -->
 		</div><!-- .wrap -->
@@ -2096,17 +2144,24 @@ class Sergio_AI_Admin {
 			wp_send_json_error( array( 'message' => __( 'Không đủ quyền thực hiện.', 'sergio-ai-studio' ) ) );
 		}
 
-		$type = isset( $_POST['type'] ) ? sanitize_key( $_POST['type'] ) : '30days';
+		$type = isset( $_POST['type'] ) ? sanitize_key( $_POST['type'] ) : 'all';
 
-		if ( 'all' === $type ) {
-			Sergio_AI_Logger::clear_all_logs();
-			$msg = __( 'Đã xóa sạch toàn bộ bản ghi nhật ký.', 'sergio-ai-studio' );
+		if ( 'delete' === $type ) {
+			$ids = isset( $_POST['ids'] ) ? array_map( 'absint', (array) $_POST['ids'] ) : array();
+			if ( empty( $ids ) ) {
+				wp_send_json_error( array( 'message' => __( 'Chưa chọn bản ghi nào để xóa.', 'sergio-ai-studio' ) ) );
+			}
+			Sergio_AI_Logger::delete_logs( $ids );
+			$msg = sprintf( __( 'Đã xóa %d bản ghi nhật ký được chọn.', 'sergio-ai-studio' ), count( $ids ) );
 		} elseif ( '7days' === $type ) {
 			Sergio_AI_Logger::purge_logs_days( 7 );
 			$msg = __( 'Đã dọn dẹp các bản ghi nhật ký cũ hơn 7 ngày.', 'sergio-ai-studio' );
-		} else {
-			Sergio_AI_Logger::purge_old_logs();
+		} elseif ( '30days' === $type ) {
+			Sergio_AI_Logger::purge_logs_days( 30 );
 			$msg = __( 'Đã dọn dẹp các bản ghi nhật ký cũ hơn 30 ngày.', 'sergio-ai-studio' );
+		} else {
+			Sergio_AI_Logger::clear_all_logs();
+			$msg = __( 'Đã xóa sạch toàn bộ bản ghi nhật ký.', 'sergio-ai-studio' );
 		}
 
 		$stats = Sergio_AI_Logger::get_stats();
@@ -2283,16 +2338,20 @@ class Sergio_AI_Admin {
 	 */
 	public static function render_raw_logs_rows_html( $logs ) {
 		if ( empty( $logs ) ) {
-			return '<tr><td colspan="5" style="text-align: center; color: #64748b; padding: 20px;">' . esc_html__( 'Không có nhật ký nào được ghi nhận.', 'sergio-ai-studio' ) . '</td></tr>';
+			return '<tr class="no-items"><td class="colspanchange" colspan="5" style="text-align: center; color: #64748b; padding: 20px;">' . esc_html__( 'Không có nhật ký nào được ghi nhận.', 'sergio-ai-studio' ) . '</td></tr>';
 		}
 
 		ob_start();
 		foreach ( $logs as $log ) :
 		?>
-			<tr class="log-row-item" data-level="<?php echo esc_attr( $log['level'] ); ?>" data-stage="<?php echo esc_attr( $log['stage'] ); ?>" data-run-id="<?php echo esc_attr( $log['run_id'] ); ?>">
-				<td><?php echo esc_html( $log['created_at'] ); ?></td>
-				<td><code><?php echo esc_html( $log['run_id'] ); ?></code></td>
-				<td>
+			<tr class="log-row-item" data-level="<?php echo esc_attr( $log['level'] ); ?>" data-stage="<?php echo esc_attr( $log['stage'] ); ?>">
+				<th scope="row" class="check-column">
+					<input type="checkbox" name="log_ids[]" value="<?php echo (int) $log['id']; ?>">
+				</th>
+				<td class="date column-date">
+					<?php echo esc_html( $log['created_at'] ); ?>
+				</td>
+				<td class="column-level">
 					<?php if ( 'error' === $log['level'] ) : ?>
 						<span class="notice notice-error inline" style="padding: 2px 6px; margin: 0; font-weight: 600; font-size: 11px;">ERROR</span>
 					<?php elseif ( 'warning' === $log['level'] ) : ?>
@@ -2301,11 +2360,11 @@ class Sergio_AI_Admin {
 						<span class="notice notice-info inline" style="padding: 2px 6px; margin: 0; font-size: 11px;">INFO</span>
 					<?php endif; ?>
 				</td>
-				<td>
+				<td class="column-stage">
 					<strong><?php echo esc_html( Sergio_AI_Logger::map_stage_label( $log['stage'] ) ); ?></strong>
 					<div style="font-size: 11px; color: #64748b;"><code><?php echo esc_html( $log['stage'] ); ?></code></div>
 				</td>
-				<td>
+				<td class="column-primary">
 					<div><?php echo wp_kses_post( Sergio_AI_Logger::format_log_message_html( $log['message'] ) ); ?></div>
 					<?php if ( ! empty( $log['details_json'] ) ) : ?>
 						<details style="margin-top: 5px;">
