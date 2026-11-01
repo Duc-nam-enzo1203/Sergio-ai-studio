@@ -59,36 +59,8 @@ class Sergio_AI_Fact_Pack_Engine {
 
         $this->logger->info(
             'fact_collection',
-            sprintf( 'Bắt đầu thu thập dữ kiện thật cho chủ đề: "%s" (Ngày: %s, Chế độ: %s, Model: %s)', $topic, $current_date, $grounding_mode, $override_model ? $override_model : 'Mặc định' )
+            sprintf( 'Bắt đầu AI Deep Research cho chủ đề: "%s" (Ngày: %s, Chế độ: %s, Model: %s)', $topic, $current_date, $grounding_mode, $override_model ? $override_model : 'Mặc định' )
         );
-
-        // 1. Direct Structured Integration for GitHub Repositories
-        if ( preg_match( '/(github|repo|kho lưu trữ|mã nguồn mở|open source|open-source)/i', $topic ) ) {
-            $github_pack = $this->fetch_github_structured_facts( $topic, $language );
-            if ( $github_pack ) {
-                $pack_id = $this->save_to_db( $topic, $language, $github_pack, 'verified' );
-                $github_pack['id'] = $pack_id;
-                $this->logger->info(
-                    'fact_pack_github_direct',
-                    sprintf( 'Đã trích xuất thành công %d repository thực tế trực tiếp từ GitHub API (Fact Pack #%d)', count( $github_pack['entities'] ), $pack_id )
-                );
-                return $github_pack;
-            }
-        }
-
-        // 2. Direct Structured Integration for Hugging Face Models
-        if ( preg_match( '/(hugging\s*face|huggingface|checkpoint|weights)/i', $topic ) ) {
-            $hf_pack = $this->fetch_huggingface_structured_facts( $topic, $language );
-            if ( $hf_pack ) {
-                $pack_id = $this->save_to_db( $topic, $language, $hf_pack, 'verified' );
-                $hf_pack['id'] = $pack_id;
-                $this->logger->info(
-                    'fact_pack_hf_direct',
-                    sprintf( 'Đã trích xuất thành công %d model thực tế trực tiếp từ Hugging Face API (Fact Pack #%d)', count( $hf_pack['entities'] ), $pack_id )
-                );
-                return $hf_pack;
-            }
-        }
 
         $mode_guidance = ( 'direct' === $grounding_mode )
             ? "CHẾ ĐỘ SUY LUẬN TRI THỨC TRỰC TIẾP (GROUNDING-FREE):
@@ -268,15 +240,7 @@ Hãy tìm kiếm và trích xuất một GÓI DỮ KIỆN (FACT PACK) chuẩn x�
         $has_facts    = ! empty( $parsed_pack['key_facts'] ) && count( (array) $parsed_pack['key_facts'] ) >= 1;
         $has_entities = ! empty( $parsed_pack['entities'] ) && count( (array) $parsed_pack['entities'] ) >= 1;
 
-        if ( 'direct' === $grounding_mode ) {
-            // Grounding-Free: Relies on deep model reasoning without external web citations
-            if ( ! $has_facts && ! $has_entities ) {
-                $is_verified      = false;
-                $rejection_reason = __( 'Không tìm thấy thực thể hoặc dữ kiện phù hợp trong kho tri thức.', 'sergio-ai-studio' );
-            } else {
-                $is_verified = true;
-            }
-        } elseif ( 'strict' === $strictness ) {
+        if ( 'strict' === $strictness ) {
             if ( isset( $parsed_pack['status'] ) && 'insufficient_data' === $parsed_pack['status'] ) {
                 $is_verified      = false;
                 $rejection_reason = ! empty( $parsed_pack['status_reason'] ) ? $parsed_pack['status_reason'] : __( 'Không tìm thấy đủ dữ kiện thực tế có nguồn dẫn chứng hợp lệ trên Internet.', 'sergio-ai-studio' );
@@ -292,26 +256,13 @@ Hãy tìm kiếm và trích xuất một GÓI DỮ KIỆN (FACT PACK) chuẩn x�
                 );
             }
         } else {
-            // Standard Mode (Flexible & Resilient):
-            // Accepts if:
-            // 1) >= 2 distinct independent domains, OR
-            // 2) At least 1 project/repository URL from reputable platforms (GitHub, Hugging Face, ArXiv, etc.), OR
-            // 3) At least 1 verified primary source + at least 1 key fact, OR
-            // 4) Model identified genuine real entities and key facts
+            // Standard Deep Research Mode:
+            // Accepts whenever Deep Research discovers real entities or key facts
             if ( ! $has_facts && ! $has_entities ) {
                 $is_verified      = false;
-                $rejection_reason = ! empty( $parsed_pack['status_reason'] ) ? $parsed_pack['status_reason'] : __( 'Không tìm thấy dữ kiện thực tế hoặc thực thể hợp lệ trên Internet.', 'sergio-ai-studio' );
-            } elseif ( $domain_count >= 2 ) {
-                $is_verified = true;
-            } elseif ( $has_reputable_platform && $unique_url_count >= 1 ) {
-                $is_verified = true;
-            } elseif ( $domain_count >= 1 && $has_facts ) {
-                $is_verified = true;
-            } elseif ( $has_facts && $has_entities ) {
-                $is_verified = true;
+                $rejection_reason = ! empty( $parsed_pack['status_reason'] ) ? $parsed_pack['status_reason'] : __( 'Deep Research không tìm thấy dữ kiện thực tế hoặc thực thể phù hợp.', 'sergio-ai-studio' );
             } else {
-                $is_verified      = false;
-                $rejection_reason = ! empty( $parsed_pack['status_reason'] ) ? $parsed_pack['status_reason'] : __( 'Cổng kiểm chứng từ chối: Không tìm thấy nguồn dẫn chứng hợp lệ hoặc dữ kiện quá sơ sài.', 'sergio-ai-studio' );
+                $is_verified = true;
             }
         }
 
@@ -405,160 +356,6 @@ Hãy tìm kiếm và trích xuất một GÓI DỮ KIỆN (FACT PACK) chuẩn x�
         );
 
         return $wpdb->insert_id;
-    }
-
-    /**
-     * Fetch real structured data for GitHub topics directly from GitHub API
-     */
-    private function fetch_github_structured_facts( $topic, $language = 'vi' ) {
-        // Strip triggering words and conversational/temporal modifiers
-        $cleaned = preg_replace( '/\b(github|repo|repos|repositories|repository|kho lưu trữ|mã nguồn mở|open source|open-source|top|hot|thịnh hành|hay nhất|mới nhất|nổi bật|nổi tiếng|đáng chú ý|trong|hôm nay|hôm qua|tuần này|tháng này|năm nay|ngày|\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?)\b/iu', '', $topic );
-        $cleaned = trim( preg_replace( '/[^\p{L}\p{N}\s\-\_]/u', ' ', (string) $cleaned ) );
-        $cleaned = trim( preg_replace( '/\s+/', ' ', $cleaned ) );
-
-        if ( ! empty( $cleaned ) && strlen( $cleaned ) > 2 && ! preg_match( '/^(ai|dev|code|hot)$/i', $cleaned ) ) {
-            $query = rawurlencode( $cleaned . ' in:name,description stars:>100' );
-            $url   = 'https://api.github.com/search/repositories?q=' . $query . '&sort=stars&order=desc&per_page=6';
-        } else {
-            // General trending / top active repositories
-            $url   = 'https://api.github.com/search/repositories?q=stars:>1000+topic:ai&sort=stars&order=desc&per_page=6';
-        }
-
-        $res = wp_remote_get( $url, array(
-            'headers' => array(
-                'User-Agent' => 'Sergio-AI-Studio/2.1',
-                'Accept'     => 'application/vnd.github.v3+json',
-            ),
-            'timeout' => 15,
-        ) );
-
-        if ( is_wp_error( $res ) || 200 !== wp_remote_retrieve_response_code( $res ) ) {
-            return null;
-        }
-
-        $body = wp_remote_retrieve_body( $res );
-        $data = json_decode( $body, true );
-
-        if ( empty( $data['items'] ) || ! is_array( $data['items'] ) ) {
-            return null;
-        }
-
-        $entities  = array();
-        $facts     = array();
-        $metrics   = array();
-        $citations = array();
-        $current_date = wp_date( 'd/m/Y' );
-
-        foreach ( array_slice( $data['items'], 0, 5 ) as $item ) {
-            $name      = $item['name'];
-            $full_name = $item['full_name'];
-            $stars     = number_format_i18n( $item['stargazers_count'] );
-            $desc      = ! empty( $item['description'] ) ? $item['description'] : 'Kho lưu trữ mã nguồn mở nổi bật trên GitHub.';
-            $repo_url  = $item['html_url'];
-            $lang      = ! empty( $item['language'] ) ? $item['language'] : 'Code';
-
-            $entities[] = array(
-                'name' => $full_name,
-                'type' => 'GitHub Repository / Open Source Project',
-                'role' => 'Dự án mã nguồn mở (' . $lang . ')',
-            );
-
-            $facts[]   = sprintf( 'Repository %s (%s) đạt cột mốc %s stars trên GitHub: %s', $full_name, $lang, $stars, $desc );
-            $metrics[] = sprintf( '%s stars (%s)', $stars, $name );
-
-            $citations[] = array(
-                'title'          => sprintf( 'GitHub: %s - %s', $full_name, $desc ),
-                'url'            => $repo_url,
-                'publisher'      => 'GitHub Official Repository',
-                'published_date' => $current_date,
-            );
-        }
-
-        return array(
-            'status'           => 'verified',
-            'status_reason'    => 'Dữ liệu được trích xuất trực tiếp thời gian thực từ GitHub API.',
-            'primary_event'    => sprintf( 'Tổng hợp các kho lưu trữ GitHub mã nguồn mở nổi bật nhất liên quan đến chủ đề: %s', $topic ),
-            'entities'         => $entities,
-            'key_facts'        => $facts,
-            'verified_metrics' => $metrics,
-            'suggested_angles' => array(
-                'Phân tích chi tiết các dự án GitHub mã nguồn mở hàng đầu và bài học ứng dụng thực tế',
-                'So sánh kiến trúc và tính năng nổi bật giữa các repository AI được cộng đồng quan tâm nhất',
-            ),
-            'source_citations' => $citations,
-        );
-    }
-
-    /**
-     * Fetch real structured data for Hugging Face models directly from Hugging Face API
-     */
-    private function fetch_huggingface_structured_facts( $topic, $language = 'vi' ) {
-        // Strip triggering words to isolate model name/topic
-        $cleaned = preg_replace( '/\b(hugging\s*face|huggingface|checkpoint|weights|models?|mô hình|mới nhất|hàng đầu)\b/iu', '', $topic );
-        $cleaned = trim( preg_replace( '/[^\p{L}\p{N}\s\-\_]/u', ' ', (string) $cleaned ) );
-        $cleaned = trim( preg_replace( '/\s+/', ' ', $cleaned ) );
-
-        if ( ! empty( $cleaned ) ) {
-            $url = 'https://huggingface.co/api/models?search=' . rawurlencode( $cleaned ) . '&sort=likes&direction=-1&limit=5';
-        } else {
-            $url = 'https://huggingface.co/api/models?sort=likes&direction=-1&limit=5';
-        }
-
-        $res = wp_remote_get( $url, array(
-            'headers' => array( 'User-Agent' => 'Sergio-AI-Studio/2.1' ),
-            'timeout' => 15,
-        ) );
-
-        if ( is_wp_error( $res ) || 200 !== wp_remote_retrieve_response_code( $res ) ) {
-            return null;
-        }
-
-        $data = json_decode( wp_remote_retrieve_body( $res ), true );
-        if ( empty( $data ) || ! is_array( $data ) ) {
-            return null;
-        }
-
-        $entities  = array();
-        $facts     = array();
-        $metrics   = array();
-        $citations = array();
-        $current_date = wp_date( 'd/m/Y' );
-
-        foreach ( $data as $m ) {
-            $model_id = isset( $m['id'] ) ? $m['id'] : '';
-            $likes    = isset( $m['likes'] ) ? number_format_i18n( $m['likes'] ) : 0;
-            $task     = isset( $m['pipeline_tag'] ) ? $m['pipeline_tag'] : 'AI Model';
-
-            $entities[] = array(
-                'name' => $model_id,
-                'type' => 'Open Source AI Model (Hugging Face)',
-                'role' => 'Tác vụ: ' . $task,
-            );
-
-            $facts[]   = sprintf( 'Mô hình %s đạt %s lượt yêu thích trên Hugging Face Hub, chuyên phục vụ tác vụ %s.', $model_id, $likes, $task );
-            $metrics[] = sprintf( '%s likes (%s)', $likes, $model_id );
-
-            $citations[] = array(
-                'title'          => sprintf( 'Hugging Face Hub: %s', $model_id ),
-                'url'            => 'https://huggingface.co/' . $model_id,
-                'publisher'      => 'Hugging Face Official Hub',
-                'published_date' => $current_date,
-            );
-        }
-
-        return array(
-            'status'           => 'verified',
-            'status_reason'    => 'Dữ liệu được trích xuất trực tiếp thời gian thực từ Hugging Face Hub API.',
-            'primary_event'    => sprintf( 'Tổng hợp các mô hình trí tuệ nhân tạo (AI Models) thịnh hành nhất trên Hugging Face: %s', $topic ),
-            'entities'         => $entities,
-            'key_facts'        => $facts,
-            'verified_metrics' => $metrics,
-            'suggested_angles' => array(
-                'Điểm danh các mô hình mã nguồn mở hàng đầu trên Hugging Face và phân tích năng lực ứng dụng',
-                'Xu hướng phát triển mô hình AI cộng đồng: Đánh giá chi tiết các checkpoint phổ biến nhất',
-            ),
-            'source_citations' => $citations,
-        );
     }
 
     /**
