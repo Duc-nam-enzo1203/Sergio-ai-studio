@@ -352,6 +352,38 @@ jQuery(document).ready(function($) {
         $steps.append('<div class="' + itemClass + '">' + iconSvg + '<span>' + escapeHtml(text) + '</span></div>');
     }
 
+    function setStepperHeader($box, status, htmlOrText) {
+        var $header = $box.find('.stepper-status-header');
+        if (!$header.length) { return; }
+
+        var $icon = $header.find('.stepper-header-icon');
+        if (!$icon.length) {
+            var $spinner = $header.find('.stepper-spinner');
+            if ($spinner.length) {
+                $spinner.wrap('<span class="stepper-header-icon"></span>');
+            } else {
+                $header.prepend('<span class="stepper-header-icon"></span>');
+            }
+            $icon = $header.find('.stepper-header-icon');
+        }
+
+        var $msg = $box.find('#pipeline_progress_msg, #crawl_progress_msg, #seo_batch_progress_text, #ai_seo_loading_msg');
+        if (!$msg.length) {
+            $msg = $header.find('span:not(.stepper-header-icon, .stepper-spinner)');
+        }
+
+        if (status === 'running') {
+            $icon.html('<span class="stepper-spinner"></span>');
+            $msg.html('<span style="color: var(--sergio-text-primary);">' + escapeHtml(htmlOrText) + '</span>');
+        } else if (status === 'success') {
+            $icon.html('<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" style="display:inline-block; vertical-align:middle;"><polyline points="20 6 9 17 4 12"/></svg>');
+            $msg.html('<span style="color: #10b981; font-weight: 600;">' + htmlOrText + '</span>');
+        } else if (status === 'fail' || status === 'error') {
+            $icon.html('<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.5" style="display:inline-block; vertical-align:middle;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>');
+            $msg.html('<span style="color: #f43f5e; font-weight: 600;">' + htmlOrText + '</span>');
+        }
+    }
+
     // 4A. Run 1-Click Pipeline (Full flow)
     $('#btn_run_pipeline').on('click', function() {
         var $btn = $(this);
@@ -364,7 +396,6 @@ jQuery(document).ready(function($) {
         }
 
         var $box = $('#pipeline_progress_box');
-        var $msg = $('#pipeline_progress_msg');
         var $steps = $('#pipeline_steps_list');
         var $resCard = $('#pipeline_result_card');
         var $previewBox = $('#fact_pack_preview_box');
@@ -376,7 +407,7 @@ jQuery(document).ready(function($) {
         $box.slideDown(150);
         $steps.empty();
 
-        $msg.text('Đang nghiên cứu dữ kiện thực tế và lập Fact Pack...');
+        setStepperHeader($box, 'running', 'Đang nghiên cứu dữ kiện thực tế và lập Fact Pack...');
         addPipelineStep('Giai đoạn 1: Tra cứu dữ liệu thực tế từ web & đối chiếu thực thể...', 'active');
 
         var payload = $.extend({
@@ -393,7 +424,7 @@ jQuery(document).ready(function($) {
         .done(function(res) {
             if (res.success) {
                 var d = res.data;
-                $msg.html('<span style="color: #10b981;">' + escapeHtml(d.message) + '</span>');
+                setStepperHeader($box, 'success', escapeHtml(d.message));
                 $steps.children().last().replaceWith('<div class="stepper-item-row is-done"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>Giai đoạn 1: Thu thập & đối chiếu dữ kiện thực tế thành công</span></div>');
                 addPipelineStep('Giai đoạn 2: Tách tiêu đề độc bản & phân tích thực thể cốt lõi', 'done');
                 addPipelineStep('Giai đoạn 3: Biên tập bài viết chuyên sâu chuẩn Rank Math SEO (~' + escapeHtml(d.word_count) + ' từ)', 'done');
@@ -422,7 +453,7 @@ jQuery(document).ready(function($) {
                 $resCard.html(cardHtml).slideDown(200);
             } else {
                 var err = (res.data && res.data.message) ? res.data.message : 'Có lỗi xảy ra.';
-                $msg.html('<span style="color: #f43f5e;">Thất bại: ' + escapeHtml(err) + '</span>');
+                setStepperHeader($box, 'fail', 'Thất bại: ' + escapeHtml(err));
                 $steps.children().last().replaceWith('<div class="stepper-item-row is-failed"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span>' + escapeHtml(err) + '</span></div>');
                 studioModal({ title: 'Lỗi Biên Soạn Bài Viết', message: err, type: 'error' });
             }
@@ -431,7 +462,7 @@ jQuery(document).ready(function($) {
             var msg = status === 'timeout'
                 ? 'Hết thời gian chờ kết nối máy chủ (300 giây). Vui lòng thử lại hoặc chọn mô hình "Gemini 2.0 Flash" / "Tri thức trực tiếp" để tăng tốc.'
                 : 'Lỗi mạng hoặc máy chủ (' + xhr.status + ').';
-            $msg.html('<span style="color: #f43f5e;">' + escapeHtml(msg) + '</span>');
+            setStepperHeader($box, 'fail', escapeHtml(msg));
             addPipelineStep(msg, 'fail');
             studioModal({ title: 'Lỗi Kết Nối', message: msg, type: 'error' });
         })
@@ -465,7 +496,7 @@ jQuery(document).ready(function($) {
         $box.slideDown(150);
         $steps.empty();
 
-        $msg.text('Đang tra cứu và lập Fact Pack từ web...');
+        setStepperHeader($box, 'running', 'Đang tra cứu và lập Fact Pack từ web...');
         addPipelineStep('Thu thập dữ kiện thời gian thực & trích xuất thực thể...', 'active');
 
         $.ajax({
@@ -486,7 +517,7 @@ jQuery(document).ready(function($) {
             if (res.success) {
                 activeFactPackData = res.data;
                 var d = res.data;
-                $msg.html('<span style="color: #10b981;">' + escapeHtml(d.message) + '</span>');
+                setStepperHeader($box, 'success', escapeHtml(d.message));
                 $steps.children().last().replaceWith('<div class="stepper-item-row is-done"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>Đã đối chiếu thành công ' + (d.key_facts ? d.key_facts.length : 0) + ' dữ kiện & ' + (d.source_citations ? d.source_citations.length : 0) + ' nguồn tham khảo</span></div>');
 
                 // Render Fact Pack Preview HTML
@@ -533,7 +564,7 @@ jQuery(document).ready(function($) {
                 $previewBox.slideDown(200);
             } else {
                 var err = (res.data && res.data.message) ? res.data.message : 'Không thể lập Fact Pack.';
-                $msg.html('<span style="color: #f43f5e;">Thất bại: ' + escapeHtml(err) + '</span>');
+                setStepperHeader($box, 'fail', 'Thất bại: ' + escapeHtml(err));
                 $steps.children().last().replaceWith('<div class="stepper-item-row is-failed"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span>' + escapeHtml(err) + '</span></div>');
                 studioModal({ title: 'Lỗi Thu Thập Fact Pack', message: err, type: 'error' });
             }
@@ -542,7 +573,7 @@ jQuery(document).ready(function($) {
             var msg = status === 'timeout'
                 ? 'Hết thời gian chờ kết nối (180 giây). Vui lòng thử lại với chế độ "Tri thức trực tiếp" hoặc chọn model "Gemini 2.0 Flash".'
                 : 'Lỗi mạng hoặc máy chủ (' + xhr.status + ').';
-            $msg.html('<span style="color: #f43f5e;">' + escapeHtml(msg) + '</span>');
+            setStepperHeader($box, 'fail', escapeHtml(msg));
             addPipelineStep(msg, 'fail');
             studioModal({ title: 'Lỗi Kết Nối', message: msg, type: 'error' });
         })
@@ -562,7 +593,6 @@ jQuery(document).ready(function($) {
         var $btn = $(this);
         var opts = getWriterOptions();
         var $box = $('#pipeline_progress_box');
-        var $msg = $('#pipeline_progress_msg');
         var $steps = $('#pipeline_steps_list');
         var $resCard = $('#pipeline_result_card');
 
@@ -570,7 +600,7 @@ jQuery(document).ready(function($) {
         $box.slideDown(150);
         $steps.empty();
 
-        $msg.text('Đang chấp bút bài viết độc bản từ Fact Pack #' + activeFactPackData.pack_id + '...');
+        setStepperHeader($box, 'running', 'Đang chấp bút bài viết độc bản từ Fact Pack #' + activeFactPackData.pack_id + '...');
         addPipelineStep('Lập kế hoạch biên tập (Editorial Outline & Rank Math Focus Keyword)...', 'active');
 
         var payload = $.extend({
@@ -588,7 +618,7 @@ jQuery(document).ready(function($) {
         .done(function(res) {
             if (res.success) {
                 var d = res.data;
-                $msg.html('<span style="color: #10b981;">' + escapeHtml(d.message) + '</span>');
+                setStepperHeader($box, 'success', escapeHtml(d.message));
                 $steps.children().last().replaceWith('<div class="stepper-item-row is-done"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>Hoàn thành chấp bút & thiết lập SEO</span></div>');
                 addPipelineStep('Lưu bài viết (' + (d.status === 'publish' ? 'Đã xuất bản' : 'Bản nháp') + ') & Xử lý ảnh đại diện', 'done');
 
@@ -617,7 +647,7 @@ jQuery(document).ready(function($) {
                 studioModal({ title: 'Thành Công', message: d.message, type: 'success' });
             } else {
                 var err = (res.data && res.data.message) ? res.data.message : 'Lỗi khi chấp bút.';
-                $msg.html('<span style="color: #f43f5e;">Thất bại: ' + escapeHtml(err) + '</span>');
+                setStepperHeader($box, 'fail', 'Thất bại: ' + escapeHtml(err));
                 $steps.children().last().replaceWith('<div class="stepper-item-row is-failed"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span>' + escapeHtml(err) + '</span></div>');
                 studioModal({ title: 'Lỗi Chấp Bút Bài Viết', message: err, type: 'error' });
             }
@@ -626,7 +656,7 @@ jQuery(document).ready(function($) {
             var msg = status === 'timeout'
                 ? 'Hết thời gian chờ kết nối máy chủ (240 giây).'
                 : 'Lỗi mạng hoặc máy chủ (' + xhr.status + ').';
-            $msg.html('<span style="color: #f43f5e;">' + escapeHtml(msg) + '</span>');
+            setStepperHeader($box, 'fail', escapeHtml(msg));
             addPipelineStep(msg, 'fail');
             studioModal({ title: 'Lỗi Kết Nối', message: msg, type: 'error' });
         })
@@ -669,7 +699,7 @@ jQuery(document).ready(function($) {
         $box.slideDown(150);
         $steps.empty();
 
-        $msg.text('Đang kết nối và thu thập nội dung từ các URL...');
+        setStepperHeader($box, 'running', 'Đang kết nối và thu thập nội dung từ các URL...');
         $steps.append('<div class="stepper-item-row is-active"><span class="stepper-spinner" style="width:12px; height:12px;"></span><span>Đang tải nội dung trang (wp_safe_remote_get)...</span></div>');
 
         $.ajax({
@@ -688,8 +718,8 @@ jQuery(document).ready(function($) {
         })
         .done(function(res) {
             if (res.success) {
-                $msg.html('<span style="color: #10b981;">' + escapeHtml(res.data.message) + '</span>');
-                $steps.append('<div class="stepper-item-row is-done"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>Thu thập và tái bút hoàn tất</span></div>');
+                setStepperHeader($box, 'success', escapeHtml(res.data.message));
+                $steps.children().last().replaceWith('<div class="stepper-item-row is-done"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>Thu thập và tái bút hoàn tất</span></div>');
 
                 if (res.data.results && res.data.results.length > 0) {
                     $.each(res.data.results, function(idx, item) {
@@ -715,14 +745,17 @@ jQuery(document).ready(function($) {
                 }
             } else {
                 var err = (res.data && res.data.message) ? res.data.message : 'Có lỗi xảy ra khi crawl.';
-                $msg.html('<span style="color:#f43f5e;">' + escapeHtml(err) + '</span>');
+                setStepperHeader($box, 'fail', 'Thất bại: ' + escapeHtml(err));
+                $steps.children().last().replaceWith('<div class="stepper-item-row is-failed"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span>' + escapeHtml(err) + '</span></div>');
+                studioModal({ title: 'Lỗi Crawl', message: err, type: 'error' });
             }
         })
         .fail(function(xhr, status) {
             var msg = status === 'timeout'
                 ? 'Hết thời gian chờ (180 giây). Các trang web cần crawl phản hồi quá chậm.'
                 : 'Lỗi mạng hoặc máy chủ (' + xhr.status + ').';
-            $msg.html('<span style="color:#f43f5e;">' + escapeHtml(msg) + '</span>');
+            setStepperHeader($box, 'fail', escapeHtml(msg));
+            studioModal({ title: 'Lỗi Kết Nối', message: msg, type: 'error' });
         })
         .always(function() {
             $btn.prop('disabled', false);

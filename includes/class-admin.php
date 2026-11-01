@@ -1133,7 +1133,7 @@ class Sergio_AI_Admin {
 						<!-- Linear Progress Stepper -->
 						<div id="pipeline_progress_box" class="studio-stepper-box" style="display: none;">
 							<div class="stepper-status-header">
-								<span class="stepper-spinner"></span>
+								<span class="stepper-header-icon"><span class="stepper-spinner"></span></span>
 								<span id="pipeline_progress_msg"><?php esc_html_e( 'Đang khởi tạo kết nối...', 'sergio-ai-studio' ); ?></span>
 							</div>
 							<div id="pipeline_steps_list" class="stepper-items-track"></div>
@@ -1247,7 +1247,7 @@ class Sergio_AI_Admin {
 
 						<div id="crawl_progress_box" class="studio-stepper-box" style="display: none;">
 							<div class="stepper-status-header">
-								<span class="stepper-spinner"></span>
+								<span class="stepper-header-icon"><span class="stepper-spinner"></span></span>
 								<span id="crawl_progress_msg"><?php esc_html_e( 'Đang kết nối crawl...', 'sergio-ai-studio' ); ?></span>
 							</div>
 							<div id="crawl_steps_list" class="stepper-items-track"></div>

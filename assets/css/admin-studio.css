@@ -1023,6 +1023,15 @@
     margin-bottom: 16px;
 }
 
+.stepper-header-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+}
+
 .stepper-spinner {
     width: 16px;
     height: 16px;
