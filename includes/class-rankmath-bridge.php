@@ -50,6 +50,8 @@ class Sergio_AI_RankMath_Bridge {
 		$canonical     = get_post_meta( $post_id, 'rank_math_canonical_url', true );
 		$robots        = get_post_meta( $post_id, 'rank_math_robots', true );
 		$rm_score      = get_post_meta( $post_id, 'rank_math_seo_score', true );
+		$studio_score  = get_post_meta( $post_id, '_sergio_ai_seo_score', true );
+		$display_score = ! empty( $studio_score ) ? absint( $studio_score ) : ( ! empty( $rm_score ) ? absint( $rm_score ) : 0 );
 
 		return array(
 			'post_id'       => $post_id,
@@ -61,7 +63,7 @@ class Sergio_AI_RankMath_Bridge {
 			'description'   => ! empty( $seo_desc ) ? $seo_desc : '',
 			'canonical_url' => ! empty( $canonical ) ? $canonical : get_permalink( $post_id ),
 			'robots'        => ! empty( $robots ) ? (array) $robots : array( 'index', 'follow' ),
-			'rm_score'      => ! empty( $rm_score ) ? absint( $rm_score ) : 0,
+			'rm_score'      => $display_score,
 			'edit_url'      => function_exists( 'get_edit_post_link' ) ? get_edit_post_link( $post_id, 'raw' ) : admin_url( 'post.php?post=' . $post_id . '&action=edit' ),
 			'view_url'      => get_permalink( $post_id ),
 		);
@@ -81,7 +83,10 @@ class Sergio_AI_RankMath_Bridge {
 		$focus_kw = isset( $metas['focus_keyword'] ) ? sanitize_text_field( $metas['focus_keyword'] ) : '';
 		$title    = isset( $metas['seo_title'] ) ? sanitize_text_field( $metas['seo_title'] ) : '';
 		$desc     = isset( $metas['description'] ) ? sanitize_textarea_field( $metas['description'] ) : '';
-		$url      = isset( $metas['canonical_url'] ) ? esc_url_raw( $metas['canonical_url'] ) : get_permalink( $post_id );
+		$url      = isset( $metas['canonical_url'] ) && ! empty( $metas['canonical_url'] ) ? esc_url_raw( $metas['canonical_url'] ) : '';
+
+		$post     = get_post( $post_id );
+		$is_draft = $post && in_array( $post->post_status, array( 'draft', 'auto-draft', 'pending' ), true );
 
 		// Standard Rank Math Meta Keys (Used by both Free & PRO)
 		if ( ! empty( $focus_kw ) ) {
@@ -97,7 +102,13 @@ class Sergio_AI_RankMath_Bridge {
 		}
 
 		update_post_meta( $post_id, 'rank_math_robots', array( 'index', 'follow' ) );
-		update_post_meta( $post_id, 'rank_math_canonical_url', $url );
+
+		// Only store canonical URL if explicitly provided or post is already published (avoid premature ?p=ID)
+		if ( ! empty( $url ) ) {
+			update_post_meta( $post_id, 'rank_math_canonical_url', $url );
+		} elseif ( ! $is_draft ) {
+			update_post_meta( $post_id, 'rank_math_canonical_url', get_permalink( $post_id ) );
+		}
 
 		// Fallback for native/Yoast/AIOSEO if Rank Math is not the primary plugin
 		update_post_meta( $post_id, '_sergio_ai_seo_focus_kw', $focus_kw );
@@ -144,7 +155,7 @@ class Sergio_AI_RankMath_Bridge {
 
 		if ( isset( $data['score'] ) ) {
 			$score = min( 100, max( 0, absint( $data['score'] ) ) );
-			update_post_meta( $post_id, 'rank_math_seo_score', $score );
+			update_post_meta( $post_id, '_sergio_ai_seo_score', $score );
 		}
 
 		return true;

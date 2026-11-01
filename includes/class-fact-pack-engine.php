@@ -89,12 +89,14 @@ class Sergio_AI_Fact_Pack_Engine {
         $system_prompt = "Bạn là Trợ lý Nghiên cứu Dữ kiện Cấp cao (Senior Fact Researcher & Investigative Journalist).
 HÔM NAY LÀ NGÀY {$current_date} (NĂM {$current_year}).
 NGUYÊN TẮC BẤT BIẾN:
-1. Bạn khai thác dữ liệu thực tế từ web hoặc kho tri thức kỹ thuật đã được xác thực về các công ty, sản phẩm, mô hình, kiến trúc công nghệ thật.
-2. TUYỆT ĐỐI KHÔNG BỊA đặt tên repo, không bịa tên sản phẩm không có thật, không bịa số liệu đo lường, không bịa nhân vật.
+1. Bạn khai thác dữ liệu thực tế từ web qua Google Search Grounding hoặc nguồn đã được xác thực về các công ty, sản phẩm, mô hình, kiến trúc công nghệ thật.
+2. TUYỆT ĐỐI KHÔNG BỊA đặt tên repo, không bịa tên sản phẩm không có thật, không bịa số liệu đo lường, không bịa trích dẫn.
 3. VỀ TRẠNG THÁI KIỂM CHỨNG (status):
-- Với mọi chủ đề có thực thể, công nghệ, công ty, sản phẩm hoặc hiện tượng thật (Ví dụ: Cursor, OpenAI, ChatGPT, Claude, Anthropic, Python, SEO, GitHub, React, AI Agents...): BẮT BUỘC trả về \"status\": \"verified\" với đầy đủ các dữ kiện, tính năng, thông số kỹ thuật và kiến trúc ĐÃ ĐƯỢC CÔNG BỐ.
-- NẾU chủ đề có tính thời sự trong tuần/tháng cụ thể mà không có báo cáo thời gian thực: Hãy tập trung phân tích sâu vào các cập nhật và cột mốc xác thực gần nhất của thực thể đó.
-- CHỈ trả về \"status\": \"insufficient_data\" khi chủ đề hoàn toàn là chuỗi ký tự rác vô nghĩa (ví dụ: 'asdkjhqwue') hoặc một thực thể hoàn toàn giả tưởng không thể tra cứu.
+- Đánh giá trung thực: CHỈ trả về \"status\": \"verified\" khi tìm thấy dữ kiện cụ thể, xác thực và có ít nhất 1 nguồn bài viết/tài liệu công khai uy tín trên Internet kèm URL thực tế.
+- BẮT BUỘC trả về \"status\": \"insufficient_data\" khi:
+  + Không tìm thấy nguồn uy tín hoặc thông tin không thể kiểm chứng.
+  + Chủ đề là tin đồn vô căn cứ, chuỗi ký tự rác, hoặc thực thể giả tưởng.
+  + Không trích xuất được số liệu hoặc thông số kỹ thuật thực tế từ nguồn tin cậy.
 4. Ngôn ngữ phản hồi chính: " . ( 'vi' === $language ? 'Tiếng Việt' : 'English' ) . ".";
 
         $clean_topic = trim( wp_strip_all_tags( $topic ) );
@@ -188,33 +190,33 @@ Hãy tìm kiếm và trích xuất một GÓI DỮ KIỆN (FACT PACK) chuẩn x�
             }
         }
 
-        // Auto-enrich reputable reference links if citations are empty but facts are solid
-        if ( empty( $parsed_pack['source_citations'] ) && ! empty( $parsed_pack['key_facts'] ) ) {
-            $parsed_pack['source_citations'] = array();
-            if ( ! empty( $parsed_pack['entities'] ) ) {
-                foreach ( $parsed_pack['entities'] as $entity ) {
-                    $entity_name = isset( $entity['name'] ) ? sanitize_text_field( $entity['name'] ) : '';
-                    if ( ! empty( $entity_name ) ) {
-                        $parsed_pack['source_citations'][] = array(
-                            'title'          => sprintf( __( 'Tài liệu & Hồ sơ chính thức: %s', 'sergio-ai-studio' ), $entity_name ),
-                            'url'            => 'https://www.google.com/search?q=' . rawurlencode( $entity_name . ' official release' ),
-                            'publisher'      => 'Official Release Portal',
-                            'published_date' => $current_date,
-                        );
-                    }
+        // Enforce genuine web citations (strip fake search URLs and invalid links)
+        $valid_citations = array();
+        if ( ! empty( $parsed_pack['source_citations'] ) && is_array( $parsed_pack['source_citations'] ) ) {
+            foreach ( $parsed_pack['source_citations'] as $c ) {
+                $c_url = isset( $c['url'] ) ? trim( (string) $c['url'] ) : '';
+                if ( empty( $c_url ) || ! wp_http_validate_url( $c_url ) ) {
+                    continue;
                 }
-            }
-            if ( empty( $parsed_pack['source_citations'] ) ) {
-                $parsed_pack['source_citations'][] = array(
-                    'title'          => sprintf( __( 'Dữ liệu kiểm chứng chuyên ngành: %s', 'sergio-ai-studio' ), $topic ),
-                    'url'            => 'https://www.google.com/search?q=' . rawurlencode( $topic ),
-                    'publisher'      => 'Verified Knowledge Base',
-                    'published_date' => $current_date,
+                $host = strtolower( (string) parse_url( $c_url, PHP_URL_HOST ) );
+                // Exclude search engine query pages masquerading as factual sources
+                if ( strpos( $host, 'google.' ) !== false && strpos( $c_url, '/search' ) !== false ) {
+                    continue;
+                }
+                if ( strpos( $host, 'bing.' ) !== false && strpos( $c_url, '/search' ) !== false ) {
+                    continue;
+                }
+                $valid_citations[] = array(
+                    'title'          => sanitize_text_field( $c['title'] ?? $host ),
+                    'url'            => esc_url_raw( $c_url ),
+                    'publisher'      => sanitize_text_field( $c['publisher'] ?? $host ),
+                    'published_date' => sanitize_text_field( $c['published_date'] ?? $current_date ),
                 );
             }
         }
+        $parsed_pack['source_citations'] = $valid_citations;
 
-        // Validate: If status is insufficient_data or no facts found
+        // Strict Validation: If status is insufficient_data, no facts found, or NO real sources found
         if (
             ( isset( $parsed_pack['status'] ) && 'insufficient_data' === $parsed_pack['status'] ) ||
             empty( $parsed_pack['key_facts'] ) ||
@@ -222,7 +224,7 @@ Hãy tìm kiếm và trích xuất một GÓI DỮ KIỆN (FACT PACK) chuẩn x�
         ) {
             $reason = ! empty( $parsed_pack['status_reason'] )
                 ? $parsed_pack['status_reason']
-                : __( 'Không tìm thấy đủ dữ kiện thực tế có nguồn dẫn chứng trên Internet.', 'sergio-ai-studio' );
+                : __( 'Không tìm thấy đủ dữ kiện thực tế có nguồn dẫn chứng hợp lệ trên Internet.', 'sergio-ai-studio' );
 
             $this->logger->warning( 'fact_pack_rejected', sprintf( 'Dừng tạo bài: %s', $reason ), $parsed_pack );
 
@@ -231,7 +233,7 @@ Hãy tìm kiếm và trích xuất một GÓI DỮ KIỆN (FACT PACK) chuẩn x�
 
             return new WP_Error(
                 'insufficient_data',
-                sprintf( __( 'Dữ kiện không đủ độ tin cậy để viết bài: %s (Đã hủy tạo bài để tránh bịa số liệu).', 'sergio-ai-studio' ), $reason ),
+                sprintf( __( 'Dữ kiện không đủ độ tin cậy để viết bài: %s (Đã dừng để bảo đảm tính xác thực, tránh bịa số liệu).', 'sergio-ai-studio' ), $reason ),
                 array( 'fact_pack_id' => $pack_id )
             );
         }
@@ -319,17 +321,21 @@ Hãy tìm kiếm và trích xuất một GÓI DỮ KIỆN (FACT PACK) chuẩn x�
      * Fetch real structured data for GitHub topics directly from GitHub API
      */
     private function fetch_github_structured_facts( $topic, $language = 'vi' ) {
-        $url = 'https://api.github.com/search/repositories?q=stars:>1000+topic:ai&sort=stars&order=desc&per_page=6';
+        // Strip triggering words to isolate user search terms
+        $cleaned = preg_replace( '/\b(github|repo|repositories|repository|kho lưu trữ|mã nguồn mở|open source|open-source|top|hay nhất|mới nhất|nổi bật)\b/iu', '', $topic );
+        $cleaned = trim( preg_replace( '/[^\p{L}\p{N}\s\-\_]/u', ' ', (string) $cleaned ) );
+        $cleaned = trim( preg_replace( '/\s+/', ' ', $cleaned ) );
 
-        if ( preg_match( '/(agent|tác nhân)/i', $topic ) ) {
-            $url = 'https://api.github.com/search/repositories?q=stars:>500+agent&sort=stars&order=desc&per_page=6';
-        } elseif ( preg_match( '/(llm|model|ngôn ngữ)/i', $topic ) ) {
-            $url = 'https://api.github.com/search/repositories?q=stars:>1000+llm&sort=stars&order=desc&per_page=6';
+        if ( ! empty( $cleaned ) ) {
+            $query = rawurlencode( $cleaned . ' in:name,description' );
+            $url   = 'https://api.github.com/search/repositories?q=' . $query . '&sort=stars&order=desc&per_page=6';
+        } else {
+            $url   = 'https://api.github.com/search/repositories?q=stars:>1000+topic:ai&sort=stars&order=desc&per_page=6';
         }
 
         $res = wp_remote_get( $url, array(
             'headers' => array(
-                'User-Agent' => 'Sergio-AI-Studio/2.0',
+                'User-Agent' => 'Sergio-AI-Studio/2.1',
                 'Accept'     => 'application/vnd.github.v3+json',
             ),
             'timeout' => 15,
@@ -396,9 +402,19 @@ Hãy tìm kiếm và trích xuất một GÓI DỮ KIỆN (FACT PACK) chuẩn x�
      * Fetch real structured data for Hugging Face models directly from Hugging Face API
      */
     private function fetch_huggingface_structured_facts( $topic, $language = 'vi' ) {
-        $url = 'https://huggingface.co/api/models?sort=likes&direction=-1&limit=5';
+        // Strip triggering words to isolate model name/topic
+        $cleaned = preg_replace( '/\b(hugging\s*face|huggingface|checkpoint|weights|models?|mô hình|mới nhất|hàng đầu)\b/iu', '', $topic );
+        $cleaned = trim( preg_replace( '/[^\p{L}\p{N}\s\-\_]/u', ' ', (string) $cleaned ) );
+        $cleaned = trim( preg_replace( '/\s+/', ' ', $cleaned ) );
+
+        if ( ! empty( $cleaned ) ) {
+            $url = 'https://huggingface.co/api/models?search=' . rawurlencode( $cleaned ) . '&sort=likes&direction=-1&limit=5';
+        } else {
+            $url = 'https://huggingface.co/api/models?sort=likes&direction=-1&limit=5';
+        }
+
         $res = wp_remote_get( $url, array(
-            'headers' => array( 'User-Agent' => 'Sergio-AI-Studio/2.0' ),
+            'headers' => array( 'User-Agent' => 'Sergio-AI-Studio/2.1' ),
             'timeout' => 15,
         ) );
 

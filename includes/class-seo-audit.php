@@ -494,8 +494,8 @@ class Sergio_AI_SEO_Audit {
 
 		$final_score = min( 100, max( 0, $score ) );
 
-		// Sync with Rank Math score
-		update_post_meta( $post_id, 'rank_math_seo_score', $final_score );
+		// Store internal On-Page Studio SEO score (do not overwrite Rank Math's editor-calculated score)
+		update_post_meta( $post_id, '_sergio_ai_seo_score', $final_score );
 
 		return array(
 			'post_id'         => $post_id,
@@ -870,8 +870,9 @@ class Sergio_AI_SEO_Audit {
 			. "   - Các thẻ <h2> và <h3> tiếp theo phải bao quát các thực thể ngữ nghĩa liên quan (LSI Entities).\n"
 			. "3. MẬT ĐỘ TỪ KHÓA TỰ NHIÊN (1.0% - 1.8%):\n"
 			. "   - Rải đều cụm từ \"" . $focus_kw . "\" tự nhiên trong các đoạn văn và danh sách. Tuyệt đối không nhồi nhét thô thiển.\n"
-			. "4. ĐỘ SÂU NỘI DUNG & E-E-A-T:\n"
-			. "   - Mở rộng bài viết đạt độ dài từ 1,000 đến 1,800 từ chất lượng cao, cung cấp số liệu, phân tích thực tế, bảng so sánh hoặc hướng dẫn từng bước chi tiết.\n"
+			. "4. ĐỘ SÂU NỘI DUNG & BẢO TOÀN DỮ KIỆN THỰC TẾ:\n"
+			. "   - Dựa trên dữ liệu và bối cảnh của nội dung gốc, tổ chức lại mạch bài viết chuyên sâu, rõ ràng và mạch lạc.\n"
+			. "   - TUYỆT ĐỐI KHÔNG BỊA ĐẶT số liệu thống kê, tên công ty, nghiên cứu hoặc số đo không có trong bài gốc.\n"
 			. "   - Loại bỏ các câu mở đầu sáo rỗng vô nghĩa (ví dụ: 'Trong kỷ nguyên số ngày nay...').\n"
 			. "5. THẺ ALT HÌNH ẢNH:\n"
 			. "   - Nếu nội dung có thẻ <img>, hãy bổ sung thuộc tính alt đầy đủ, giàu ngữ cảnh và chứa từ khóa liên quan (ví dụ: alt=\"Hình ảnh minh họa cho " . $focus_kw . "\").\n"
@@ -921,16 +922,18 @@ class Sergio_AI_SEO_Audit {
 			return $update_result;
 		}
 
-		// Ensure Rank Math Metadata and Title are fully synced and hit 85-100 score
-		$seo_data = Sergio_AI_RankMath_Bridge::get_post_seo_data( $post_id );
+		// Ensure Metadata and Title are synced cleanly with focus keyword
+		$seo_data  = Sergio_AI_RankMath_Bridge::get_post_seo_data( $post_id );
 		$cur_title = ! empty( $seo_data['seo_title'] ) ? $seo_data['seo_title'] : $post->post_title;
 		if ( false === mb_stripos( $cur_title, $focus_kw, 0, 'UTF-8' ) ) {
-			$cur_title = mb_substr( $focus_kw . ' - Hướng Dẫn & Đánh Giá Chi Tiết 2026', 0, 60, 'UTF-8' );
+			$cur_title = mb_substr( $focus_kw . ': ' . $post->post_title, 0, 60, 'UTF-8' );
 		}
 
 		$cur_desc = ! empty( $seo_data['description'] ) ? $seo_data['description'] : '';
 		if ( empty( $cur_desc ) || false === mb_stripos( $cur_desc, $focus_kw, 0, 'UTF-8' ) ) {
-			$cur_desc = mb_substr( sprintf( __( 'Khám phá chi tiết về %s: Phân tích chuyên sâu, hướng dẫn thực hành và giải đáp thắc mắc chuẩn E-E-A-T mới nhất.', 'sergio-ai-studio' ), $focus_kw ), 0, 155, 'UTF-8' );
+			$excerpt_text = wp_strip_all_tags( $sanitized_html );
+			$excerpt_text = trim( preg_replace( '/\s+/', ' ', $excerpt_text ) );
+			$cur_desc     = mb_substr( $excerpt_text, 0, 155, 'UTF-8' );
 		}
 
 		Sergio_AI_RankMath_Bridge::update_post_seo_data( $post_id, array(
@@ -1046,7 +1049,7 @@ class Sergio_AI_SEO_Audit {
 		if ( $score >= 80 ) {
 			return array(
 				'class' => 'score-great',
-				'label' => __( 'Tốt (Rank Math Đạt Chuẩn)', 'sergio-ai-studio' ),
+				'label' => __( 'Tốt (Đạt Chuẩn On-Page)', 'sergio-ai-studio' ),
 				'color' => '#10b981',
 			);
 		} elseif ( $score >= 50 ) {

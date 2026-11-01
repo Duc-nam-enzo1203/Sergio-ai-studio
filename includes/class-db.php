@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Sergio_AI_DB {
 
-    const DB_VERSION = '2.0.0';
+    const DB_VERSION = '2.1.0';
 
     /**
      * Table names helper

@@ -86,23 +86,25 @@ Nguồn: {$source_domain}
 Hãy trả về JSON duy nhất, không có markdown code block, không có giải thích ngoài JSON.
 PROMPT;
 
-        $this->logger->log( 'info', 'content_rewriter', sprintf( 'Bắt đầu viết lại bài từ: %s', $source_domain ) );
+        $this->logger->info( 'content_rewriter', sprintf( 'Bắt đầu viết lại bài từ: %s', $source_domain ) );
 
         $raw = $this->client->generate_content( $prompt, '', false, 0.7, 60 );
 
         if ( is_wp_error( $raw ) ) {
-            $this->logger->log( 'error', 'content_rewriter', $raw->get_error_message() );
+            $this->logger->error( 'content_rewriter', $raw->get_error_message() );
             return $raw;
         }
 
+        $raw_text = is_array( $raw ) ? ( $raw['text'] ?? '' ) : (string) $raw;
+
         // Parse JSON response.
         // Strip potential markdown fences if model wraps it.
-        $json_str = preg_replace( '/^```(?:json)?\s*/i', '', trim( $raw ) );
+        $json_str = preg_replace( '/^```(?:json)?\s*/i', '', trim( $raw_text ) );
         $json_str = preg_replace( '/\s*```$/', '', $json_str );
         $parsed   = json_decode( $json_str, true );
 
         if ( ! is_array( $parsed ) || empty( $parsed['content'] ) || empty( $parsed['title'] ) ) {
-            $this->logger->log( 'error', 'content_rewriter', 'Gemini trả về JSON không hợp lệ', array( 'raw' => substr( $raw, 0, 500 ) ) );
+            $this->logger->error( 'content_rewriter', 'Gemini trả về JSON không hợp lệ', array( 'raw' => substr( $raw_text, 0, 500 ) ) );
             return new WP_Error( 'parse_error', __( 'Gemini trả về dữ liệu không đúng định dạng JSON.', 'sergio-ai-studio' ) );
         }
 
@@ -156,12 +158,22 @@ PROMPT;
         if ( ! empty( $rewritten['meta_description'] ) ) {
             update_post_meta( $post_id, 'rank_math_description', sanitize_text_field( $rewritten['meta_description'] ) );
         }
-        // Store source URL for attribution.
+        // Store source URL for attribution and anti-duplication cache.
         if ( ! empty( $rewritten['source_url'] ) ) {
             update_post_meta( $post_id, '_sergio_crawl_source_url', esc_url_raw( $rewritten['source_url'] ) );
+            if ( class_exists( 'Sergio_AI_Web_Crawler' ) ) {
+                Sergio_AI_Web_Crawler::record_processed_url(
+                    $rewritten['source_url'],
+                    $rewritten['title'] ?? '',
+                    $rewritten['source_domain'] ?? ''
+                );
+            }
         }
 
-        $this->logger->log( 'info', 'content_rewriter', sprintf( 'Đã lưu bản nháp #%d từ nguồn %s', $post_id, $rewritten['source_domain'] ) );
+        update_post_meta( $post_id, '_sergio_ai_generated', 1 );
+        update_post_meta( $post_id, '_sergio_ai_studio_version', '2.1.0' );
+
+        $this->logger->info( 'content_rewriter', sprintf( 'Đã lưu bản nháp #%d từ nguồn %s', $post_id, $rewritten['source_domain'] ) );
 
         return $post_id;
     }

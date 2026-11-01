@@ -244,7 +244,8 @@ HƯỚNG DẪN VIẾT BÀI:
             );
         }
 
-        update_post_meta( $post_id, '_sergio_ai_studio_version', '2.0.0' );
+        update_post_meta( $post_id, '_sergio_ai_generated', 1 );
+        update_post_meta( $post_id, '_sergio_ai_studio_version', '2.1.0' );
         update_post_meta( $post_id, '_sergio_ai_generated_time', current_time( 'mysql' ) );
 
         $this->logger->info(

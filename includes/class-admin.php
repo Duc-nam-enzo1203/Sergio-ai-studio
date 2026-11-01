@@ -1697,8 +1697,8 @@ class Sergio_AI_Admin {
 
 	public function ajax_crawl_rewrite() {
 		check_ajax_referer( 'sergio_ai_studio_nonce', 'nonce' );
-		if ( ! current_user_can( 'publish_posts' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Không đủ quyền đăng bài viết.', 'sergio-ai-studio' ) ) );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Chỉ Quản trị viên mới có quyền sử dụng tính năng Crawl & Viết Lại.', 'sergio-ai-studio' ) ) );
 		}
 
 		$user_id      = get_current_user_id();
@@ -1858,6 +1858,10 @@ class Sergio_AI_Admin {
 			wp_send_json_error( array( 'message' => __( 'Thiếu ID bài viết.', 'sergio-ai-studio' ) ) );
 		}
 
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'Bạn không có quyền chỉnh sửa bài viết này.', 'sergio-ai-studio' ) ) );
+		}
+
 		$audit = Sergio_AI_SEO_Audit::audit_post( $post_id );
 		if ( is_wp_error( $audit ) ) {
 			wp_send_json_error( array( 'message' => $audit->get_error_message() ) );
@@ -1880,6 +1884,17 @@ class Sergio_AI_Admin {
 			wp_send_json_error( array( 'message' => __( 'Thiếu ID bài viết.', 'sergio-ai-studio' ) ) );
 		}
 
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'Bạn không có quyền chỉnh sửa bài viết này.', 'sergio-ai-studio' ) ) );
+		}
+
+		$user_id      = get_current_user_id();
+		$cooldown_key = 'sergio_ai_ai_opt_cd_' . $user_id;
+		if ( get_transient( $cooldown_key ) ) {
+			wp_send_json_error( array( 'message' => __( 'Vui lòng đợi 5 giây giữa các lần gọi AI tối ưu.', 'sergio-ai-studio' ) ) );
+		}
+		set_transient( $cooldown_key, 1, 5 );
+
 		$logger = new Sergio_AI_Logger();
 		$client = new Sergio_AI_Gemini_Client( '', '', $logger );
 
@@ -1893,7 +1908,7 @@ class Sergio_AI_Admin {
 		}
 
 		wp_send_json_success( array(
-			'message'     => __( 'Đã tạo xong gói tối ưu SEO từ Gemini AI.', 'sergio-ai-studio' ),
+			'message'     => __( 'Đã tạo xong gói đề xuất On-Page từ Gemini AI.', 'sergio-ai-studio' ),
 			'suggestions' => $result,
 		) );
 	}
@@ -1907,6 +1922,10 @@ class Sergio_AI_Admin {
 		$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
 		if ( empty( $post_id ) ) {
 			wp_send_json_error( array( 'message' => __( 'Thiếu ID bài viết.', 'sergio-ai-studio' ) ) );
+		}
+
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'Bạn không có quyền chỉnh sửa bài viết này.', 'sergio-ai-studio' ) ) );
 		}
 
 		$focus_kw = isset( $_POST['focus_keyword'] ) ? sanitize_text_field( wp_unslash( $_POST['focus_keyword'] ) ) : '';
@@ -1947,6 +1966,17 @@ class Sergio_AI_Admin {
 			wp_send_json_error( array( 'message' => __( 'Thiếu ID bài viết hoặc trang.', 'sergio-ai-studio' ) ) );
 		}
 
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'Bạn không có quyền chỉnh sửa bài viết này.', 'sergio-ai-studio' ) ) );
+		}
+
+		$user_id      = get_current_user_id();
+		$cooldown_key = 'sergio_ai_ai_deep_cd_' . $user_id;
+		if ( get_transient( $cooldown_key ) ) {
+			wp_send_json_error( array( 'message' => __( 'Vui lòng đợi 10 giây giữa các lần tối ưu sâu nội dung.', 'sergio-ai-studio' ) ) );
+		}
+		set_transient( $cooldown_key, 1, 10 );
+
 		$focus_kw = isset( $_POST['focus_keyword'] ) ? sanitize_text_field( wp_unslash( $_POST['focus_keyword'] ) ) : '';
 
 		$logger = new Sergio_AI_Logger();
@@ -1962,16 +1992,23 @@ class Sergio_AI_Admin {
 		}
 
 		wp_send_json_success( array(
-			'message' => __( 'Đã nâng cấp nội dung và tái cấu trúc On-Page đạt chuẩn thành công!', 'sergio-ai-studio' ),
+			'message' => __( 'Đã tái cấu trúc và tối ưu nội dung On-Page thành công!', 'sergio-ai-studio' ),
 			'audit'   => $audit,
 		) );
 	}
 
 	public function ajax_batch_fix_seo() {
 		check_ajax_referer( 'sergio_ai_studio_nonce', 'nonce' );
-		if ( ! current_user_can( 'edit_posts' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Không đủ quyền thực hiện.', 'sergio-ai-studio' ) ) );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Chỉ Quản trị viên (Administrator) mới có quyền thực hiện tối ưu hàng loạt.', 'sergio-ai-studio' ) ) );
 		}
+
+		$user_id      = get_current_user_id();
+		$cooldown_key = 'sergio_ai_ai_batch_cd_' . $user_id;
+		if ( get_transient( $cooldown_key ) ) {
+			wp_send_json_error( array( 'message' => __( 'Vui lòng đợi 20 giây giữa các đợt chạy tối ưu hàng loạt.', 'sergio-ai-studio' ) ) );
+		}
+		set_transient( $cooldown_key, 1, 20 );
 
 		$post_ids = isset( $_POST['post_ids'] ) ? array_map( 'absint', (array) $_POST['post_ids'] ) : array();
 		if ( empty( $post_ids ) ) {

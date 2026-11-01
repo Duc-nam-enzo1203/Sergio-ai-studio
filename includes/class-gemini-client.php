@@ -76,14 +76,14 @@ class Sergio_AI_Gemini_Client {
         if ( empty( $model ) ) {
             $this->model = isset( $options['gemini_model_primary'] ) && ! empty( $options['gemini_model_primary'] )
                 ? $options['gemini_model_primary']
-                : 'gemini-3.5-flash-lite';
+                : 'gemini-2.5-flash';
         } else {
             $this->model = $model;
         }
 
         $this->fallback_model = isset( $options['gemini_model_fallback'] ) && ! empty( $options['gemini_model_fallback'] )
             ? $options['gemini_model_fallback']
-            : 'gemini-flash-lite-latest';
+            : 'gemini-2.5-flash-lite';
 
         $this->logger = $logger ? $logger : new Sergio_AI_Logger();
 
@@ -278,46 +278,27 @@ class Sergio_AI_Gemini_Client {
         // Send HTTP Request with automatic single retry for transient failures
         $result = $this->send_request_with_retry( $endpoint, $payload, $timeout );
 
-        // RESILIENCE 1: If call fails and Search Grounding tools were enabled, retry primary without Search Grounding tool
-        if ( is_wp_error( $result ) && isset( $payload['tools'] ) ) {
-            $err_msg = $result->get_error_message();
-            $this->logger->warning(
-                'gemini_grounding_fallback',
-                sprintf( 'Google Search Grounding gặp hạn mức/sự cố (%s). Tự động chuyển sang chế độ Tri thức Chuyên sâu (không qua tool Search)...', $err_msg )
-            );
-            unset( $payload['tools'] );
-            $result = $this->send_request_with_retry( $endpoint, $payload, $timeout );
-        }
-
-        // RESILIENCE 2: Model fallback chain if primary model fails (503 High Demand, 404 Deprecated, or 429)
+        // If primary model fails, attempt exactly 1 configured fallback model
         if ( is_wp_error( $result ) ) {
-            if ( isset( $payload['tools'] ) ) {
-                unset( $payload['tools'] );
-            }
+            $fallback = ! empty( $this->fallback_model ) && $this->fallback_model !== $clean_model
+                ? $this->fallback_model
+                : '';
 
-            $candidate_fallbacks = array();
-            if ( ! empty( $this->fallback_model ) && $this->fallback_model !== $clean_model ) {
-                $candidate_fallbacks[] = $this->fallback_model;
-            }
-            // Always append ultra-reliable high-availability models
-            foreach ( array( 'gemini-3.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-3-flash-preview' ) as $safe_mod ) {
-                if ( ! in_array( $safe_mod, $candidate_fallbacks, true ) && $safe_mod !== $clean_model ) {
-                    $candidate_fallbacks[] = $safe_mod;
-                }
-            }
-
-            foreach ( $candidate_fallbacks as $fb_model ) {
+            if ( ! empty( $fallback ) ) {
                 $this->logger->warning(
                     'gemini_fallback',
-                    sprintf( 'Model [%s] gặp sự cố: %s. Đang chuyển sang model cứu trợ [%s]...', $clean_model, $result->get_error_message(), $fb_model )
+                    sprintf( 'Model [%s] gặp sự cố: %s. Đang thử model dự phòng duy nhất [%s]...', $clean_model, $result->get_error_message(), $fallback )
                 );
 
-                $fallback_endpoint = self::API_BASE . '/models/' . $fb_model . ':generateContent';
+                $fallback_endpoint = self::API_BASE . '/models/' . $fallback . ':generateContent';
                 $fallback_result   = $this->send_request_with_retry( $fallback_endpoint, $payload, $timeout );
 
                 if ( ! is_wp_error( $fallback_result ) ) {
-                    return $this->parse_gemini_response( $fallback_result, $fb_model );
+                    return $this->parse_gemini_response( $fallback_result, $fallback );
                 }
+
+                $this->logger->error( 'gemini_fallback_failed', sprintf( 'Model dự phòng [%s] cũng thất bại: %s', $fallback, $fallback_result->get_error_message() ) );
+                return $fallback_result;
             }
 
             $this->logger->error( 'gemini_api_error', $result->get_error_message() );

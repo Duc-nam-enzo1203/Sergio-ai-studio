@@ -15,25 +15,24 @@
 
 ### 2. Audit & Tối Ưu SEO On-Page Toàn Diện (Posts & Pages)
 - Quét sức khỏe SEO tổng thể toàn site cho cả **Bài Viết (Posts)** và **Trang Tĩnh (Pages)**.
-- Thang điểm 100 theo chuẩn Rank Math với bảng kiểm định chi tiết 14 tiêu chí.
-- **AI Nâng Cấp Nội Dung:** Tự động mở rộng bài viết đạt từ 1,000 - 1,800 từ chuyên sâu (Helpful Content & E-E-A-T), đẩy điểm On-Page đạt từ **85 đến 98+ điểm (Xanh Rank Math)**.
-- **Kế Hoạch Cải Thiện Toàn Site 1-Click:** Tự động phát hiện và xử lý hàng loạt các trang thiếu từ khóa, thiếu mô tả hoặc điểm kém.
+- Đánh giá theo thang điểm On-Page 100 điểm với bảng kiểm định chi tiết 14 tiêu chí dựa trên Claude-SEO.
+- **AI Tối Ưu Nội Dung & Metadata:** Tái cấu trúc nội dung, bổ sung Answer-First Hook, FAQ ngữ nghĩa và đồng bộ các trường Focus Keyword, Title, Meta Description chuẩn Rank Math.
+- **Kế Hoạch Cải Thiện Toàn Site:** Phát hiện và hỗ trợ xử lý các trang thiếu từ khóa, thiếu mô tả hoặc cấu trúc chưa tối ưu.
 
-### 3. Nghiên Cứu Chủ Đề & Tự Động Viết Bài Theo Lịch (WP-Cron)
-- **Topic Analyzer:** Phân tích ý định tìm kiếm, bóc tách góc nhìn khai thác độc đáo và từ khóa ngách.
-- **Hàng Đợi Nội Dung (Queue):** Quản lý danh sách chủ đề theo chu kỳ tự động.
-- **Lịch Trình WP-Cron Linh Hoạt:** Cấu hình tần suất viết bài tự động (theo giờ tùy chọn hoặc các mốc chuẩn), tự động trích xuất chủ đề và xuất bản.
+### 3. Nghiên Cứu Dữ Kiện Thật & Tự Động Viết Bài Theo Lịch (WP-Cron)
+- **Fact Pack Engine:** Khai thác dữ kiện thật qua Google Search Grounding. Bắt buộc kiểm tra nguồn dẫn chứng thực tế trước khi viết bài; từ chối tạo bài nếu không đủ dữ liệu kiểm chứng.
+- **Hàng Đợi Nội Dung (Queue):** Quản lý chủ đề theo chu kỳ tự động, tự động phục hồi tác vụ kẹt và giới hạn tối đa số lần thử.
+- **An Toàn Xuất Bản:** Bài viết tự động luôn được đưa vào trạng thái bản nháp (`draft`) hoặc chờ duyệt (`pending`) để biên tập viên kiểm duyệt thực tế trước khi xuất bản.
 
-### 4. Thu Thập & Tái Bút Nội Dung (Crawl & Rewrite)
-- Web Crawler thu thập thông tin nguồn uy tín, phân tích dữ kiện thực tế (Fact-Pack).
-- Tái cấu trúc và viết lại bài viết độc bản, chống đạo văn, giữ trọn vẹn thông điệp giá trị.
+### 4. Thu Thập & Tái Cấu Trúc Nội Dung (Crawl & Rewrite)
+- Web Crawler tuân thủ `robots.txt`, giới hạn kích thước tải phản hồi và lưu vết URL đã xử lý để tránh thu thập trùng lặp.
+- Tái cấu trúc nội dung nguồn và lưu thành bản nháp kèm trích dẫn nguồn tham chiếu minh bạch.
 
-### 5. Bảo Mật Cấp Doanh Nghiệp (Enterprise Security)
-- Mã hóa API Key hai chiều bằng thuật toán **AES-256-CBC** kết hợp với WordPress Salts (`AUTH_SALT`, `SECURE_AUTH_KEY`).
+### 5. Bảo Mật & Xác Thực
+- Mã hóa API Key hai chiều bằng phương thức **Authenticated Encrypt-then-MAC (AES-256-CBC + HMAC-SHA256)** với khóa bí mật từ WordPress Salts.
 - Hỗ trợ khai báo API Key cố định qua file `wp-config.php` (`SERGIO_AI_GEMINI_API_KEY`).
 - Mặt nạ hiển thị bảo mật cho API Key trên giao diện quản trị (`••••••••••••••••xxxx`).
-- Phân quyền nghiêm ngặt (`manage_options`), kiểm tra Nonce chống tấn công CSRF trên 100% Endpoint AJAX.
-- Lọc dữ liệu đầu ra và mã HTML bằng hệ thống lọc an toàn bảo vệ cấu trúc bài viết.
+- Phân quyền chi tiết (`edit_post` cho từng bài viết, `manage_options` cho các tác vụ hàng loạt) kèm cơ chế thời gian chờ (cooldown) chống lạm dụng tài nguyên.
 
 ---
 
@@ -86,3 +85,4 @@ sergio-ai-studio/
 ## 📄 Bản Quyền
 Phát triển bởi **Sergio Themes & AI Team**.
 Giấy phép: GPL-2.0-or-later.
+

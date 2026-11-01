@@ -32,9 +32,9 @@ class Sergio_AI_Web_Crawler {
     const TIMEOUT = 30;
 
     /**
-     * Browser-like User-Agent for crawl requests.
+     * Honest Bot User-Agent for crawl requests identifying origin repository.
      */
-    const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+    const USER_AGENT = 'Sergio-AI-Studio-Bot/2.1 (+https://github.com/Duc-nam-enzo1203/Sergio-ai-studio)';
 
     /**
      * Crawl a single URL and return structured article data.
@@ -56,17 +56,23 @@ class Sergio_AI_Web_Crawler {
             return new WP_Error( 'invalid_scheme', __( 'Chỉ cho phép crawl URL với giao thức http hoặc https.', 'sergio-ai-studio' ) );
         }
 
-        // 3. Fetch using wp_safe_remote_get() — WP automatically blocks private IPs.
+        // 3. Respect robots.txt
+        if ( ! $this->is_url_allowed_by_robots( $validated ) ) {
+            return new WP_Error( 'robots_blocked', sprintf( __( 'Trang đích bị chặn bởi robots.txt: %s', 'sergio-ai-studio' ), esc_url( $validated ) ) );
+        }
+
+        // 4. Fetch using wp_safe_remote_get() with strict body size streaming limits.
         $response = wp_safe_remote_get( $validated, array(
-            'timeout'    => self::TIMEOUT,
-            'user-agent' => self::USER_AGENT,
-            'headers'    => array(
+            'timeout'             => self::TIMEOUT,
+            'user-agent'          => self::USER_AGENT,
+            'limit_response_size' => self::MAX_BODY_SIZE,
+            'headers'             => array(
                 'Accept'          => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 'Accept-Language' => 'vi,en-US;q=0.9,en;q=0.7',
                 'Accept-Encoding' => 'gzip, deflate',
             ),
-            'redirection' => 3,
-            'sslverify'   => true,
+            'redirection'         => 3,
+            'sslverify'           => true,
         ) );
 
         if ( is_wp_error( $response ) ) {
@@ -322,5 +328,107 @@ class Sergio_AI_Web_Crawler {
         }
 
         return $text;
+    }
+
+    /**
+     * Check if a URL is permitted by destination site's robots.txt
+     *
+     * @param  string $url
+     * @return bool
+     */
+    public function is_url_allowed_by_robots( string $url ): bool {
+        $parsed = wp_parse_url( $url );
+        if ( empty( $parsed['host'] ) ) {
+            return true;
+        }
+
+        $scheme     = $parsed['scheme'] ?? 'https';
+        $host       = $parsed['host'];
+        $path       = $parsed['path'] ?? '/';
+        $robots_url = $scheme . '://' . $host . '/robots.txt';
+
+        $cache_key   = 'sergio_robots_' . md5( $host );
+        $robots_body = get_transient( $cache_key );
+
+        if ( false === $robots_body ) {
+            $resp = wp_safe_remote_get( $robots_url, array(
+                'timeout'             => 5,
+                'user-agent'          => self::USER_AGENT,
+                'limit_response_size' => 64000,
+            ) );
+
+            if ( is_wp_error( $resp ) || 200 !== wp_remote_retrieve_response_code( $resp ) ) {
+                set_transient( $cache_key, 'ALLOW_ALL', 6 * HOUR_IN_SECONDS );
+                return true;
+            }
+
+            $robots_body = wp_remote_retrieve_body( $resp );
+            set_transient( $cache_key, $robots_body, 6 * HOUR_IN_SECONDS );
+        }
+
+        if ( 'ALLOW_ALL' === $robots_body || empty( $robots_body ) ) {
+            return true;
+        }
+
+        $lines         = explode( "\n", $robots_body );
+        $applies_to_us = false;
+
+        foreach ( $lines as $line ) {
+            $line = trim( $line );
+            if ( empty( $line ) || 0 === strpos( $line, '#' ) ) {
+                continue;
+            }
+            if ( preg_match( '/^User-agent:\s*(.+)$/i', $line, $m ) ) {
+                $agent         = trim( $m[1] );
+                $applies_to_us = ( '*' === $agent || stripos( self::USER_AGENT, $agent ) !== false );
+                continue;
+            }
+            if ( $applies_to_us && preg_match( '/^Disallow:\s*(.+)$/i', $line, $m ) ) {
+                $disallow = trim( $m[1] );
+                if ( ! empty( $disallow ) && 0 === strpos( $path, $disallow ) ) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Check whether a URL was already crawled and processed
+     *
+     * @param  string $url
+     * @return bool
+     */
+    public static function is_already_processed( string $url ): bool {
+        global $wpdb;
+        $table = Sergio_AI_DB::table( 'processed_urls' );
+        $hash  = md5( $url );
+        $count = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE url_hash = %s", $hash ) );
+        return (int) $count > 0;
+    }
+
+    /**
+     * Record processed URL into anti-duplication table
+     *
+     * @param  string $url
+     * @param  string $title
+     * @param  string $domain
+     * @return int|false
+     */
+    public static function record_processed_url( string $url, string $title = '', string $domain = '' ) {
+        global $wpdb;
+        $table = Sergio_AI_DB::table( 'processed_urls' );
+        return $wpdb->replace(
+            $table,
+            array(
+                'url_hash'     => md5( $url ),
+                'url'          => esc_url_raw( $url ),
+                'title'        => sanitize_text_field( $title ),
+                'domain'       => sanitize_text_field( $domain ),
+                'processed_at' => current_time( 'mysql' ),
+            ),
+            array( '%s', '%s', '%s', '%s', '%s' )
+        );
     }
 }

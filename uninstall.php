@@ -15,11 +15,13 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 
 global $wpdb;
 
-// 1. Drop custom tables.
+// 1. Drop all custom tables.
 $tables = array(
     $wpdb->prefix . 'sergio_ai_fact_packs',
     $wpdb->prefix . 'sergio_ai_topics_queue',
     $wpdb->prefix . 'sergio_ai_logs',
+    $wpdb->prefix . 'sergio_ai_processed_urls',
+    $wpdb->prefix . 'sergio_ai_recipes',
 );
 
 foreach ( $tables as $table ) {
@@ -27,9 +29,12 @@ foreach ( $tables as $table ) {
     $wpdb->query( "DROP TABLE IF EXISTS `{$table}`" );
 }
 
-// 2. Delete options.
+// 2. Delete plugin options.
 delete_option( 'sergio_ai_studio_options' );
+delete_option( 'sergio_ai_options' );
+delete_option( 'sergio_ai_db_version' );
 delete_option( 'sergio_ai_studio_db_version' );
+delete_option( 'sergio_ai_site_salt' );
 
 // 3. Clear scheduled cron hooks.
 wp_clear_scheduled_hook( 'sergio_ai_studio_cron_event' );

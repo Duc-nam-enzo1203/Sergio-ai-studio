@@ -55,6 +55,9 @@ register_deactivation_hook( __FILE__, 'sergio_ai_studio_deactivate' );
  * Initialize Plugin
  */
 function sergio_ai_studio_init() {
+	// Load plugin textdomain for i18n
+	load_plugin_textdomain( 'sergio-ai-studio', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+
 	// Initialize Scheduler
 	new Sergio_AI_Scheduler();
 

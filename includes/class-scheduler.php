@@ -135,11 +135,14 @@ class Sergio_AI_Scheduler {
 	 */
 	public static function get_daily_posts_count() {
 		global $wpdb;
-		$table = Sergio_AI_DB::table( 'logs' );
-		$today = current_time( 'Y-m-d' );
+		$today_start = current_time( 'Y-m-d 00:00:00' );
 		return (int) $wpdb->get_var( $wpdb->prepare(
-			"SELECT COUNT(*) FROM {$table} WHERE stage = 'cron_completed' AND created_at >= %s",
-			$today . ' 00:00:00'
+			"SELECT COUNT(DISTINCT p.ID) FROM {$wpdb->posts} p
+			INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+			WHERE pm.meta_key = '_sergio_ai_generated'
+			AND p.post_date >= %s
+			AND p.post_status != 'trash'",
+			$today_start
 		) );
 	}
 
@@ -155,6 +158,9 @@ class Sergio_AI_Scheduler {
 			return;
 		}
 
+		// Automatically prune logs older than 30 days
+		Sergio_AI_Logger::purge_old_logs();
+
 		global $wpdb;
 		$lock_name = 'sergio_ai_cron_mutex';
 		$acquired  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT GET_LOCK(%s, 0)", $lock_name ) );
@@ -167,13 +173,16 @@ class Sergio_AI_Scheduler {
 		$logger->info( 'cron_start', 'Bắt đầu phiên chạy tự động WP-Cron.' );
 
 		try {
-			$posts_per_run = isset( $options['schedule_posts_per_run'] ) ? max( 1, min( 5, (int) $options['schedule_posts_per_run'] ) ) : 1;
+			$posts_per_run = 1; // Process 1 post per cron run to avoid long blocking and HTTP timeout
 			$max_per_day   = isset( $options['schedule_max_posts_per_day'] ) ? (int) $options['schedule_max_posts_per_day'] : 10;
 			$topic_mode    = isset( $options['schedule_topic_mode'] ) ? $options['schedule_topic_mode'] : 'hybrid';
 			$niche_topic   = isset( $options['schedule_niche_topic'] ) ? trim( $options['schedule_niche_topic'] ) : '';
 			$default_cat   = isset( $options['default_schedule_cat'] ) ? (int) $options['default_schedule_cat'] : 0;
 			$default_auth  = isset( $options['default_schedule_author'] ) ? (int) $options['default_schedule_author'] : 0;
-			$post_status   = isset( $options['default_schedule_status'] ) ? $options['default_schedule_status'] : 'draft';
+			// Default to draft / pending for human editorial review
+			$post_status   = isset( $options['default_schedule_status'] ) && in_array( $options['default_schedule_status'], array( 'draft', 'pending' ), true )
+				? $options['default_schedule_status']
+				: 'draft';
 			$language      = isset( $options['default_language'] ) ? $options['default_language'] : 'vi';
 
 			$client = new Sergio_AI_Gemini_Client( '', '', $logger );
@@ -317,7 +326,8 @@ class Sergio_AI_Scheduler {
 			return $res;
 		}
 
-		$discovered = trim( sanitize_text_field( $res ) );
+		$raw_text   = is_array( $res ) ? ( $res['text'] ?? '' ) : (string) $res;
+		$discovered = trim( sanitize_text_field( $raw_text ) );
 		$discovered = trim( $discovered, "\"'\t\n\r" );
 		if ( empty( $discovered ) ) {
 			return new WP_Error( 'discovery_empty', 'Không thể tạo chủ đề tự động.' );
@@ -327,12 +337,25 @@ class Sergio_AI_Scheduler {
 	}
 
 	/**
-	 * Atomically claim the next pending topic
+	 * Atomically claim the next pending topic with automatic stuck recovery
 	 */
 	public static function claim_next_topic() {
 		global $wpdb;
 		$table = Sergio_AI_DB::table( 'topics_queue' );
 
+		// 1. Recover topics stuck in 'processing' for > 30 minutes
+		$stuck_cutoff = gmdate( 'Y-m-d H:i:s', time() - 1800 );
+		$wpdb->query( $wpdb->prepare(
+			"UPDATE {$table}
+			SET status = CASE WHEN attempts >= 3 THEN 'failed' ELSE 'pending' END,
+			    last_error = CASE WHEN attempts >= 3 THEN 'Hủy tự động: Đã thử quá 3 lần bị gián đoạn' ELSE 'Tự động giải phóng: Quá 30 phút chưa hoàn tất' END,
+			    updated_at = %s
+			WHERE status = 'processing' AND updated_at < %s",
+			current_time( 'mysql' ),
+			$stuck_cutoff
+		) );
+
+		// 2. Select next pending topic
 		$row = $wpdb->get_row( "SELECT id FROM {$table} WHERE status = 'pending' ORDER BY priority ASC, id ASC LIMIT 1", ARRAY_A );
 		if ( ! $row ) {
 			return null;
@@ -340,7 +363,7 @@ class Sergio_AI_Scheduler {
 
 		$id      = (int) $row['id'];
 		$updated = $wpdb->query( $wpdb->prepare(
-			"UPDATE {$table} SET status = 'processing', updated_at = %s WHERE id = %d AND status = 'pending'",
+			"UPDATE {$table} SET status = 'processing', attempts = attempts + 1, updated_at = %s WHERE id = %d AND status = 'pending'",
 			current_time( 'mysql' ),
 			$id
 		) );

@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<ruleset name="Sergio-AI-Studio">
+    <description>WordPress Coding Standards for Sergio AI Studio</description>
+
+    <!-- Scan all files in directory -->
+    <file>.</file>
+
+    <!-- Exclude patterns -->
+    <exclude-pattern>/vendor/*</exclude-pattern>
+    <exclude-pattern>/node_modules/*</exclude-pattern>
+    <exclude-pattern>/assets/*</exclude-pattern>
+    <exclude-pattern>/tests/*</exclude-pattern>
+
+    <!-- Show colors and progress -->
+    <arg colors="1"/>
+    <arg value="sp"/>
+
+    <!-- Set minimum supported WP version -->
+    <config name="minimum_supported_wp_version" value="6.0"/>
+
+    <rule ref="WordPress-Core"/>
+    <rule ref="WordPress-Docs"/>
+    <rule ref="WordPress.Security.EscapeOutput"/>
+    <rule ref="WordPress.Security.NonceVerification"/>
+</ruleset>
