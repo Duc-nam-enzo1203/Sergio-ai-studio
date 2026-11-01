@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Admin Dashboard UI & AJAX Controller — Sergio AI Studio v2.1
  *
@@ -145,6 +145,7 @@ class Sergio_AI_Admin {
 		$clean['default_schedule_author']   = isset( $input['default_schedule_author'] ) ? absint( $input['default_schedule_author'] ) : 0;
 		$clean['default_schedule_cat']      = isset( $input['default_schedule_cat'] ) ? absint( $input['default_schedule_cat'] ) : 0;
 		$clean['default_schedule_status']   = in_array( $input['default_schedule_status'] ?? '', array( 'draft', 'publish' ), true ) ? $input['default_schedule_status'] : 'draft';
+		$clean['schedule_image_option']    = in_array( $input['schedule_image_option'] ?? '', array( 'reference', 'banner', 'none' ), true ) ? $input['schedule_image_option'] : 'reference';
 
 		$scheduler = new Sergio_AI_Scheduler();
 		if ( $clean['scheduler_enabled'] ) {
@@ -234,6 +235,7 @@ class Sergio_AI_Admin {
 		$default_sched_auth  = (int) ( $options['default_schedule_author'] ?? get_current_user_id() );
 		$default_sched_cat   = (int) ( $options['default_schedule_cat'] ?? 0 );
 		$default_sched_stat  = $options['default_schedule_status'] ?? 'draft';
+		$schedule_image_opt  = $options['schedule_image_option'] ?? 'reference';
 
 		$scheduler     = new Sergio_AI_Scheduler();
 		$next_run_time = $scheduler->get_next_run_time();
@@ -783,6 +785,27 @@ class Sergio_AI_Admin {
 													</select>
 												</td>
 											</tr>
+											<tr>
+												<th scope="row">
+													<label for="schedule_image_option"><?php esc_html_e( 'Ảnh Đại Diện Bài Viết', 'sergio-ai-studio' ); ?></label>
+												</th>
+												<td>
+													<select name="sergio_ai_studio_options[schedule_image_option]" id="schedule_image_option">
+														<option value="reference" <?php selected( $schedule_image_opt, 'reference' ); ?>>
+															<?php esc_html_e( 'Trích xuất từ nguồn tham khảo (Ghi nguồn tác giả rõ ràng)', 'sergio-ai-studio' ); ?>
+														</option>
+														<option value="banner" <?php selected( $schedule_image_opt, 'banner' ); ?>>
+															<?php esc_html_e( 'Tự động vẽ Banner đồ họa thương hiệu (1200x630, 0 API)', 'sergio-ai-studio' ); ?>
+														</option>
+														<option value="none" <?php selected( $schedule_image_opt, 'none' ); ?>>
+															<?php esc_html_e( 'Không tạo ảnh đại diện (Tối ưu tốc độ tối đa)', 'sergio-ai-studio' ); ?>
+														</option>
+													</select>
+													<p class="description">
+														<?php esc_html_e( 'Phương thức tự động tạo hoặc gắn ảnh đại diện (Featured Image) chuẩn Rank Math khi tiến trình lập lịch chạy.', 'sergio-ai-studio' ); ?>
+													</p>
+												</td>
+											</tr>
 										</tbody>
 									</table>
 								</div>
@@ -838,6 +861,11 @@ class Sergio_AI_Admin {
 									</p>
 									<p class="description" style="margin: 0;">
 										<?php printf( esc_html__( 'Quy mô đợt: %d bài viết / phiên', 'sergio-ai-studio' ), (int) $posts_per_run ); ?>
+										&bull;
+										<?php
+										$img_opt_label = ( 'banner' === $schedule_image_opt ) ? __( 'Banner GD', 'sergio-ai-studio' ) : ( ( 'none' === $schedule_image_opt ) ? __( 'Không tạo ảnh', 'sergio-ai-studio' ) : __( 'Ảnh từ nguồn tin', 'sergio-ai-studio' ) );
+										printf( esc_html__( 'Ảnh: %s', 'sergio-ai-studio' ), esc_html( $img_opt_label ) );
+										?>
 									</p>
 								</div>
 								<p>

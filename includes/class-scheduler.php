@@ -282,10 +282,13 @@ class Sergio_AI_Scheduler {
 				}
 
 				// 6. Step 4: Save Post
+				$image_opt = isset( $options['schedule_image_option'] ) ? sanitize_key( $options['schedule_image_option'] ) : 'reference';
+
 				$post_id = $writer->save_post( $article, array(
-					'status'      => $post_status,
-					'category_id' => $category_id,
-					'author_id'   => $default_auth,
+					'status'       => $post_status,
+					'category_id'  => $category_id,
+					'author_id'    => $default_auth,
+					'image_option' => $image_opt,
 				), $fact_pack['id'] );
 
 				if ( is_wp_error( $post_id ) ) {
