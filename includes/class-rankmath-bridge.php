@@ -110,6 +110,17 @@ class Sergio_AI_RankMath_Bridge {
 			update_post_meta( $post_id, 'rank_math_canonical_url', get_permalink( $post_id ) );
 		}
 
+		// Social Meta Tags (OpenGraph Facebook & Twitter for Rank Math)
+		if ( ! empty( $title ) ) {
+			update_post_meta( $post_id, 'rank_math_facebook_title', $title );
+			update_post_meta( $post_id, 'rank_math_twitter_title', $title );
+		}
+		if ( ! empty( $desc ) ) {
+			update_post_meta( $post_id, 'rank_math_facebook_description', $desc );
+			update_post_meta( $post_id, 'rank_math_twitter_description', $desc );
+		}
+		update_post_meta( $post_id, 'rank_math_twitter_use_facebook', 'on' );
+
 		// Fallback for native/Yoast/AIOSEO if Rank Math is not the primary plugin
 		update_post_meta( $post_id, '_sergio_ai_seo_focus_kw', $focus_kw );
 		update_post_meta( $post_id, '_sergio_ai_seo_title', $title );

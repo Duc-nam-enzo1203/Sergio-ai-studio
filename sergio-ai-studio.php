@@ -32,6 +32,7 @@ require_once SERGIO_AI_STUDIO_DIR . 'includes/class-scheduler.php';
 require_once SERGIO_AI_STUDIO_DIR . 'includes/class-web-crawler.php';
 require_once SERGIO_AI_STUDIO_DIR . 'includes/class-content-rewriter.php';
 require_once SERGIO_AI_STUDIO_DIR . 'includes/class-seo-audit.php';
+require_once SERGIO_AI_STUDIO_DIR . 'includes/class-image-service.php';
 
 if ( is_admin() ) {
 	require_once SERGIO_AI_STUDIO_DIR . 'includes/class-admin.php';

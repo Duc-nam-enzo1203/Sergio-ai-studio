@@ -28,6 +28,8 @@ class Sergio_AI_Admin {
 		add_action( 'wp_ajax_sergio_ai_test_connection', array( $this, 'ajax_test_connection' ) );
 		add_action( 'wp_ajax_sergio_ai_run_pipeline_stage1', array( $this, 'ajax_run_pipeline_stage1' ) );
 		add_action( 'wp_ajax_sergio_ai_add_queue_topics', array( $this, 'ajax_add_queue_topics' ) );
+		add_action( 'wp_ajax_sergio_ai_retry_queue_item', array( $this, 'ajax_retry_queue_item' ) );
+		add_action( 'wp_ajax_sergio_ai_prioritize_queue_item', array( $this, 'ajax_prioritize_queue_item' ) );
 		add_action( 'wp_ajax_sergio_ai_delete_queue_item', array( $this, 'ajax_delete_queue_item' ) );
 		add_action( 'wp_ajax_sergio_ai_run_cron_now', array( $this, 'ajax_run_cron_now' ) );
 		add_action( 'wp_ajax_sergio_ai_crawl_rewrite', array( $this, 'ajax_crawl_rewrite' ) );
@@ -72,6 +74,8 @@ class Sergio_AI_Admin {
 				return '<svg' . $cls . ' width="' . $w . '" height="' . $h . '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
 			case 'refresh':
 				return '<svg' . $cls . ' width="' . $w . '" height="' . $h . '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>';
+			case 'arrow-up':
+				return '<svg' . $cls . ' width="' . $w . '" height="' . $h . '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>';
 			case 'trash':
 				return '<svg' . $cls . ' width="' . $w . '" height="' . $h . '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
 			case 'bolt':
@@ -926,17 +930,18 @@ class Sergio_AI_Admin {
 							<table class="studio-data-table" id="queue_items_table">
 								<thead>
 									<tr>
-										<th style="width: 70px;">ID</th>
+										<th style="width: 60px;">ID</th>
 										<th><?php esc_html_e( 'Chủ Đề Nghiên Cứu', 'sergio-ai-studio' ); ?></th>
-										<th style="width: 120px;"><?php esc_html_e( 'Trạng Thái', 'sergio-ai-studio' ); ?></th>
-										<th style="width: 160px;"><?php esc_html_e( 'Thời Gian Tạo', 'sergio-ai-studio' ); ?></th>
-										<th style="width: 80px; text-align: center;"><?php esc_html_e( 'Thao Tác', 'sergio-ai-studio' ); ?></th>
+										<th style="width: 110px;"><?php esc_html_e( 'Trạng Thái', 'sergio-ai-studio' ); ?></th>
+										<th style="width: 70px; text-align: center;"><?php esc_html_e( 'Lần Thử', 'sergio-ai-studio' ); ?></th>
+										<th style="width: 150px;"><?php esc_html_e( 'Thời Gian Tạo', 'sergio-ai-studio' ); ?></th>
+										<th style="width: 110px; text-align: center;"><?php esc_html_e( 'Thao Tác', 'sergio-ai-studio' ); ?></th>
 									</tr>
 								</thead>
 								<tbody>
 									<?php if ( empty( $queue_items ) ) : ?>
 										<tr id="queue_empty_row">
-											<td colspan="5" class="cell-empty-text">
+											<td colspan="6" class="cell-empty-text">
 												<?php esc_html_e( 'Hàng đợi hiện đang trống. Bạn có thể nạp chủ đề ở phía trên hoặc để AI tự động nghiên cứu theo Lĩnh vực ngách.', 'sergio-ai-studio' ); ?>
 											</td>
 										</tr>
@@ -947,12 +952,22 @@ class Sergio_AI_Admin {
 												<td>
 													<strong class="item-primary-text"><?php echo esc_html( $q['topic'] ); ?></strong>
 													<?php if ( ! empty( $q['last_error'] ) ) : ?>
-														<div class="item-error-subtext"><?php echo esc_html( $q['last_error'] ); ?></div>
+														<div class="item-error-subtext" style="color: #f43f5e; font-size: 11px; margin-top: 3px;"><?php echo esc_html( $q['last_error'] ); ?></div>
 													<?php endif; ?>
 												</td>
 												<td><span class="status-badge-inline status-<?php echo esc_attr( $q['status'] ); ?>"><?php echo esc_html( strtoupper( $q['status'] ) ); ?></span></td>
+												<td style="text-align: center; font-size: 13px; color: #64748b;"><?php echo (int) ( $q['attempts'] ?? 0 ); ?>/3</td>
 												<td class="cell-time"><?php echo esc_html( $q['created_at'] ); ?></td>
-												<td style="text-align: center;">
+												<td style="text-align: center; white-space: nowrap;">
+													<?php if ( 'failed' === $q['status'] ) : ?>
+														<button type="button" class="studio-icon-btn sergio-btn-retry-queue" data-id="<?php echo esc_attr( $q['id'] ); ?>" title="<?php esc_attr_e( 'Thử lại chủ đề này', 'sergio-ai-studio' ); ?>" style="color: #4f46e5;">
+															<?php echo self::svg( 'refresh', 13 ); // phpcs:ignore ?>
+														</button>
+													<?php elseif ( 'pending' === $q['status'] ) : ?>
+														<button type="button" class="studio-icon-btn sergio-btn-priority-queue" data-id="<?php echo esc_attr( $q['id'] ); ?>" title="<?php esc_attr_e( 'Đẩy lên đầu hàng đợi ưu tiên', 'sergio-ai-studio' ); ?>" style="color: #059669;">
+															<?php echo self::svg( 'arrow-up', 13 ); // phpcs:ignore ?>
+														</button>
+													<?php endif; ?>
 													<button type="button" class="studio-icon-btn sergio-btn-del-queue" data-id="<?php echo esc_attr( $q['id'] ); ?>" title="<?php esc_attr_e( 'Xóa mục này', 'sergio-ai-studio' ); ?>">
 														<?php echo self::svg( 'trash', 14 ); // phpcs:ignore ?>
 													</button>
@@ -1658,11 +1673,55 @@ class Sergio_AI_Admin {
 		$options  = get_option( 'sergio_ai_studio_options', array() );
 		$language = isset( $options['default_language'] ) ? $options['default_language'] : 'vi';
 
-		$added = Sergio_AI_Scheduler::add_topics( $raw_topics, $category_id, $language );
+		$result  = Sergio_AI_Scheduler::add_topics( $raw_topics, $category_id, $language );
+		$added   = is_array( $result ) ? ( $result['added'] ?? 0 ) : (int) $result;
+		$skipped = is_array( $result ) ? ( $result['skipped'] ?? 0 ) : 0;
+
+		$msg = sprintf( __( 'Đã nạp thành công %d chủ đề vào hàng đợi!', 'sergio-ai-studio' ), $added );
+		if ( $skipped > 0 ) {
+			$msg .= ' ' . sprintf( __( '(%d chủ đề bị bỏ qua do trùng lặp gần đây)', 'sergio-ai-studio' ), $skipped );
+		}
 
 		wp_send_json_success( array(
-			'message' => sprintf( __( 'Đã thêm thành công %d chủ đề vào hàng đợi!', 'sergio-ai-studio' ), $added ),
+			'message' => $msg,
 			'added'   => $added,
+			'skipped' => $skipped,
+		) );
+	}
+
+	public function ajax_retry_queue_item() {
+		check_ajax_referer( 'sergio_ai_studio_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Không đủ quyền thực hiện.', 'sergio-ai-studio' ) ) );
+		}
+
+		$id = isset( $_POST['id'] ) ? absint( $_POST['id'] ) : 0;
+		if ( $id <= 0 ) {
+			wp_send_json_error( array( 'message' => __( 'ID hàng đợi không hợp lệ.', 'sergio-ai-studio' ) ) );
+		}
+
+		Sergio_AI_Scheduler::retry_topic( $id );
+		wp_send_json_success( array(
+			'id'      => $id,
+			'message' => __( 'Đã đặt lại chủ đề về trạng thái chờ xử lý (PENDING).', 'sergio-ai-studio' ),
+		) );
+	}
+
+	public function ajax_prioritize_queue_item() {
+		check_ajax_referer( 'sergio_ai_studio_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Không đủ quyền thực hiện.', 'sergio-ai-studio' ) ) );
+		}
+
+		$id = isset( $_POST['id'] ) ? absint( $_POST['id'] ) : 0;
+		if ( $id <= 0 ) {
+			wp_send_json_error( array( 'message' => __( 'ID hàng đợi không hợp lệ.', 'sergio-ai-studio' ) ) );
+		}
+
+		Sergio_AI_Scheduler::prioritize_topic( $id );
+		wp_send_json_success( array(
+			'id'      => $id,
+			'message' => __( 'Đã đẩy chủ đề lên đầu hàng đợi ưu tiên.', 'sergio-ai-studio' ),
 		) );
 	}
 

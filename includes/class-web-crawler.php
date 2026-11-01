@@ -37,6 +37,37 @@ class Sergio_AI_Web_Crawler {
     const USER_AGENT = 'Sergio-AI-Studio-Bot/2.1 (+https://github.com/Duc-nam-enzo1203/Sergio-ai-studio)';
 
     /**
+     * Normalize URL by stripping tracking parameters (utm_*, fbclid, etc.)
+     *
+     * @param string $url
+     * @return string
+     */
+    public static function normalize_url( string $url ): string {
+        $parsed = wp_parse_url( trim( $url ) );
+        if ( empty( $parsed['host'] ) ) {
+            return $url;
+        }
+
+        $scheme = $parsed['scheme'] ?? 'https';
+        $host   = strtolower( $parsed['host'] );
+        $path   = $parsed['path'] ?? '/';
+        $query_str = '';
+
+        if ( ! empty( $parsed['query'] ) ) {
+            parse_str( $parsed['query'], $query_params );
+            $tracking_keys = array( 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'fbclid', 'gclid', 'mc_cid', 'mc_eid', 'ref', 'source' );
+            foreach ( $tracking_keys as $tk ) {
+                unset( $query_params[ $tk ] );
+            }
+            if ( ! empty( $query_params ) ) {
+                $query_str = '?' . http_build_query( $query_params );
+            }
+        }
+
+        return $scheme . '://' . $host . $path . $query_str;
+    }
+
+    /**
      * Crawl a single URL and return structured article data.
      *
      * @param  string $url     The URL to crawl (must be http/https).
@@ -44,8 +75,9 @@ class Sergio_AI_Web_Crawler {
      * @return array|WP_Error  Array with keys: url, title, content, meta_description, published_date, source_domain.
      */
     public function crawl_url( string $url, array $options = array() ) {
-        // 1. Validate URL structure.
-        $validated = wp_http_validate_url( $url );
+        // 1. Normalize and validate URL structure.
+        $normalized = self::normalize_url( $url );
+        $validated  = wp_http_validate_url( $normalized );
         if ( ! $validated ) {
             return new WP_Error( 'invalid_url', sprintf( __( 'URL không hợp lệ hoặc không được phép: %s', 'sergio-ai-studio' ), esc_url( $url ) ) );
         }
@@ -61,7 +93,15 @@ class Sergio_AI_Web_Crawler {
             return new WP_Error( 'robots_blocked', sprintf( __( 'Trang đích bị chặn bởi robots.txt: %s', 'sergio-ai-studio' ), esc_url( $validated ) ) );
         }
 
-        // 4. Fetch using wp_safe_remote_get() with strict body size streaming limits.
+        // 4. Polite per-domain rate limiting
+        $host = strtolower( (string) wp_parse_url( $validated, PHP_URL_HOST ) );
+        $rate_key = 'sergio_crawl_host_' . md5( $host );
+        if ( get_transient( $rate_key ) ) {
+            usleep( 500000 ); // 0.5s polite pause
+        }
+        set_transient( $rate_key, 1, 2 );
+
+        // 5. Fetch using wp_safe_remote_get() with strict body size streaming limits.
         $response = wp_safe_remote_get( $validated, array(
             'timeout'             => self::TIMEOUT,
             'user-agent'          => self::USER_AGENT,
@@ -204,7 +244,7 @@ class Sergio_AI_Web_Crawler {
 
     /**
      * Extract clean article text from HTML.
-     * Priority: <article> → <main> → [class*=content] → <body>
+     * Priority: JSON-LD (Schema.org articleBody) → <article> → <main> → [class*=content] → <body>
      * Removes: nav, header, footer, aside, script, style, iframe, form, ads.
      *
      * @param  string $html
@@ -212,18 +252,23 @@ class Sergio_AI_Web_Crawler {
      * @return string Plain text of article body, limited to $max_chars.
      */
     private function parse_article_content( string $html, int $max_chars = 8000 ): string {
+        // Priority 1: Extract authoritative articleBody from JSON-LD schema if available
+        $jsonld_body = $this->extract_jsonld_article_body( $html );
+        if ( ! empty( $jsonld_body ) && mb_strlen( $jsonld_body, 'UTF-8' ) >= 250 ) {
+            return $this->sanitize_crawled_text( $jsonld_body, $max_chars );
+        }
+
         $dom = new DOMDocument();
         // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
         @$dom->loadHTML( '<?xml encoding="utf-8" ?>' . $html );
         $xpath = new DOMXPath( $dom );
 
-        // Remove noise elements.
+        // Remove noise elements (Use precise class matching to prevent wiping "lead", "heading", "breadcrumbs")
         $noise_selectors = array(
             '//nav', '//header', '//footer', '//aside',
             '//script', '//style', '//iframe', '//form',
             '//noscript', '//figure[@class]',
-            '//*[contains(@class,"ad")]',
-            '//*[contains(@class,"advertisement")]',
+            '//*[contains(concat(" ", normalize-space(@class), " "), " ad ") or contains(concat(" ", normalize-space(@class), " "), " ads ") or contains(@class,"advertisement") or contains(@class,"banner-ad") or contains(@class,"sponsored")]',
             '//*[contains(@class,"sidebar")]',
             '//*[contains(@class,"comment")]',
             '//*[contains(@class,"related")]',
@@ -406,6 +451,82 @@ class Sergio_AI_Web_Crawler {
         $hash  = md5( $url );
         $count = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE url_hash = %s", $hash ) );
         return (int) $count > 0;
+    }
+
+    /**
+     * Extract articleBody from JSON-LD Schema (Article, NewsArticle, BlogPosting, TechArticle)
+     *
+     * @param string $html
+     * @return string
+     */
+    private function extract_jsonld_article_body( string $html ): string {
+        if ( preg_match_all( '/<script\s+[^>]*type=[\'"]application\/ld\+json[\'"][^>]*>(.*?)<\/script>/is', $html, $matches ) ) {
+            foreach ( $matches[1] as $json_raw ) {
+                $data = json_decode( trim( $json_raw ), true );
+                if ( ! is_array( $data ) ) {
+                    continue;
+                }
+                $items = isset( $data['@graph'] ) && is_array( $data['@graph'] ) ? $data['@graph'] : array( $data );
+                foreach ( $items as $item ) {
+                    if ( ! empty( $item['@type'] ) ) {
+                        $types = is_array( $item['@type'] ) ? $item['@type'] : array( $item['@type'] );
+                        foreach ( $types as $t ) {
+                            if ( in_array( strtolower( (string) $t ), array( 'article', 'newsarticle', 'blogposting', 'techarticle', 'report' ), true ) ) {
+                                if ( ! empty( $item['articleBody'] ) && is_string( $item['articleBody'] ) && mb_strlen( $item['articleBody'], 'UTF-8' ) > 150 ) {
+                                    return trim( $item['articleBody'] );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return '';
+    }
+
+    /**
+     * Calculate 5-gram word sequence overlap similarity between source and generated article (0.0 to 1.0)
+     * Enforces verifiable anti-plagiarism threshold.
+     *
+     * @param string $source_text Raw original text
+     * @param string $target_text Generated article text
+     * @param int    $n           N-gram size (default 5 words)
+     * @return float
+     */
+    public static function calculate_ngram_similarity( string $source_text, string $target_text, int $n = 5 ): float {
+        $tokenize = function( $text ) {
+            $clean = function_exists( 'mb_strtolower' ) ? mb_strtolower( wp_strip_all_tags( $text ), 'UTF-8' ) : strtolower( wp_strip_all_tags( $text ) );
+            $clean = preg_replace( '/[^\p{L}\p{N}\s]/u', '', $clean );
+            return array_values( array_filter( preg_split( '/\s+/u', (string) $clean ) ) );
+        };
+
+        $src_words = $tokenize( $source_text );
+        $tgt_words = $tokenize( $target_text );
+
+        if ( count( $tgt_words ) < $n || count( $src_words ) < $n ) {
+            return 0.0;
+        }
+
+        $build_ngrams = function( $words ) use ( $n ) {
+            $grams = array();
+            $count = count( $words );
+            for ( $i = 0; $i <= $count - $n; $i++ ) {
+                $grams[ implode( ' ', array_slice( $words, $i, $n ) ) ] = true;
+            }
+            return $grams;
+        };
+
+        $src_ngrams = $build_ngrams( $src_words );
+        $tgt_ngrams = $build_ngrams( $tgt_words );
+
+        $matches = 0;
+        foreach ( $tgt_ngrams as $gram => $_ ) {
+            if ( isset( $src_ngrams[ $gram ] ) ) {
+                $matches++;
+            }
+        }
+
+        return count( $tgt_ngrams ) > 0 ? (float) ( $matches / count( $tgt_ngrams ) ) : 0.0;
     }
 
     /**

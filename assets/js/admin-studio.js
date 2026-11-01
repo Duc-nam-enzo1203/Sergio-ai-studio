@@ -538,6 +538,71 @@ jQuery(document).ready(function($) {
         });
     });
 
+    $(document).on('click', '.sergio-btn-retry-queue', function() {
+        var $btn = $(this);
+        var itemId = $btn.data('id');
+        if (!itemId) { return; }
+
+        $btn.prop('disabled', true);
+        $.post(getAjaxUrl(), {
+            action: 'sergio_ai_retry_queue_item',
+            nonce: getNonce(),
+            id: itemId
+        })
+        .done(function(res) {
+            if (res.success) {
+                var $row = $('#queue-row-' + itemId);
+                $row.find('.status-badge-inline')
+                    .removeClass('status-failed')
+                    .addClass('status-pending')
+                    .text('PENDING');
+                $row.find('.item-error-subtext').remove();
+                $btn.replaceWith(
+                    '<button type="button" class="studio-icon-btn sergio-btn-priority-queue" data-id="' + itemId + '" title="Đẩy lên đầu hàng đợi ưu tiên" style="color: #059669;">' +
+                    '<svg class="sergio-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>' +
+                    '</button>'
+                );
+                studioModal({ title: 'Thành Công', message: res.data.message, type: 'success' });
+            } else {
+                studioModal({ title: 'Lỗi', message: res.data ? res.data.message : 'Lỗi thử lại.', type: 'error' });
+                $btn.prop('disabled', false);
+            }
+        })
+        .fail(function() {
+            studioModal({ title: 'Lỗi Kết Nối', message: 'Không thể kết nối đến máy chủ.', type: 'error' });
+            $btn.prop('disabled', false);
+        });
+    });
+
+    $(document).on('click', '.sergio-btn-priority-queue', function() {
+        var $btn = $(this);
+        var itemId = $btn.data('id');
+        if (!itemId) { return; }
+
+        $btn.prop('disabled', true);
+        $.post(getAjaxUrl(), {
+            action: 'sergio_ai_prioritize_queue_item',
+            nonce: getNonce(),
+            id: itemId
+        })
+        .done(function(res) {
+            if (res.success) {
+                var $row = $('#queue-row-' + itemId);
+                $row.css('background', '#f0fdf4');
+                setTimeout(function() { $row.css('background', ''); }, 2000);
+                studioModal({ title: 'Ưu Tiên', message: res.data.message, type: 'success' });
+            } else {
+                studioModal({ title: 'Lỗi', message: res.data ? res.data.message : 'Lỗi ưu tiên.', type: 'error' });
+            }
+        })
+        .fail(function() {
+            studioModal({ title: 'Lỗi Kết Nối', message: 'Không thể kết nối đến máy chủ.', type: 'error' });
+        })
+        .always(function() {
+            $btn.prop('disabled', false);
+        });
+    });
+
     $(document).on('click', '.sergio-btn-del-queue', function() {
         var $btn = $(this);
         var itemId = $btn.data('id');

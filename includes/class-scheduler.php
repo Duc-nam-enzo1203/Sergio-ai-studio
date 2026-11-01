@@ -237,6 +237,8 @@ class Sergio_AI_Scheduler {
 					break;
 				}
 
+				$job_success = false;
+
 				// 3. Step 1: Build Fact Pack
 				$fact_engine = new Sergio_AI_Fact_Pack_Engine( $client, $logger );
 				$fact_pack   = $fact_engine->build_fact_pack( $topic_title, $language );
@@ -247,6 +249,7 @@ class Sergio_AI_Scheduler {
 						self::update_topic_status( $queue_row['id'], 'failed', $err );
 					}
 					$logger->warning( 'cron_fact_pack_failed', sprintf( 'Chủ đề "%s" thất bại: %s', $topic_title, $err ) );
+					$this->record_cron_failure( $err, $options, $logger );
 					continue;
 				}
 
@@ -260,6 +263,7 @@ class Sergio_AI_Scheduler {
 						self::update_topic_status( $queue_row['id'], 'failed', $err );
 					}
 					$logger->error( 'cron_editorial_failed', $err );
+					$this->record_cron_failure( $err, $options, $logger );
 					continue;
 				}
 
@@ -273,6 +277,7 @@ class Sergio_AI_Scheduler {
 						self::update_topic_status( $queue_row['id'], 'failed', $err );
 					}
 					$logger->error( 'cron_writing_failed', $err );
+					$this->record_cron_failure( $err, $options, $logger );
 					continue;
 				}
 
@@ -288,12 +293,16 @@ class Sergio_AI_Scheduler {
 					if ( $queue_row ) {
 						self::update_topic_status( $queue_row['id'], 'failed', $err );
 					}
+					$this->record_cron_failure( $err, $options, $logger );
 					continue;
 				}
 
 				if ( $queue_row ) {
 					self::update_topic_status( $queue_row['id'], 'completed' );
 				}
+
+				// Reset consecutive failures counter on success
+				update_option( 'sergio_ai_consecutive_cron_failures', 0 );
 
 				$logger->info( 'cron_completed', sprintf( 'Tạo bài tự động thành công ID #%d cho chủ đề "%s"', $post_id, $topic_title ) );
 			}
@@ -305,7 +314,91 @@ class Sergio_AI_Scheduler {
 	}
 
 	/**
+	 * Record a cron failure and trigger circuit breaker if threshold is reached
+	 */
+	private function record_cron_failure( $err, &$options, $logger ) {
+		$failures = (int) get_option( 'sergio_ai_consecutive_cron_failures', 0 ) + 1;
+		update_option( 'sergio_ai_consecutive_cron_failures', $failures );
+
+		if ( $failures >= 3 ) {
+			// Trip circuit breaker: pause scheduler to protect API quota and server
+			$options['scheduler_enabled'] = 0;
+			update_option( 'sergio_ai_studio_options', $options );
+
+			$logger->error(
+				'circuit_breaker_tripped',
+				sprintf( 'Circuit breaker kích hoạt: Scheduler tự động tạm dừng sau %d lần chạy thất bại liên tiếp.', $failures )
+			);
+
+			$admin_email = get_option( 'admin_email' );
+			if ( $admin_email ) {
+				$site_name = get_bloginfo( 'name' );
+				$subject   = sprintf( '[%s] Sergio AI Studio: Cảnh báo tự động tạm dừng lịch trình', $site_name );
+				$message   = "Xin chào Quản trị viên,\n\n" .
+							 "Tính năng viết bài tự động của Sergio AI Studio đã tự động TẠM DỪNG do gặp lỗi liên tiếp 3 lần trong tiến trình WP-Cron.\n\n" .
+							 "Lỗi gần nhất: " . $err . "\n\n" .
+							 "Vui lòng truy cập trang Quản trị WordPress > Sergio AI Studio để kiểm tra lại khóa API, mạng kết nối hoặc hàng đợi chủ đề trước khi bật lại.\n\n" .
+							 "Trân trọng,\nSergio AI Studio System";
+
+				wp_mail( $admin_email, $subject, $message );
+			}
+		}
+	}
+
+	/**
+	 * Check if a topic was recently covered within the last N days
+	 * Checks both published posts in wp_posts and completed queue items
+	 *
+	 * @param string $topic Topic text
+	 * @param int    $days  Number of days to check (default 30)
+	 * @return bool
+	 */
+	public static function is_topic_duplicate_recent( $topic, $days = 30 ) {
+		global $wpdb;
+		$clean_topic = trim( sanitize_text_field( $topic ) );
+		if ( empty( $clean_topic ) ) {
+			return false;
+		}
+
+		$cutoff_date = gmdate( 'Y-m-d H:i:s', time() - ( (int) $days * DAY_IN_SECONDS ) );
+
+		// 1. Check published/draft posts
+		$like_query  = '%' . $wpdb->esc_like( $clean_topic ) . '%';
+		$post_exists = (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT ID FROM {$wpdb->posts}
+			WHERE post_type = 'post'
+			AND post_status IN ('publish', 'draft', 'pending')
+			AND post_date >= %s
+			AND (post_title LIKE %s OR %s LIKE CONCAT('%%', post_title, '%%'))
+			LIMIT 1",
+			$cutoff_date,
+			$like_query,
+			$clean_topic
+		) );
+
+		if ( $post_exists > 0 ) {
+			return true;
+		}
+
+		// 2. Check completed queue items
+		$table_queue  = Sergio_AI_DB::table( 'topics_queue' );
+		$queue_exists = (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT id FROM {$table_queue}
+			WHERE status = 'completed'
+			AND created_at >= %s
+			AND (topic = %s OR %s LIKE CONCAT('%%', topic, '%%'))
+			LIMIT 1",
+			$cutoff_date,
+			$clean_topic,
+			$clean_topic
+		) );
+
+		return $queue_exists > 0;
+	}
+
+	/**
 	 * AI Auto-Discovery: Ask Gemini to discover a hot trending news topic in the niche
+	 * Powered by Google Search Grounding to guarantee real-world grounding and fresh entities
 	 */
 	public static function discover_topic_from_niche( $client, $logger, $niche = '', $language = 'vi' ) {
 		if ( empty( $niche ) ) {
@@ -313,15 +406,33 @@ class Sergio_AI_Scheduler {
 		}
 
 		$date_str = wp_date( 'd/m/Y' );
-		$prompt   = "Bạn là biên tập viên tin tức công nghệ hàng đầu. Hôm nay là ngày {$date_str}.\n" .
-					"Dựa trên lĩnh vực: \"{$niche}\", hãy chọn ra ĐÚNG 1 chủ đề hoặc sự kiện tin tức công nghệ thực tế mới nhất trong 7 ngày qua để viết bài phân tích chuyên sâu.\n" .
-					"QUY TẮC BẮT BUỘC:\n" .
-					"- Trả về CHỈ DUY NHẤT 1 DÒNG là tiêu đề chủ đề (ngắn gọn, dưới 15 từ, chứa tên thực thể/sản phẩm có thật).\n" .
-					"- KHÔNG có dấu ngoặc kép, KHÔNG có lời giải thích, KHÔNG có tiền tố.";
 
-		$logger->info( 'cron_topic_discovery', sprintf( 'Đang tự động nghiên cứu chủ đề mới cho lĩnh vực: %s', $niche ) );
+		// Retrieve recent topics to explicitly forbid duplicates
+		global $wpdb;
+		$recent_posts = $wpdb->get_col(
+			"SELECT post_title FROM {$wpdb->posts}
+			WHERE post_type = 'post'
+			AND post_status IN ('publish', 'draft', 'pending')
+			ORDER BY ID DESC LIMIT 15"
+		);
 
-		$res = $client->generate_content( $prompt, '', false, 0.7, 30 );
+		$exclusion_text = '';
+		if ( ! empty( $recent_posts ) ) {
+			$exclusion_text = "\nCÁC CHỦ ĐỀ ĐÃ XUẤT BẢN GẦN ĐÂY (TUYỆT ĐỐI KHÔNG TRÙNG LẶP NỘI DUNG VỚI DANH SÁCH NÀY):\n- " . implode( "\n- ", array_slice( $recent_posts, 0, 10 ) ) . "\n";
+		}
+
+		$prompt = "Bạn là biên tập viên tin tức hàng đầu. Hôm nay là ngày {$date_str}.\n" .
+				  "Dựa trên lĩnh vực chuyên sâu: \"{$niche}\", hãy tra cứu bằng Google Search và chọn ra ĐÚNG 1 sự kiện, bản tin hoặc sản phẩm thực tế mới nhất trong 7 ngày qua để viết bài phân tích chuyên sâu.\n" .
+				  $exclusion_text .
+				  "QUY TẮC BẮT BUỘC:\n" .
+				  "- Trả về CHỈ DUY NHẤT 1 DÒNG là tiêu đề chủ đề (ngắn gọn, dưới 15 từ, chứa tên thực thể/sản phẩm có thật).\n" .
+				  "- KHÔNG có dấu ngoặc kép, KHÔNG có lời giải thích, KHÔNG có tiền tố như 'Chủ đề: ' hay '1. '.\n" .
+				  "- Chủ đề PHẢI CÓ THẬT VÀ MỚI XẢY RA, không bịa đặt tên thực thể.";
+
+		$logger->info( 'cron_topic_discovery', sprintf( 'Đang tự động nghiên cứu chủ đề mới bằng Google Search Grounding cho lĩnh vực: %s', $niche ) );
+
+		// Google Search Grounding ENABLED (true)
+		$res = $client->generate_content( $prompt, '', true, 0.7, 45 );
 		if ( is_wp_error( $res ) ) {
 			return $res;
 		}
@@ -329,8 +440,25 @@ class Sergio_AI_Scheduler {
 		$raw_text   = is_array( $res ) ? ( $res['text'] ?? '' ) : (string) $res;
 		$discovered = trim( sanitize_text_field( $raw_text ) );
 		$discovered = trim( $discovered, "\"'\t\n\r" );
+		$discovered = preg_replace( '/^(?:chủ đề|tiêu đề|topic)[:\s]*/iu', '', $discovered );
+
 		if ( empty( $discovered ) ) {
 			return new WP_Error( 'discovery_empty', 'Không thể tạo chủ đề tự động.' );
+		}
+
+		if ( self::is_topic_duplicate_recent( $discovered, 30 ) ) {
+			$logger->warning( 'cron_discovery_duplicate', sprintf( 'Chủ đề "%s" bị trùng lặp với bài viết gần đây. Đang thử lại...', $discovered ) );
+			$retry_prompt = $prompt . "\nLƯU Ý: Chủ đề '{$discovered}' đã bị trùng lặp, hãy chọn 1 sự kiện HOÀN TOÀN KHÁC.";
+			$retry_res    = $client->generate_content( $retry_prompt, '', true, 0.8, 45 );
+			if ( ! is_wp_error( $retry_res ) ) {
+				$raw_retry        = is_array( $retry_res ) ? ( $retry_res['text'] ?? '' ) : (string) $retry_res;
+				$retry_discovered = trim( sanitize_text_field( $raw_retry ) );
+				$retry_discovered = trim( $retry_discovered, "\"'\t\n\r" );
+				$retry_discovered = preg_replace( '/^(?:chủ đề|tiêu đề|topic)[:\s]*/iu', '', $retry_discovered );
+				if ( ! empty( $retry_discovered ) && ! self::is_topic_duplicate_recent( $retry_discovered, 30 ) ) {
+					return $retry_discovered;
+				}
+			}
 		}
 
 		return $discovered;
@@ -406,18 +534,88 @@ class Sergio_AI_Scheduler {
 	}
 
 	/**
+	 * Retry a failed or cancelled topic
+	 */
+	public static function retry_topic( $id ) {
+		global $wpdb;
+		$table = Sergio_AI_DB::table( 'topics_queue' );
+		return $wpdb->update(
+			$table,
+			array(
+				'status'     => 'pending',
+				'attempts'   => 0,
+				'last_error' => null,
+				'updated_at' => current_time( 'mysql' ),
+			),
+			array( 'id' => (int) $id ),
+			array( '%s', '%d', '%s', '%s' ),
+			array( '%d' )
+		);
+	}
+
+	/**
+	 * Prioritize a topic by bumping its priority to top (1)
+	 */
+	public static function prioritize_topic( $id ) {
+		global $wpdb;
+		$table = Sergio_AI_DB::table( 'topics_queue' );
+		return $wpdb->update(
+			$table,
+			array(
+				'priority'   => 1,
+				'updated_at' => current_time( 'mysql' ),
+			),
+			array( 'id' => (int) $id ),
+			array( '%d', '%s' ),
+			array( '%d' )
+		);
+	}
+
+	/**
+	 * Delete a topic from queue
+	 */
+	public static function delete_topic( $id ) {
+		global $wpdb;
+		$table = Sergio_AI_DB::table( 'topics_queue' );
+		return $wpdb->delete( $table, array( 'id' => (int) $id ), array( '%d' ) );
+	}
+
+	/**
 	 * Add topics in bulk
+	 * Supports pipe-separated format: "Chủ đề | Từ khóa chính | ID Chuyên mục"
+	 * Rejects recent duplicates (30 days)
+	 *
+	 * @param string $raw_topics  Raw newline-separated text
+	 * @param int    $category_id Default category ID
+	 * @param string $language    Language
+	 * @return array Array with counts: ['added' => int, 'skipped' => int]
 	 */
 	public static function add_topics( $raw_topics, $category_id = 0, $language = 'vi' ) {
 		global $wpdb;
 		$table = Sergio_AI_DB::table( 'topics_queue' );
 
-		$lines = explode( "\n", $raw_topics );
-		$added = 0;
+		$lines   = explode( "\n", $raw_topics );
+		$added   = 0;
+		$skipped = 0;
 
 		foreach ( $lines as $line ) {
-			$topic = trim( sanitize_text_field( $line ) );
+			$raw_line = trim( $line );
+			if ( empty( $raw_line ) ) {
+				continue;
+			}
+
+			// Parse pipe-delimited format: Topic | Focus Keyword | Category ID
+			$parts       = array_map( 'trim', explode( '|', $raw_line ) );
+			$topic       = sanitize_text_field( $parts[0] );
+			$line_cat_id = isset( $parts[2] ) && is_numeric( $parts[2] ) ? absint( $parts[2] ) : absint( $category_id );
+
 			if ( empty( $topic ) ) {
+				continue;
+			}
+
+			// Duplicate check within 30 days
+			if ( self::is_topic_duplicate_recent( $topic, 30 ) ) {
+				$skipped++;
 				continue;
 			}
 
@@ -425,7 +623,7 @@ class Sergio_AI_Scheduler {
 				$table,
 				array(
 					'topic'       => $topic,
-					'category_id' => absint( $category_id ),
+					'category_id' => $line_cat_id,
 					'language'    => sanitize_key( $language ),
 					'status'      => 'pending',
 					'priority'    => 10,
@@ -437,7 +635,10 @@ class Sergio_AI_Scheduler {
 			$added++;
 		}
 
-		return $added;
+		return array(
+			'added'   => $added,
+			'skipped' => $skipped,
+		);
 	}
 
 	/**

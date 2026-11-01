@@ -108,11 +108,35 @@ PROMPT;
             return new WP_Error( 'parse_error', __( 'Gemini trả về dữ liệu không đúng định dạng JSON.', 'sergio-ai-studio' ) );
         }
 
+        // Code-level Anti-Plagiarism Guard: Measure 5-gram overlap against source
+        if ( class_exists( 'Sergio_AI_Web_Crawler' ) ) {
+            $similarity = Sergio_AI_Web_Crawler::calculate_ngram_similarity( $source_text, $parsed['content'], 5 );
+            if ( $similarity > 0.40 ) {
+                $this->logger->warning( 'plagiarism_threshold_exceeded', sprintf( 'Tỷ lệ trùng n-gram 5 từ cao (%.1f%%) so với nguồn.', $similarity * 100 ) );
+                return new WP_Error(
+                    'plagiarism_risk',
+                    sprintf( __( 'Tỷ lệ trùng lặp câu chữ với nguồn quá cao (%.1f%%). Đã dừng để bảo vệ tính độc bản SEO.', 'sergio-ai-studio' ), $similarity * 100 )
+                );
+            }
+        }
+
+        // Code-level source attribution box insertion (never rely solely on AI prompt)
+        $clean_content = $parsed['content'];
+        if ( false === strpos( $clean_content, 'sergio-sources-box' ) && ! empty( $source_url ) ) {
+            $clean_content .= sprintf(
+                '<div class="sergio-sources-box mt-5 p-4 border rounded bg-light"><h3 class="h5 mb-2">%s</h3><p class="mb-0 text-muted">%s: <a href="%s" target="_blank" rel="nofollow noopener noreferrer">%s</a></p></div>',
+                esc_html__( 'Nguồn tham khảo:', 'sergio-ai-studio' ),
+                esc_html__( 'Trích nguồn từ', 'sergio-ai-studio' ),
+                esc_url( $source_url ),
+                esc_html( $source_domain )
+            );
+        }
+
         return array(
             'title'            => sanitize_text_field( $parsed['title'] ),
             'meta_description' => sanitize_text_field( $parsed['meta_description'] ?? '' ),
             'focus_keyword'    => sanitize_text_field( $parsed['focus_keyword'] ?? '' ),
-            'content'          => $parsed['content'], // Will be wp_kses-filtered when saving.
+            'content'          => $clean_content, // Will be wp_kses-filtered when saving.
             'source_url'       => $source_url,
             'source_domain'    => $source_domain,
         );
@@ -172,6 +196,21 @@ PROMPT;
 
         update_post_meta( $post_id, '_sergio_ai_generated', 1 );
         update_post_meta( $post_id, '_sergio_ai_studio_version', '2.1.0' );
+
+        // Attach featured image banner
+        try {
+            if ( class_exists( 'Sergio_AI_Image_Service' ) ) {
+                $image_service = new Sergio_AI_Image_Service( $this->logger );
+                $image_service->attach_featured_image(
+                    $post_id,
+                    $rewritten['title'],
+                    $rewritten['focus_keyword'] ?? '',
+                    ''
+                );
+            }
+        } catch ( Exception $e ) {
+            $this->logger->warning( 'image_service_failed', 'Lỗi khi tạo ảnh cho bài viết crawl: ' . $e->getMessage() );
+        }
 
         $this->logger->info( 'content_rewriter', sprintf( 'Đã lưu bản nháp #%d từ nguồn %s', $post_id, $rewritten['source_domain'] ) );
 

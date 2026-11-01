@@ -192,6 +192,7 @@ Hãy tìm kiếm và trích xuất một GÓI DỮ KIỆN (FACT PACK) chuẩn x�
 
         // Enforce genuine web citations (strip fake search URLs and invalid links)
         $valid_citations = array();
+        $unique_domains  = array();
         if ( ! empty( $parsed_pack['source_citations'] ) && is_array( $parsed_pack['source_citations'] ) ) {
             foreach ( $parsed_pack['source_citations'] as $c ) {
                 $c_url = isset( $c['url'] ) ? trim( (string) $c['url'] ) : '';
@@ -206,6 +207,9 @@ Hãy tìm kiếm và trích xuất một GÓI DỮ KIỆN (FACT PACK) chuẩn x�
                 if ( strpos( $host, 'bing.' ) !== false && strpos( $c_url, '/search' ) !== false ) {
                     continue;
                 }
+                $clean_host = str_replace( 'www.', '', $host );
+                $unique_domains[ $clean_host ] = true;
+
                 $valid_citations[] = array(
                     'title'          => sanitize_text_field( $c['title'] ?? $host ),
                     'url'            => esc_url_raw( $c_url ),
@@ -215,16 +219,17 @@ Hãy tìm kiếm và trích xuất một GÓI DỮ KIỆN (FACT PACK) chuẩn x�
             }
         }
         $parsed_pack['source_citations'] = $valid_citations;
+        $domain_count = count( $unique_domains );
 
-        // Strict Validation: If status is insufficient_data, no facts found, or NO real sources found
+        // Strict Code-Level Gate: Require >= 2 distinct independent domains for web search grounding
         if (
             ( isset( $parsed_pack['status'] ) && 'insufficient_data' === $parsed_pack['status'] ) ||
             empty( $parsed_pack['key_facts'] ) ||
-            empty( $parsed_pack['source_citations'] )
+            $domain_count < 2
         ) {
-            $reason = ! empty( $parsed_pack['status_reason'] )
-                ? $parsed_pack['status_reason']
-                : __( 'Không tìm thấy đủ dữ kiện thực tế có nguồn dẫn chứng hợp lệ trên Internet.', 'sergio-ai-studio' );
+            $reason = ( $domain_count < 2 && ! empty( $parsed_pack['key_facts'] ) )
+                ? sprintf( __( 'Cổng kiểm chứng từ chối: Chỉ tìm thấy %d domain nguồn (%s). Bắt buộc tối thiểu 2 nguồn độc lập từ 2 domain khác nhau để bảo đảm dữ kiện thật.', 'sergio-ai-studio' ), $domain_count, implode( ', ', array_keys( $unique_domains ) ) )
+                : ( ! empty( $parsed_pack['status_reason'] ) ? $parsed_pack['status_reason'] : __( 'Không tìm thấy đủ dữ kiện thực tế có nguồn dẫn chứng hợp lệ trên Internet.', 'sergio-ai-studio' ) );
 
             $this->logger->warning( 'fact_pack_rejected', sprintf( 'Dừng tạo bài: %s', $reason ), $parsed_pack );
 
