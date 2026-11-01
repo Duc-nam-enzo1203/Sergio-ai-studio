@@ -573,6 +573,8 @@ class Sergio_AI_Admin {
 												<?php endforeach; ?>
 											<?php else : ?>
 												<option value="gemini-2.5-flash" <?php selected( $primary_model, 'gemini-2.5-flash' ); ?>>Gemini 2.5 Flash</option>
+												<option value="gemini-2.0-flash" <?php selected( $primary_model, 'gemini-2.0-flash' ); ?>>Gemini 2.0 Flash (Tốc độ cao & Quota độc lập)</option>
+												<option value="gemini-1.5-flash" <?php selected( $primary_model, 'gemini-1.5-flash' ); ?>>Gemini 1.5 Flash (Ổn định LTS)</option>
 												<option value="gemini-3.5-flash-lite" <?php selected( $primary_model, 'gemini-3.5-flash-lite' ); ?>>Gemini 3.5 Flash Lite</option>
 												<option value="gemini-2.5-pro" <?php selected( $primary_model, 'gemini-2.5-pro' ); ?>>Gemini 2.5 Pro</option>
 											<?php endif; ?>
@@ -590,6 +592,8 @@ class Sergio_AI_Admin {
 													</option>
 												<?php endforeach; ?>
 											<?php else : ?>
+												<option value="gemini-2.0-flash" <?php selected( $fallback_model, 'gemini-2.0-flash' ); ?>>Gemini 2.0 Flash (Tốc độ cao & Quota độc lập)</option>
+												<option value="gemini-1.5-flash" <?php selected( $fallback_model, 'gemini-1.5-flash' ); ?>>Gemini 1.5 Flash (Ổn định LTS)</option>
 												<option value="gemini-3.5-flash-lite" <?php selected( $fallback_model, 'gemini-3.5-flash-lite' ); ?>>Gemini 3.5 Flash Lite</option>
 												<option value="gemini-2.5-flash" <?php selected( $fallback_model, 'gemini-2.5-flash' ); ?>>Gemini 2.5 Flash</option>
 											<?php endif; ?>

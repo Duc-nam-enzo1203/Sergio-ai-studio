@@ -239,87 +239,152 @@ class Sergio_AI_Gemini_Client {
             $override_model          = isset( $opts['override_model'] ) ? (string) $opts['override_model'] : $override_model;
         }
 
-        $target_model = ! empty( $override_model ) ? $override_model : $this->model;
-        $clean_model  = str_replace( 'models/', '', $target_model );
-        if ( 'gemini-2.5-flash-lite' === $clean_model ) {
-            $clean_model = 'gemini-3.5-flash-lite';
-        }
+        // Build multi-model resilient cascade chain
+        $candidates       = $this->build_model_cascade( $override_model );
+        $last_error       = null;
+        $attempted_models = array();
 
-        $endpoint = self::API_BASE . '/models/' . $clean_model . ':generateContent';
+        foreach ( $candidates as $model_idx => $candidate_model ) {
+            $attempted_models[] = $candidate_model;
+            $endpoint = self::API_BASE . '/models/' . $candidate_model . ':generateContent';
 
-        // Build Payload
-        $payload = array(
-            'contents' => array(
-                array(
-                    'role'  => 'user',
-                    'parts' => array(
-                        array( 'text' => (string) $prompt ),
+            // Base Payload
+            $base_payload = array(
+                'contents' => array(
+                    array(
+                        'role'  => 'user',
+                        'parts' => array(
+                            array( 'text' => (string) $prompt ),
+                        ),
                     ),
                 ),
-            ),
-            'generationConfig' => array(
-                'temperature'     => (float) $temperature,
-                'maxOutputTokens' => 8192,
-            ),
-        );
-
-        // System Instruction (Google standard format - strictly scalar string)
-        if ( is_string( $system_prompt ) && '' !== trim( $system_prompt ) ) {
-            $payload['system_instruction'] = array(
-                'parts' => array(
-                    array( 'text' => trim( $system_prompt ) ),
+                'generationConfig' => array(
+                    'temperature'     => (float) $temperature,
+                    'maxOutputTokens' => 8192,
                 ),
             );
-        }
 
-        // Search Grounding Tool
-        if ( $enable_search_grounding ) {
-            $payload['tools'] = array(
-                array(
-                    'googleSearch' => new stdClass(),
-                ),
-            );
-        }
-
-        $this->logger->info(
-            'gemini_api_call',
-            sprintf( 'Gửi yêu cầu tới model [%s] (Grounding: %s)', $clean_model, $enable_search_grounding ? 'BẬT' : 'TẮT' )
-        );
-
-        // Send HTTP Request with automatic single retry for transient failures
-        $result = $this->send_request_with_retry( $endpoint, $payload, $timeout );
-
-        // If primary model fails, attempt exactly 1 configured fallback model
-        if ( is_wp_error( $result ) ) {
-            $fallback = ! empty( $this->fallback_model ) && $this->fallback_model !== $clean_model
-                ? $this->fallback_model
-                : '';
-            if ( 'gemini-2.5-flash-lite' === $fallback ) {
-                $fallback = 'gemini-3.5-flash-lite';
+            // System Instruction (Google standard format - strictly scalar string)
+            if ( is_string( $system_prompt ) && '' !== trim( $system_prompt ) ) {
+                $base_payload['system_instruction'] = array(
+                    'parts' => array(
+                        array( 'text' => trim( $system_prompt ) ),
+                    ),
+                );
             }
 
-            if ( ! empty( $fallback ) ) {
+            // Attempt 1: With Google Search Grounding (if requested)
+            $payload = $base_payload;
+            if ( $enable_search_grounding ) {
+                $payload['tools'] = array(
+                    array(
+                        'googleSearch' => new stdClass(),
+                    ),
+                );
+            }
+
+            $this->logger->info(
+                'gemini_api_call',
+                sprintf( 'Gửi yêu cầu tới model [%s] (Grounding: %s)', $candidate_model, $enable_search_grounding ? 'BẬT' : 'TẮT' )
+            );
+
+            // Send HTTP Request with automatic single retry for transient failures
+            $result = $this->send_request_with_retry( $endpoint, $payload, $timeout );
+
+            // If success, parse and return
+            if ( ! is_wp_error( $result ) ) {
+                if ( $model_idx > 0 ) {
+                    $this->logger->info( 'gemini_fallback_success', sprintf( 'Tự động phục hồi thành công qua model dự phòng [%s]!', $candidate_model ) );
+                }
+                return $this->parse_gemini_response( $result, $candidate_model );
+            }
+
+            $error_code = $result->get_error_code();
+            $error_msg  = $result->get_error_message();
+            $last_error = $result;
+
+            // If error is 403 (Invalid API Key / Permission Denied), do not cascade — it will fail identically
+            if ( 'gemini_auth_error' === $error_code || false !== stripos( $error_msg, 'API_KEY_INVALID' ) || false !== stripos( $error_msg, 'PERMISSION_DENIED' ) ) {
+                $this->logger->error( 'gemini_auth_failed', sprintf( 'Lỗi xác thực API Key: %s', $error_msg ) );
+                return $result;
+            }
+
+            // Grounding Quota Circuit Fallback: If request had Search Grounding and hit 429 quota, immediately retry CURRENT model WITHOUT Grounding
+            if ( $enable_search_grounding && ( 'gemini_quota_exhausted' === $error_code || 'gemini_rate_limited' === $error_code || 429 === $result->get_error_data() || false !== stripos( $error_msg, 'quota' ) || false !== stripos( $error_msg, 'tool' ) ) ) {
                 $this->logger->warning(
-                    'gemini_fallback',
-                    sprintf( 'Model [%s] gặp sự cố: %s. Đang thử model dự phòng duy nhất [%s]...', $clean_model, $result->get_error_message(), $fallback )
+                    'gemini_grounding_fallback',
+                    sprintf( 'Model [%s] gặp giới hạn hạn mức Google Search Grounding (429). Hệ thống tự động chuyển sang chế độ suy luận tri thức trực tiếp (Grounding-Free)...', $candidate_model )
                 );
 
-                $fallback_endpoint = self::API_BASE . '/models/' . $fallback . ':generateContent';
-                $fallback_result   = $this->send_request_with_retry( $fallback_endpoint, $payload, $timeout );
+                $grounding_free_payload = $base_payload; // Payload without 'tools'
+                $gf_result = $this->send_request_with_retry( $endpoint, $grounding_free_payload, $timeout );
 
-                if ( ! is_wp_error( $fallback_result ) ) {
-                    return $this->parse_gemini_response( $fallback_result, $fallback );
+                if ( ! is_wp_error( $gf_result ) ) {
+                    $this->logger->info( 'gemini_grounding_fallback_success', sprintf( 'Thành công khi chạy không dùng Search Grounding trên model [%s]!', $candidate_model ) );
+                    return $this->parse_gemini_response( $gf_result, $candidate_model );
                 }
 
-                $this->logger->error( 'gemini_fallback_failed', sprintf( 'Model dự phòng [%s] cũng thất bại: %s', $fallback, $fallback_result->get_error_message() ) );
-                return $fallback_result;
+                $last_error = $gf_result;
+                $error_msg  = $gf_result->get_error_message();
             }
 
-            $this->logger->error( 'gemini_api_error', $result->get_error_message() );
-            return $result;
+            // Log model cascade step if there is a next candidate
+            if ( isset( $candidates[ $model_idx + 1 ] ) ) {
+                $next_model = $candidates[ $model_idx + 1 ];
+                $this->logger->warning(
+                    'gemini_model_cascade',
+                    sprintf( 'Model [%s] gặp sự cố (%s). Đang tự động chuyển sang model kế tiếp trong chuỗi dự phòng: [%s]...', $candidate_model, $error_msg, $next_model )
+                );
+            }
         }
 
-        return $this->parse_gemini_response( $result, $clean_model );
+        // All models and fallbacks in the cascade were exhausted
+        $this->logger->error( 'gemini_all_fallbacks_failed', sprintf( 'Toàn bộ %d model trong chuỗi dự phòng đều thất bại. Lỗi cuối: %s', count( $candidates ), $last_error->get_error_message() ) );
+
+        // If the error was 429 Quota Exhausted, construct actionable Vietnamese guidance
+        if ( false !== stripos( $last_error->get_error_message(), '429' ) || false !== stripos( $last_error->get_error_message(), 'quota' ) || 'gemini_quota_exhausted' === $last_error->get_error_code() ) {
+            $actionable_msg = sprintf(
+                __( "Lỗi hạn mức Gemini API (429 - Quota Exceeded): Tài khoản Google AI Studio đã tạm thời hết hạn mức sử dụng (Quota / Rate Limit) cho các mô hình đã thử (%s).\n\nGiải pháp xử lý ngay:\n1. Đổi Model: Vào menu 'Sergio AI Studio' > 'Cài Đặt' và đổi 'Mô Hình Chính' sang model khác (ví dụ: gemini-2.0-flash hoặc gemini-1.5-flash).\n2. Nếu vừa thực hiện liên tiếp nhiều tác vụ, vui lòng chờ 1-2 phút để Google làm mới hạn mức mỗi phút (RPM).\n3. Bạn có thể kích hoạt gói Pay-As-You-Go trên console https://aistudio.google.com/ để mở rộng hạn mức (chỉ tính phí khi vượt ngưỡng miễn phí rất lớn).\n4. Hoặc thay một Google AI API Key mới nếu tài khoản hiện tại đã chạm mốc 1.500 lượt gọi miễn phí trong ngày.", 'sergio-ai-studio' ),
+                implode( ', ', $attempted_models )
+            );
+            return new WP_Error( 'gemini_quota_exhausted', $actionable_msg, array( 'attempted_models' => $attempted_models, 'original_message' => $last_error->get_error_message() ) );
+        }
+
+        return $last_error;
+    }
+
+    /**
+     * Build an ordered cascade list of models to try
+     *
+     * @param string $override_model Optional override model
+     * @return array List of model IDs
+     */
+    public function build_model_cascade( $override_model = '' ) {
+        $primary = ! empty( $override_model ) ? $override_model : $this->model;
+        $primary = str_replace( 'models/', '', $primary );
+        if ( 'gemini-2.5-flash-lite' === $primary ) {
+            $primary = 'gemini-3.5-flash-lite';
+        }
+
+        $fallback = ! empty( $this->fallback_model ) ? str_replace( 'models/', '', $this->fallback_model ) : '';
+        if ( 'gemini-2.5-flash-lite' === $fallback ) {
+            $fallback = 'gemini-3.5-flash-lite';
+        }
+
+        $candidates = array( $primary );
+        if ( ! empty( $fallback ) && ! in_array( $fallback, $candidates, true ) ) {
+            $candidates[] = $fallback;
+        }
+
+        // Resilient Google AI models with independent free quotas
+        $pool = array( 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash' );
+        foreach ( $pool as $pm ) {
+            if ( ! in_array( $pm, $candidates, true ) ) {
+                $candidates[] = $pm;
+            }
+        }
+
+        return $candidates;
     }
 
     /**
@@ -346,7 +411,9 @@ class Sergio_AI_Gemini_Client {
 
             if ( is_wp_error( $response ) ) {
                 $last_error = $response;
-                sleep( 2 ); // Wait before retry
+                if ( $attempt < $max_retries ) {
+                    sleep( 2 ); // Wait before retry
+                }
                 continue;
             }
 
@@ -358,15 +425,32 @@ class Sergio_AI_Gemini_Client {
             }
 
             $decoded = json_decode( $body, true );
-            $msg = isset( $decoded['error']['message'] ) ? $decoded['error']['message'] : sprintf( 'Lỗi HTTP %d', $code );
+            $msg     = isset( $decoded['error']['message'] ) ? $decoded['error']['message'] : sprintf( 'Lỗi HTTP %d', $code );
+            $status  = isset( $decoded['error']['status'] ) ? $decoded['error']['status'] : '';
 
-            // Retry on temporary 503 or 429
-            if ( in_array( $code, array( 429, 503, 500 ), true ) && $attempt < $max_retries ) {
-                sleep( 3 );
+            // Check for invalid API key or permission denied (immediate break)
+            if ( 400 === $code || 403 === $code ) {
+                if ( false !== stripos( $msg, 'API_KEY_INVALID' ) || false !== stripos( $msg, 'PERMISSION_DENIED' ) || false !== stripos( $msg, 'API key not valid' ) ) {
+                    return new WP_Error( 'gemini_auth_error', sprintf( 'Lỗi xác thực Gemini API (%d): %s', $code, $msg ), $code );
+                }
+            }
+
+            // Check for hard quota exhaustion
+            $is_hard_quota = ( 429 === $code && ( 'RESOURCE_EXHAUSTED' === $status || false !== stripos( $msg, 'quota' ) || false !== stripos( $msg, 'exceeded' ) ) );
+
+            if ( $is_hard_quota ) {
+                // Hard quota limit reached: do not sleep and retry on same endpoint; return immediately to let caller cascade
+                return new WP_Error( 'gemini_quota_exhausted', sprintf( 'Lỗi Gemini API (429 Quota): %s', $msg ), 429 );
+            }
+
+            // Transient rate-limiting (e.g. RPM burst) or temporary 503 / 500
+            if ( in_array( $code, array( 429, 500, 503 ), true ) && $attempt < $max_retries ) {
+                $backoff = ( 429 === $code ) ? 3 : 2;
+                sleep( $backoff );
                 continue;
             }
 
-            return new WP_Error( 'gemini_api_error', sprintf( 'Lỗi Gemini API (%d): %s', $code, $msg ) );
+            return new WP_Error( 'gemini_api_error', sprintf( 'Lỗi Gemini API (%d): %s', $code, $msg ), $code );
         }
 
         return $last_error ? $last_error : new WP_Error( 'gemini_timeout', __( 'Hết thời gian kết nối API sau các lần thử.', 'sergio-ai-studio' ) );
@@ -375,10 +459,22 @@ class Sergio_AI_Gemini_Client {
     /**
      * Parse raw Gemini JSON response and extract text + Grounding Metadata
      */
-    private function parse_gemini_response( $raw_json, $model_name ) {
+    public function parse_gemini_response( $raw_json, $model_name ) {
         $data = json_decode( $raw_json, true );
 
-        if ( ! is_array( $data ) || empty( $data['candidates'][0]['content']['parts'] ) ) {
+        if ( ! is_array( $data ) ) {
+            return new WP_Error( 'invalid_json', __( 'Phản hồi từ Gemini không phải là chuỗi JSON hợp lệ.', 'sergio-ai-studio' ) );
+        }
+
+        // Safety filter check
+        if ( ! empty( $data['promptFeedback']['blockReason'] ) ) {
+            return new WP_Error( 'safety_blocked', sprintf( __( 'Yêu cầu bị chặn bởi bộ lọc an toàn của Google: %s', 'sergio-ai-studio' ), $data['promptFeedback']['blockReason'] ) );
+        }
+
+        if ( empty( $data['candidates'][0]['content']['parts'] ) ) {
+            if ( ! empty( $data['candidates'][0]['finishReason'] ) && 'STOP' !== $data['candidates'][0]['finishReason'] ) {
+                return new WP_Error( 'finish_reason_stopped', sprintf( __( 'Phản hồi bị dừng bất thường: %s', 'sergio-ai-studio' ), $data['candidates'][0]['finishReason'] ) );
+            }
             return new WP_Error( 'empty_response', __( 'Gemini không trả về nội dung hợp lệ.', 'sergio-ai-studio' ) );
         }
 

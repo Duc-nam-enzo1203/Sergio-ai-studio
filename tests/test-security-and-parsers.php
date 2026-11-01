@@ -58,6 +58,24 @@ function wp_generate_password( $length = 12 ) {
 function add_action( $hook, $callback, $priority = 10, $accepted_args = 1 ) {}
 function apply_filters( $hook, $value ) { return $value; }
 function wp_parse_args( $args, $defaults = array() ) { return array_merge( $defaults, (array) $args ); }
+function __( $text, $domain = 'default' ) { return $text; }
+
+if ( ! class_exists( 'WP_Error' ) ) {
+    class WP_Error {
+        private $code;
+        private $message;
+        private $data;
+        public function __construct( $code = '', $message = '', $data = '' ) {
+            $this->code = $code;
+            $this->message = $message;
+            $this->data = $data;
+        }
+        public function get_error_code() { return $this->code; }
+        public function get_error_message() { return $this->message; }
+        public function get_error_data() { return $this->data; }
+    }
+}
+function is_wp_error( $thing ) { return $thing instanceof WP_Error; }
 
 require_once __DIR__ . '/../includes/class-security.php';
 require_once __DIR__ . '/../includes/class-logger.php';
@@ -175,6 +193,48 @@ assert_true( $meta_extracted['image_url'] === 'https://images.unsplash.com/photo
 $sample_jsonld_image = '<html><head><script type="application/ld+json">{"@context":"https://schema.org","@type":"NewsArticle","image":{"@type":"ImageObject","url":"https://cdn.example.com/lead-photo.png"}}</script></head><body></body></html>';
 $jsonld_img = $crawler_inst->extract_jsonld_image_url( $sample_jsonld_image );
 assert_true( $jsonld_img === 'https://cdn.example.com/lead-photo.png', 'Extract image URL from JSON-LD NewsArticle schema correctly' );
+
+// 8. Test Gemini Client Resilience: Model Cascade & Quota 429 Handling
+$client_inst = new Sergio_AI_Gemini_Client( 'AIzaFakeKeyForTestingPurposes123456789', 'gemini-2.5-flash' );
+$cascade = $client_inst->build_model_cascade();
+
+assert_true( is_array( $cascade ) && count( $cascade ) >= 3, 'Model cascade contains at least 3 failover models' );
+assert_true( $cascade[0] === 'gemini-2.5-flash', 'Cascade starts with user primary model' );
+assert_true( in_array( 'gemini-2.0-flash', $cascade, true ), 'Cascade contains gemini-2.0-flash' );
+assert_true( in_array( 'gemini-1.5-flash', $cascade, true ), 'Cascade contains gemini-1.5-flash' );
+
+// Test Deprecated Model Migration in Cascade
+$cascade_deprecated = $client_inst->build_model_cascade( 'gemini-2.5-flash-lite' );
+assert_true( $cascade_deprecated[0] === 'gemini-3.5-flash-lite', 'Deprecated gemini-2.5-flash-lite cleanly migrates to gemini-3.5-flash-lite in cascade' );
+
+// Test parse_gemini_response with Safety Block
+$safety_json = json_encode( array(
+    'promptFeedback' => array( 'blockReason' => 'SAFETY' ),
+    'candidates' => array(),
+) );
+$safety_res = $client_inst->parse_gemini_response( $safety_json, 'gemini-2.5-flash' );
+assert_true( is_wp_error( $safety_res ) && 'safety_blocked' === $safety_res->get_error_code(), 'parse_gemini_response identifies Google safety block gracefully' );
+
+// Test parse_gemini_response with Grounding Metadata
+$grounded_json = json_encode( array(
+    'candidates' => array(
+        array(
+            'content' => array(
+                'parts' => array( array( 'text' => 'Báo cáo AI 2026 chính xác.' ) ),
+            ),
+            'groundingMetadata' => array(
+                'webSearchQueries' => array( 'ai trends 2026' ),
+                'groundingChunks' => array(
+                    array( 'web' => array( 'uri' => 'https://ai.google.dev', 'title' => 'Google AI' ) ),
+                ),
+            ),
+        ),
+    ),
+) );
+$grounded_res = $client_inst->parse_gemini_response( $grounded_json, 'gemini-2.5-flash' );
+assert_true( ! is_wp_error( $grounded_res ), 'Grounded JSON parses successfully' );
+assert_true( 'Báo cáo AI 2026 chính xác.' === $grounded_res['text'], 'Parsed text matches response part' );
+assert_true( count( $grounded_res['grounding_metadata']['sources'] ) === 1, 'Grounding sources metadata extracted correctly' );
 
 echo "\n🎉 ALL TESTS PASSED SUCCESSFULLY!\n";
 
