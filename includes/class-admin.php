@@ -1326,13 +1326,14 @@ class Sergio_AI_Admin {
 							<!-- Active audit workbench -->
 							<div id="seo_pane_active" style="display: none;">
 								<div class="postbox">
-									<div class="postbox-header" style="display: flex; justify-content: space-between; align-items: center;">
-										<h2 class="hndle">
-											<span id="audit_post_type_label" class="notice notice-info inline" style="padding: 1px 5px; margin-right: 6px;">POST</span>
-											<span id="audit_post_id_label">#00</span>:
-											<span id="audit_post_title_heading"></span>
-										</h2>
-										<div style="padding-right: 12px;">
+									<div class="postbox-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; min-height: 42px;">
+										<div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; padding-right: 16px;">
+											<span id="audit_post_type_label" class="sergio-log-badge badge-info" style="font-size: 11px; font-weight: 600; flex-shrink: 0;">POST</span>
+											<span id="audit_post_id_label" style="color: #64748b; font-size: 13px; font-weight: 600; flex-shrink: 0;">#00</span>
+											<span style="color: #c3c4c7; flex-shrink: 0;">—</span>
+											<strong id="audit_post_title_heading" style="font-size: 14px; color: #1d2327; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></strong>
+										</div>
+										<div style="display: flex; gap: 6px; flex-shrink: 0; align-items: center;">
 											<a href="#" target="_blank" id="audit_post_edit_btn" class="button button-small"><?php esc_html_e( 'Sửa bài trong WP', 'sergio-ai-studio' ); ?></a>
 											<a href="#" target="_blank" id="audit_post_view_btn" class="button button-small"><?php esc_html_e( 'Xem trước', 'sergio-ai-studio' ); ?></a>
 										</div>
@@ -1372,7 +1373,7 @@ class Sergio_AI_Admin {
 											</h3>
 
 											<div id="ai_rec_intent_box" style="margin-bottom: 10px; display: none;">
-												<span id="ai_rec_intent_tag" class="notice notice-info inline" style="padding: 2px 8px; font-weight: 500;"></span>
+												<span id="ai_rec_intent_tag" class="sergio-log-badge badge-info" style="font-size: 12px; font-weight: 500;"></span>
 											</div>
 
 											<div style="margin-bottom: 10px;">

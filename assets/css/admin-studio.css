@@ -1049,29 +1049,31 @@
 
 .sergio-log-badge {
     display: inline-block;
-    padding: 2px 8px;
+    padding: 2px 7px;
     font-size: 11px;
     font-weight: 600;
     border-radius: 3px;
     line-height: 1.4;
     letter-spacing: 0.3px;
-    border: 1px solid transparent;
+    border: 1px solid transparent !important;
+    box-shadow: none !important;
+    text-decoration: none !important;
 }
 
 .sergio-log-badge.badge-error {
-    background: #fcf0f1;
-    color: #b32d2e;
-    border-color: #f5c2c7;
+    background: #fcf0f1 !important;
+    color: #b32d2e !important;
+    border-color: #f5c2c7 !important;
 }
 
 .sergio-log-badge.badge-warning {
-    background: #fff8e5;
-    color: #855a00;
-    border-color: #ffeeba;
+    background: #fff8e5 !important;
+    color: #855a00 !important;
+    border-color: #ffeeba !important;
 }
 
 .sergio-log-badge.badge-info {
-    background: #f0f6fc;
-    color: #0c5460;
-    border-color: #bee5eb;
+    background: #f0f6fc !important;
+    color: #0c5460 !important;
+    border-color: #bee5eb !important;
 }
