@@ -71,6 +71,41 @@ class Sergio_AI_Topic_Analyzer {
                 break;
         }
 
+        // Dynamic Editorial Archetypes (Breaks monotony)
+        $archetypes = array(
+            'contrarian'     => array(
+                'label'       => 'Phân tích phản biện & Bóc trần thực tế (Hype vs. Reality)',
+                'instruction' => 'Bóc tách xem tuyên bố của hãng có thật sự như quảng cáo hay không, phân tích rào cản kỹ thuật, chi phí ẩn và đánh giá rủi ro thực tế.',
+            ),
+            'deep_teardown'  => array(
+                'label'       => 'Giải mã cơ chế & So sánh kỹ thuật chuyên sâu (Technical Teardown)',
+                'instruction' => 'Đi sâu vào kiến trúc bên trong, nguyên lý vận hành, so sánh trực diện thông số và benchmark với các đối thủ cùng phân khúc.',
+            ),
+            'market_battle'  => array(
+                'label'       => 'Cuộc chiến thị trường & Bàn cờ công nghệ (Big Tech Ecosystem)',
+                'instruction' => 'Phân tích động thái này giáng đòn vào đối thủ nào, ai hưởng lợi, ai bị đe dọa và thị trường sẽ phân cực thế nào trong 12 tháng tới.',
+            ),
+            'actionable_ops' => array(
+                'label'       => 'Cẩm nang hành động & Đánh giá tác động thực tiễn (Actionable Playbook)',
+                'instruction' => 'Doanh nghiệp và người dùng cá nhân cần chuẩn bị gì, ứng dụng ra sao, bài học thực chiến để khai thác tối đa mà không lãng phí tài nguyên.',
+            ),
+        );
+        $archetype_keys = array_keys( $archetypes );
+        $chosen_arch_key = $archetype_keys[ array_rand( $archetype_keys ) ];
+        $chosen_arch = $archetypes[ $chosen_arch_key ];
+
+        // Dynamic Intro Hook Types
+        $hook_types = array(
+            'paradox'              => 'NGHỊCH LÝ (Nêu một mâu thuẫn bất ngờ đi ngược nhận thức thông thường)',
+            'metric_shock'         => 'CON SỐ GÂY SỐC (Đặt ngay con số ấn tượng hoặc tỷ lệ % đột biến lên câu đầu)',
+            'provocative_question' => 'CÂU HỎI GAI GÓC (Bắt đầu bằng một câu hỏi trực diện khiến độc giả suy ngẫm)',
+            'in_media_res'         => 'BỐI CẢNH KỊCH TÍNH (Đưa người đọc thẳng vào tâm điểm cuộc đua khốc liệt)',
+        );
+        $hook_keys = array_keys( $hook_types );
+        $chosen_hook_key = $hook_keys[ array_rand( $hook_keys ) ];
+        $chosen_hook_desc = $hook_types[ $chosen_hook_key ];
+    
+
         // Get last 5 post titles to prevent repetitive patterns
         $recent_titles = $this->get_recent_post_titles( 5 );
         $recent_titles_str = ! empty( $recent_titles ) ? implode( "\n- ", $recent_titles ) : 'Chưa có bài viết gần đây.';
@@ -103,7 +138,11 @@ NGUYÊN TẮC BẮT BUỘC:
 5. FOCUS KEYWORD CHO RANK MATH:
    - Chỉ tạo ĐÚNG 1 từ khóa chính (Primary Focus Keyword).
    - Từ khóa BẮT BUỘC có dấu tiếng Việt tự nhiên (nếu bài viết Tiếng Việt), ngắn gọn từ 2-4 từ, KHÔNG NỐI DẤU PHẨY, KHÔNG NHỒI NHÉT.
-   - 3-4 từ khóa phụ (LSI keywords) liên quan trực tiếp đến nội dung.";
+   - 3-4 từ khóa phụ (LSI keywords) liên quan trực tiếp đến nội dung.
+6. CHỈ ĐỊNH ĐỘT PHÁ SÁNG TẠO:
+   - Hướng tiếp cận bài viết: {$chosen_arch['label']} ({$chosen_arch['instruction']}).
+   - Kiểu mở bài ấn tượng: {$chosen_hook_desc}.
+   - Dàn ý BẮT BUỘC phải có ít nhất 1 mục H2 phân tích phản biện/thách thức thực tế hoặc so sánh sâu, TUYỆT ĐỐI không lập dàn ý một màu khen ngợi sáo rỗng.";
 
         $prompt = "Ý ĐỊNH TÌM KIẾM BAN ĐẦU CỦA NGƯỜI DÙNG:
 <user_intent>
