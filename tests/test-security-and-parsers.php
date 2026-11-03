@@ -189,17 +189,13 @@ $sim_rewritten = Sergio_AI_Web_Crawler::calculate_ngram_similarity( $source_samp
 assert_true( $sim_identical >= 0.95, 'Identical source text yields >= 95% 5-gram overlap (plagiarism detected)' );
 assert_true( $sim_rewritten < 0.20, 'Synthesized rewrite yields low 5-gram overlap (< 20%)' );
 
-// 5. Test GD Featured Image Generator
+// 5. Test Royalty-Free Stock Image Service (Wikimedia Commons & Unsplash Suite)
 require_once __DIR__ . '/../includes/class-image-service.php';
 
 $image_service = new Sergio_AI_Image_Service();
-$banner_path = $image_service->generate_gd_image_file( 'Đánh Giá Kiến Trúc Mô Hình Trí Tuệ Nhân Tạo 2026', sys_get_temp_dir() . '/test_banner.png' );
-
-assert_true( file_exists( $banner_path ), 'GD banner generated and file exists on disk' );
-assert_true( filesize( $banner_path ) > 3000, 'GD banner PNG size is valid (>3KB)' );
-$img_info = getimagesize( $banner_path );
-assert_true( 1200 === $img_info[0] && 630 === $img_info[1], 'GD banner dimensions are exactly 1200x630 (social standard)' );
-@unlink( $banner_path ); // Clean up test file
+assert_true( method_exists( $image_service, 'fetch_stock_image' ), 'Image service provides fetch_stock_image method' );
+assert_true( 0 === $image_service->fetch_stock_image( 0, '' ), 'Invalid post or query gracefully returns 0' );
+assert_true( class_exists( 'Sergio_AI_Image_Service' ), 'Sergio_AI_Image_Service class loaded successfully' );
 
 // 6. Test Numeric Metrics Anti-Hallucination
 require_once __DIR__ . '/../includes/class-gemini-client.php';

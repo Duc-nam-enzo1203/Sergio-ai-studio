@@ -24,8 +24,8 @@ class Sergio_AI_Image_Service {
     /**
      * Standard OpenGraph / Rank Math social banner dimensions (1200x630).
      */
-    const BANNER_WIDTH  = 1200;
-    const BANNER_HEIGHT = 630;
+    const MIN_WIDTH  = 320;
+    const MIN_HEIGHT = 180;
 
     /**
      * Logger
@@ -78,26 +78,23 @@ class Sergio_AI_Image_Service {
             : ( $has_mb ? mb_substr( $clean_title, 0, 80, 'UTF-8' ) : substr( $clean_title, 0, 80 ) );
 
         // 1. PRIMARY: Extract from Reference Sources (Ghi rõ nguồn tác giả / báo chí)
-        if ( ! empty( $source_references ) && 'template_only' !== $source_pref ) {
+        if ( 'stock' !== $source_pref && ! empty( $source_references ) ) {
             $ref_id = $this->extract_and_attach_reference_image( $post_id, $clean_title, $focus_keyword, (array) $source_references );
             if ( $ref_id && ! is_wp_error( $ref_id ) ) {
                 return $ref_id;
             }
         }
 
-        // 2. SECONDARY: Attempt Stock provider if configured
-        if ( 'stock' === $source_pref ) {
-            $stock_id = $this->fetch_stock_image( $post_id, $focus_keyword ? $focus_keyword : $clean_title, $alt_text );
-            if ( ! is_wp_error( $stock_id ) && $stock_id > 0 ) {
-                $attachment_id = $stock_id;
-            }
+        // 2. SECONDARY / FALLBACK: Royalty-Free Stock Image (Wikimedia Commons / Unsplash / Pexels)
+        $search_term = ! empty( $focus_keyword ) ? $focus_keyword : $clean_title;
+        $stock_id    = $this->fetch_stock_image( $post_id, $search_term, $alt_text );
+        if ( ! is_wp_error( $stock_id ) && $stock_id > 0 ) {
+            return $stock_id;
         }
 
-        // If no source image found, skip creating featured image entirely (No GD banner)
-        if ( empty( $attachment_id ) ) {
-            $this->logger->info( 'image_source_skipped', sprintf( 'Bài viết #%d: Nguồn tin tham khảo không có ảnh hoặc không thể tải ảnh. Bỏ qua tạo ảnh đại diện.', $post_id ) );
-            return 0;
-        }
+        // 3. If no image found from reference or stock, skip creating image (Zero GD banner)
+        $this->logger->info( 'image_source_skipped', sprintf( 'Bài viết #%d: Nguồn tin tham khảo và kho ảnh bản quyền mở đều không có ảnh phù hợp. Bỏ qua tạo ảnh đại diện.', $post_id ) );
+        return 0;
 
         if ( is_wp_error( $attachment_id ) || empty( $attachment_id ) ) {
             $this->logger->warning( 'image_service_warning', 'Không thể tạo ảnh đại diện: ' . ( is_wp_error( $attachment_id ) ? $attachment_id->get_error_message() : 'Unknown error' ) );
@@ -428,156 +425,144 @@ class Sergio_AI_Image_Service {
      * @param string $alt_text  Alt text
      * @return int|WP_Error Attachment ID
      */
-    public function generate_template_banner( $post_id, $headline, $alt_text = '' ) {
-        $upload_dir = wp_upload_dir();
-        $filename   = 'studio-banner-' . $post_id . '-' . wp_generate_password( 6, false, false ) . '.png';
-        $file_path  = trailingslashit( $upload_dir['path'] ) . $filename;
-
-        $created = $this->generate_gd_image_file( $headline, $file_path );
-        if ( is_wp_error( $created ) ) {
-            return $created;
-        }
-
-        // Insert into WordPress Media Library
-        require_once ABSPATH . 'wp-admin/includes/image.php';
-
-        $attachment = array(
-            'post_mime_type' => 'image/png',
-            'post_title'     => ! empty( $alt_text ) ? $alt_text : $headline,
-            'post_content'   => '',
-            'post_status'    => 'inherit',
-        );
-
-        $attach_id = wp_insert_attachment( $attachment, $file_path, $post_id );
-        if ( is_wp_error( $attach_id ) ) {
-            return $attach_id;
-        }
-
-        require_once ABSPATH . 'wp-admin/includes/media.php';
-        $attach_data = wp_generate_attachment_metadata( $attach_id, $file_path );
-        wp_update_attachment_metadata( $attach_id, $attach_data );
-
-        return $attach_id;
-    }
-
     /**
-     * Create raw GD PNG banner file (1200x630)
+     * Fetch Royalty-Free Image from Wikimedia Commons, Unsplash, or Pexels
      *
-     * @param string $headline    Title text to draw on canvas
-     * @param string $target_path Destination file path
-     * @return string|WP_Error   File path on success or WP_Error
+     * @param int    $post_id  WordPress Post ID
+     * @param string $query    Search keyword / entity
+     * @param string $alt_text Alt text for Rank Math
+     * @return int             Attachment ID or 0 if none found
      */
-    public function generate_gd_image_file( $headline, $target_path = '' ) {
-        if ( ! extension_loaded( 'gd' ) ) {
-            return new WP_Error( 'gd_missing', __( 'Máy chủ PHP chưa kích hoạt thư viện GD để tạo ảnh.', 'sergio-ai-studio' ) );
+    public function fetch_stock_image( $post_id, $query, $alt_text = '' ) {
+        $post_id = function_exists( 'absint' ) ? absint( $post_id ) : abs( (int) $post_id );
+        if ( empty( $post_id ) || empty( $query ) ) {
+            return 0;
         }
 
-        $width  = self::BANNER_WIDTH;
-        $height = self::BANNER_HEIGHT;
+        $options      = function_exists( 'get_option' ) ? get_option( 'sergio_ai_studio_options', array() ) : array();
+        $unsplash_key = isset( $options['unsplash_access_key'] ) && class_exists( 'Sergio_AI_Security' ) ? Sergio_AI_Security::decrypt( $options['unsplash_access_key'] ) : '';
+        $pexels_key   = isset( $options['pexels_api_key'] ) && class_exists( 'Sergio_AI_Security' ) ? Sergio_AI_Security::decrypt( $options['pexels_api_key'] ) : '';
 
-        $im = imagecreatetruecolor( $width, $height );
-        if ( ! $im ) {
-            return new WP_Error( 'gd_create_failed', __( 'Không thể khởi tạo canvas GD.', 'sergio-ai-studio' ) );
-        }
+        // Clean query terms (remove noise words)
+        $clean_query = function_exists( 'wp_strip_all_tags' ) ? wp_strip_all_tags( $query ) : strip_tags( $query );
+        $clean_query = function_exists( 'sanitize_text_field' ) ? sanitize_text_field( $clean_query ) : trim( $clean_query );
+        $clean_query = preg_replace( '/[\?\!\#\@\$\^\*\(\)\[\]\{\}\:\;\"\']/u', '', $clean_query );
 
-        // Modern Slate Gradient Background (#0f172a to #1e293b)
-        for ( $y = 0; $y < $height; $y++ ) {
-            $factor = $y / $height;
-            $r = (int) ( 15 + $factor * ( 30 - 15 ) );
-            $g = (int) ( 23 + $factor * ( 41 - 23 ) );
-            $b = (int) ( 42 + $factor * ( 59 - 42 ) );
-            $color = imagecolorallocate( $im, $r, $g, $b );
-            imageline( $im, 0, $y, $width, $y, $color );
-        }
-
-        // Draw Ambient Indigo Glow Arc (Top Right)
-        $indigo = imagecolorallocatealpha( $im, 99, 102, 241, 95 ); // #6366f1 subtle
-        imagefilledellipse( $im, 1050, 80, 500, 500, $indigo );
-
-        // Draw Accent Indigo hairline strip on the left border
-        $accent_bar = imagecolorallocate( $im, 99, 102, 241 ); // #6366f1
-        imagefilledrectangle( $im, 60, 80, 68, 160, $accent_bar );
-
-        // Color allocations
-        $white       = imagecolorallocate( $im, 255, 255, 255 );
-        $text_muted  = imagecolorallocate( $im, 148, 163, 184 ); // #94a3b8
-        $border_col  = imagecolorallocate( $im, 51, 65, 85 );    // #334155
-        $badge_bg    = imagecolorallocate( $im, 30, 41, 59 );    // #1e293b
-
-        // Header Category / Brand Badge
-        $badge_text = 'SERGIO AI STUDIO • INSIGHTS 2026';
-        imagefilledrectangle( $im, 85, 95, 420, 145, $badge_bg );
-        imagerectangle( $im, 85, 95, 420, 145, $border_col );
-        imagestring( $im, 4, 105, 112, $badge_text, $white );
-
-        // Word-wrap Headline into lines (Max 3 lines, max 42 chars per line)
-        $words = explode( ' ', $headline );
-        $lines = array();
-        $curr_line = '';
-
-        foreach ( $words as $w ) {
-            $test_line = empty( $curr_line ) ? $w : $curr_line . ' ' . $w;
-            $len = function_exists( 'mb_strlen' ) ? mb_strlen( $test_line, 'UTF-8' ) : strlen( $test_line );
-            if ( $len <= 40 ) {
-                $curr_line = $test_line;
-            } else {
-                if ( ! empty( $curr_line ) ) {
-                    $lines[] = $curr_line;
-                }
-                $curr_line = $w;
-                if ( count( $lines ) >= 3 ) {
-                    break;
-                }
+        // 1. Try Unsplash API if configured
+        if ( ! empty( $unsplash_key ) ) {
+            $attach_id = $this->fetch_from_unsplash( $post_id, $clean_query, $alt_text, $unsplash_key );
+            if ( $attach_id > 0 ) {
+                return $attach_id;
             }
         }
-        if ( ! empty( $curr_line ) && count( $lines ) < 3 ) {
-            $lines[] = $curr_line;
+
+        // 2. Try Pexels API if configured
+        if ( ! empty( $pexels_key ) ) {
+            $attach_id = $this->fetch_from_pexels( $post_id, $clean_query, $alt_text, $pexels_key );
+            if ( $attach_id > 0 ) {
+                return $attach_id;
+            }
         }
 
-        // Draw Headline text using built-in font
-        $start_y = 220;
-        foreach ( $lines as $idx => $line_str ) {
-            imagestring( $im, 5, 85, $start_y + ( $idx * 52 ), $line_str, $white );
-        }
-
-        // Footer Metadata & Provenance
-        $site_name = function_exists( 'get_bloginfo' ) ? get_bloginfo( 'name' ) : 'Sergio Themes';
-        $footer_text = sprintf( '%s  |  Verified Knowledge & Research', $site_name );
-        imageline( $im, 85, 520, 1115, 520, $border_col );
-        imagestring( $im, 4, 85, 545, $footer_text, $text_muted );
-
-        if ( empty( $target_path ) ) {
-            $upload_dir  = function_exists( 'wp_upload_dir' ) ? wp_upload_dir() : array( 'path' => sys_get_temp_dir() );
-            $target_path = rtrim( $upload_dir['path'], '/\\' ) . '/studio-banner-' . time() . '.png';
-        }
-
-        imagepng( $im, $target_path, 8 );
-        imagedestroy( $im );
-
-        if ( ! file_exists( $target_path ) ) {
-            return new WP_Error( 'image_save_failed', __( 'Không thể lưu file ảnh vào thư mục đích.', 'sergio-ai-studio' ) );
-        }
-
-        return $target_path;
+        // 3. PRIMARY OPEN REPOSITORY: Wikimedia Commons API (100% Free, Zero API Key required, Public Domain / CC)
+        return $this->fetch_from_wikimedia( $post_id, $clean_query, $alt_text );
     }
 
     /**
-     * Optional Stock Image Provider (e.g. Unsplash / Pexels)
+     * Search and download CC/Public Domain image from Wikimedia Commons API (0 API Key required)
      */
-    private function fetch_stock_image( $post_id, $query, $alt_text ) {
-        $options   = get_option( 'sergio_ai_studio_options', array() );
-        $stock_key = isset( $options['stock_api_key'] ) ? Sergio_AI_Security::decrypt( $options['stock_api_key'] ) : '';
+    private function fetch_from_wikimedia( $post_id, $query, $alt_text ) {
+        $encoded_query = rawurlencode( $query );
+        $api_url = 'https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=' . $encoded_query . '&gsrlimit=3&gsrnamespace=6&prop=imageinfo&iiprop=url|size|extmetadata&format=json';
 
-        if ( empty( $stock_key ) ) {
-            return 0; // Fallback to template banner
+        $response = wp_remote_get( $api_url, array(
+            'timeout'    => 15,
+            'user-agent' => 'SergioAIStudio/2.1 (WordPress; contact@sergiothemes.com)',
+        ) );
+
+        if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
+            return 0;
         }
 
-        // Example: Pexels API Query
-        $clean_query = rawurlencode( wp_strip_all_tags( $query ) );
-        $api_url     = 'https://api.pexels.com/v1/search?query=' . $clean_query . '&per_page=1&orientation=landscape';
+        $body = wp_remote_retrieve_body( $response );
+        $data = json_decode( $body, true );
+
+        if ( empty( $data['query']['pages'] ) ) {
+            return 0;
+        }
+
+        foreach ( $data['query']['pages'] as $page ) {
+            if ( empty( $page['imageinfo'][0]['url'] ) ) {
+                continue;
+            }
+
+            $img_info = $page['imageinfo'][0];
+            $img_url  = $img_info['url'];
+            $width    = isset( $img_info['width'] ) ? (int) $img_info['width'] : 0;
+            $height   = isset( $img_info['height'] ) ? (int) $img_info['height'] : 0;
+
+            // Require landscape and decent resolution
+            if ( $width < self::MIN_WIDTH || $height < self::MIN_HEIGHT ) {
+                continue;
+            }
+
+            // Exclude icons, svg, pdf, audio
+            $ext = strtolower( pathinfo( wp_parse_url( $img_url, PHP_URL_PATH ), PATHINFO_EXTENSION ) );
+            if ( ! in_array( $ext, array( 'jpg', 'jpeg', 'png', 'webp' ), true ) ) {
+                continue;
+            }
+
+            // Extract metadata artist & license
+            $artist  = ! empty( $img_info['extmetadata']['Artist']['value'] ) ? wp_strip_all_tags( $img_info['extmetadata']['Artist']['value'] ) : 'Wikimedia Commons';
+            $license = ! empty( $img_info['extmetadata']['LicenseShortName']['value'] ) ? sanitize_text_field( $img_info['extmetadata']['LicenseShortName']['value'] ) : 'Creative Commons';
+
+            $credit_caption = sprintf( __( 'Ảnh: %s qua Wikimedia Commons (Bản quyền mở: %s)', 'sergio-ai-studio' ), esc_html( $artist ), esc_html( $license ) );
+            $attach_id = $this->sideload_stock_file( $post_id, $img_url, $alt_text, $credit_caption, 'Wikimedia Commons' );
+
+            if ( $attach_id > 0 ) {
+                $this->logger->info( 'image_stock_attached', sprintf( 'Đã gắn ảnh miễn phí bản quyền từ Wikimedia Commons cho bài viết #%d.', $post_id ) );
+                return $attach_id;
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Search and download image from Unsplash API
+     */
+    private function fetch_from_unsplash( $post_id, $query, $alt_text, $access_key ) {
+        $api_url = 'https://api.unsplash.com/search/photos?query=' . rawurlencode( $query ) . '&per_page=1&orientation=landscape';
 
         $res = wp_remote_get( $api_url, array(
-            'headers' => array( 'Authorization' => $stock_key ),
+            'headers' => array( 'Authorization' => 'Client-ID ' . $access_key ),
+            'timeout' => 12,
+        ) );
+
+        if ( is_wp_error( $res ) || 200 !== wp_remote_retrieve_response_code( $res ) ) {
+            return 0;
+        }
+
+        $data = json_decode( wp_remote_retrieve_body( $res ), true );
+        if ( empty( $data['results'][0]['urls']['regular'] ) ) {
+            return 0;
+        }
+
+        $photo_url = $data['results'][0]['urls']['regular'];
+        $photog    = ! empty( $data['results'][0]['user']['name'] ) ? $data['results'][0]['user']['name'] : 'Unsplash';
+        $caption   = sprintf( __( 'Ảnh minh họa bởi %s qua Unsplash (Miễn phí bản quyền)', 'sergio-ai-studio' ), esc_html( $photog ) );
+
+        return $this->sideload_stock_file( $post_id, $photo_url, $alt_text, $caption, 'Unsplash' );
+    }
+
+    /**
+     * Search and download image from Pexels API
+     */
+    private function fetch_from_pexels( $post_id, $query, $alt_text, $api_key ) {
+        $api_url = 'https://api.pexels.com/v1/search?query=' . rawurlencode( $query ) . '&per_page=1&orientation=landscape';
+
+        $res = wp_remote_get( $api_url, array(
+            'headers' => array( 'Authorization' => $api_key ),
             'timeout' => 12,
         ) );
 
@@ -592,14 +577,68 @@ class Sergio_AI_Image_Service {
 
         $photo_url = $data['photos'][0]['src']['large2x'];
         $photog    = ! empty( $data['photos'][0]['photographer'] ) ? $data['photos'][0]['photographer'] : 'Pexels';
+        $caption   = sprintf( __( 'Ảnh minh họa bởi %s qua Pexels (Miễn phí bản quyền)', 'sergio-ai-studio' ), esc_html( $photog ) );
 
-        require_once ABSPATH . 'wp-admin/includes/media.php';
-        require_once ABSPATH . 'wp-admin/includes/file.php';
-        require_once ABSPATH . 'wp-admin/includes/image.php';
+        return $this->sideload_stock_file( $post_id, $photo_url, $alt_text, $caption, 'Pexels' );
+    }
 
-        $desc = sprintf( __( 'Ảnh minh họa bởi %s qua Pexels (Có bản quyền miễn phí)', 'sergio-ai-studio' ), $photog );
-        $attach_id = media_sideload_image( $photo_url, $post_id, $desc, 'id' );
+    /**
+     * Helper to download stock image file and create WordPress Attachment
+     */
+    private function sideload_stock_file( $post_id, $image_url, $alt_text, $caption_credit, $provider_name ) {
+        if ( ! function_exists( 'download_url' ) && defined( 'ABSPATH' ) && file_exists( ABSPATH . 'wp-admin/includes/file.php' ) ) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+        }
+        if ( ! function_exists( 'media_handle_sideload' ) && defined( 'ABSPATH' ) && file_exists( ABSPATH . 'wp-admin/includes/media.php' ) ) {
+            require_once ABSPATH . 'wp-admin/includes/media.php';
+        }
+        if ( ! function_exists( 'wp_generate_attachment_metadata' ) && defined( 'ABSPATH' ) && file_exists( ABSPATH . 'wp-admin/includes/image.php' ) ) {
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+        }
 
-        return is_wp_error( $attach_id ) ? 0 : $attach_id;
+        $tmp_file = download_url( $image_url, 15 );
+        if ( is_wp_error( $tmp_file ) || ! file_exists( (string) $tmp_file ) ) {
+            return 0;
+        }
+
+        $img_info = @getimagesize( $tmp_file );
+        if ( ! $img_info || empty( $img_info[0] ) || empty( $img_info[1] ) ) {
+            @unlink( $tmp_file );
+            return 0;
+        }
+
+        $ext = 'jpg';
+        $mime = $img_info['mime'] ?? '';
+        if ( 'image/png' === $mime ) {
+            $ext = 'png';
+        } elseif ( 'image/webp' === $mime ) {
+            $ext = 'webp';
+        }
+
+        $filename = 'stock-' . sanitize_title( substr( $alt_text, 0, 40 ) ) . '-' . wp_generate_password( 6, false, false ) . '.' . $ext;
+        $file_array = array(
+            'name'     => $filename,
+            'tmp_name' => $tmp_file,
+        );
+
+        $attachment_data = array(
+            'post_title'   => $alt_text,
+            'post_excerpt' => $caption_credit,
+            'post_content' => sprintf( __( 'Ảnh minh họa từ %s (Miễn phí bản quyền).', 'sergio-ai-studio' ), esc_html( $provider_name ) ),
+        );
+
+        $attach_id = media_handle_sideload( $file_array, $post_id, null, $attachment_data );
+        if ( is_wp_error( $attach_id ) || empty( $attach_id ) ) {
+            @unlink( $tmp_file );
+            return 0;
+        }
+
+        update_post_meta( $attach_id, '_wp_attachment_image_alt', $alt_text );
+        update_post_meta( $post_id, '_sergio_ai_image_source_credit', $provider_name );
+        update_post_meta( $post_id, '_sergio_ai_image_type', 'royalty_free_stock' );
+        set_post_thumbnail( $post_id, $attach_id );
+        update_post_meta( $post_id, '_sergio_ai_featured_image_id', $attach_id );
+
+        return (int) $attach_id;
     }
 }

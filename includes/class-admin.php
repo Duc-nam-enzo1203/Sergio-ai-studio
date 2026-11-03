@@ -110,49 +110,109 @@ class Sergio_AI_Admin {
 	}
 
 	public function sanitize_settings( $input ) {
-		$clean = get_option( 'sergio_ai_studio_options', array() );
+		$current = get_option( 'sergio_ai_studio_options', array() );
+		if ( ! is_array( $current ) ) {
+			$current = array();
+		}
+		$clean = $current;
 
-		// API Key — skip if constant defined in wp-config.
-		if ( ! Sergio_AI_Security::is_key_defined_in_config() ) {
-			if ( ! empty( $input['gemini_api_key'] ) ) {
-				$raw_key = trim( sanitize_text_field( wp_unslash( $input['gemini_api_key'] ) ) );
-				if ( false === strpos( $raw_key, '••••' ) ) {
-					$clean['gemini_api_key'] = Sergio_AI_Security::encrypt( $raw_key );
+		$source = isset( $input['sergio_form_source'] ) ? sanitize_key( $input['sergio_form_source'] ) : '';
+
+		// If form source is 'settings' or generic.
+		if ( empty( $source ) || 'settings' === $source ) {
+			// API Key — skip if constant defined in wp-config.
+			if ( ! Sergio_AI_Security::is_key_defined_in_config() ) {
+				if ( ! empty( $input['gemini_api_key'] ) ) {
+					$raw_key = trim( sanitize_text_field( wp_unslash( $input['gemini_api_key'] ) ) );
+					if ( false === strpos( $raw_key, '••••' ) ) {
+						$clean['gemini_api_key'] = Sergio_AI_Security::encrypt( $raw_key );
+					}
+				}
+			}
+
+			if ( isset( $input['gemini_model_primary'] ) ) {
+				$clean['gemini_model_primary'] = sanitize_text_field( wp_unslash( $input['gemini_model_primary'] ) );
+				if ( 'gemini-2.5-flash-lite' === $clean['gemini_model_primary'] ) {
+					$clean['gemini_model_primary'] = 'gemini-3.5-flash-lite';
+				}
+			}
+			if ( isset( $input['gemini_model_fallback'] ) ) {
+				$clean['gemini_model_fallback'] = sanitize_text_field( wp_unslash( $input['gemini_model_fallback'] ) );
+				if ( 'gemini-2.5-flash-lite' === $clean['gemini_model_fallback'] ) {
+					$clean['gemini_model_fallback'] = 'gemini-3.5-flash-lite';
+				}
+			}
+			if ( isset( $input['default_language'] ) ) {
+				$clean['default_language'] = sanitize_text_field( wp_unslash( $input['default_language'] ) );
+			}
+			if ( isset( $input['default_post_status'] ) ) {
+				$clean['default_post_status'] = in_array( $input['default_post_status'], array( 'draft', 'publish' ), true ) ? $input['default_post_status'] : 'draft';
+			}
+
+			// Stock Photo API keys (Unsplash & Pexels).
+			if ( isset( $input['unsplash_access_key'] ) ) {
+				$raw_unsplash = trim( sanitize_text_field( wp_unslash( $input['unsplash_access_key'] ) ) );
+				if ( empty( $raw_unsplash ) ) {
+					$clean['unsplash_access_key'] = '';
+				} elseif ( false === strpos( $raw_unsplash, '••••' ) ) {
+					$clean['unsplash_access_key'] = Sergio_AI_Security::encrypt( $raw_unsplash );
+				}
+			}
+			if ( isset( $input['pexels_api_key'] ) ) {
+				$raw_pexels = trim( sanitize_text_field( wp_unslash( $input['pexels_api_key'] ) ) );
+				if ( empty( $raw_pexels ) ) {
+					$clean['pexels_api_key'] = '';
+				} elseif ( false === strpos( $raw_pexels, '••••' ) ) {
+					$clean['pexels_api_key'] = Sergio_AI_Security::encrypt( $raw_pexels );
 				}
 			}
 		}
 
-		$clean['gemini_model_primary']  = isset( $input['gemini_model_primary'] ) ? sanitize_text_field( wp_unslash( $input['gemini_model_primary'] ) ) : 'gemini-2.5-flash';
-		$clean['gemini_model_fallback'] = isset( $input['gemini_model_fallback'] ) ? sanitize_text_field( wp_unslash( $input['gemini_model_fallback'] ) ) : 'gemini-3.5-flash-lite';
-		if ( 'gemini-2.5-flash-lite' === $clean['gemini_model_primary'] ) {
-			$clean['gemini_model_primary'] = 'gemini-3.5-flash-lite';
-		}
-		if ( 'gemini-2.5-flash-lite' === $clean['gemini_model_fallback'] ) {
-			$clean['gemini_model_fallback'] = 'gemini-3.5-flash-lite';
-		}
-		$clean['default_language']      = isset( $input['default_language'] ) ? sanitize_text_field( wp_unslash( $input['default_language'] ) ) : 'vi';
-		$clean['default_post_status']   = in_array( $input['default_post_status'] ?? '', array( 'draft', 'publish' ), true ) ? $input['default_post_status'] : 'draft';
+		// If form source is 'scheduler' or generic.
+		if ( empty( $source ) || 'scheduler' === $source ) {
+			$clean['scheduler_enabled'] = ! empty( $input['scheduler_enabled'] ) ? 1 : 0;
 
-		// Scheduler Advanced Settings.
-		$clean['scheduler_enabled']         = ! empty( $input['scheduler_enabled'] ) ? 1 : 0;
-		$clean['schedule_frequency']        = isset( $input['schedule_frequency'] ) ? sanitize_text_field( wp_unslash( $input['schedule_frequency'] ) ) : 'daily';
-		$clean['schedule_custom_hours']     = isset( $input['schedule_custom_hours'] ) ? absint( $input['schedule_custom_hours'] ) : 1;
-		$clean['schedule_posts_per_run']    = isset( $input['schedule_posts_per_run'] ) ? min( 5, max( 1, absint( $input['schedule_posts_per_run'] ) ) ) : 1;
-		$clean['schedule_max_posts_per_day']= isset( $input['schedule_max_posts_per_day'] ) ? absint( $input['schedule_max_posts_per_day'] ) : 10;
-		$clean['schedule_topic_mode']       = in_array( $input['schedule_topic_mode'] ?? '', array( 'hybrid', 'queue_only', 'ai_discover' ), true ) ? $input['schedule_topic_mode'] : 'hybrid';
-		$clean['schedule_niche_topic']      = isset( $input['schedule_niche_topic'] ) ? sanitize_text_field( wp_unslash( $input['schedule_niche_topic'] ) ) : '';
-		$clean['schedule_target_length']    = in_array( $input['schedule_target_length'] ?? '', array( 'standard', 'short', 'deep_dive' ), true ) ? $input['schedule_target_length'] : 'standard';
-		$clean['default_schedule_author']   = isset( $input['default_schedule_author'] ) ? absint( $input['default_schedule_author'] ) : 0;
-		$clean['default_schedule_cat']      = isset( $input['default_schedule_cat'] ) ? absint( $input['default_schedule_cat'] ) : 0;
-		$clean['default_schedule_status']   = in_array( $input['default_schedule_status'] ?? '', array( 'draft', 'publish' ), true ) ? $input['default_schedule_status'] : 'draft';
-		$clean['schedule_image_option']    = in_array( $input['schedule_image_option'] ?? '', array( 'reference', 'none' ), true ) ? $input['schedule_image_option'] : 'reference';
+			if ( isset( $input['schedule_frequency'] ) ) {
+				$clean['schedule_frequency'] = sanitize_text_field( wp_unslash( $input['schedule_frequency'] ) );
+			}
+			if ( isset( $input['schedule_custom_hours'] ) ) {
+				$clean['schedule_custom_hours'] = absint( $input['schedule_custom_hours'] );
+			}
+			if ( isset( $input['schedule_posts_per_run'] ) ) {
+				$clean['schedule_posts_per_run'] = min( 5, max( 1, absint( $input['schedule_posts_per_run'] ) ) );
+			}
+			if ( isset( $input['schedule_max_posts_per_day'] ) ) {
+				$clean['schedule_max_posts_per_day'] = absint( $input['schedule_max_posts_per_day'] );
+			}
+			if ( isset( $input['schedule_topic_mode'] ) ) {
+				$clean['schedule_topic_mode'] = in_array( $input['schedule_topic_mode'], array( 'hybrid', 'queue_only', 'ai_discover' ), true ) ? $input['schedule_topic_mode'] : 'hybrid';
+			}
+			if ( isset( $input['schedule_niche_topic'] ) ) {
+				$clean['schedule_niche_topic'] = sanitize_text_field( wp_unslash( $input['schedule_niche_topic'] ) );
+			}
+			if ( isset( $input['schedule_target_length'] ) ) {
+				$clean['schedule_target_length'] = in_array( $input['schedule_target_length'], array( 'standard', 'short', 'deep_dive' ), true ) ? $input['schedule_target_length'] : 'standard';
+			}
+			if ( isset( $input['default_schedule_author'] ) ) {
+				$clean['default_schedule_author'] = absint( $input['default_schedule_author'] );
+			}
+			if ( isset( $input['default_schedule_cat'] ) ) {
+				$clean['default_schedule_cat'] = absint( $input['default_schedule_cat'] );
+			}
+			if ( isset( $input['default_schedule_status'] ) ) {
+				$clean['default_schedule_status'] = in_array( $input['default_schedule_status'], array( 'draft', 'publish' ), true ) ? $input['default_schedule_status'] : 'draft';
+			}
+			if ( isset( $input['schedule_image_option'] ) ) {
+				$clean['schedule_image_option'] = in_array( $input['schedule_image_option'], array( 'reference', 'stock', 'none' ), true ) ? $input['schedule_image_option'] : 'reference';
+			}
 
-		$scheduler = new Sergio_AI_Scheduler();
-		if ( $clean['scheduler_enabled'] ) {
-			$custom_h = ( 'sergio_custom_interval' === $clean['schedule_frequency'] ) ? $clean['schedule_custom_hours'] : 0;
-			$scheduler->setup_schedule( $clean['schedule_frequency'], $custom_h );
-		} else {
-			$scheduler->clear_schedule();
+			$scheduler = new Sergio_AI_Scheduler();
+			if ( $clean['scheduler_enabled'] ) {
+				$custom_h = ( 'sergio_custom_interval' === ( $clean['schedule_frequency'] ?? 'daily' ) ) ? ( $clean['schedule_custom_hours'] ?? 1 ) : 0;
+				$scheduler->setup_schedule( $clean['schedule_frequency'] ?? 'daily', $custom_h );
+			} else {
+				$scheduler->clear_schedule();
+			}
 		}
 
 		return $clean;
@@ -235,6 +295,9 @@ class Sergio_AI_Admin {
 		$default_sched_auth  = (int) ( $options['default_schedule_author'] ?? get_current_user_id() );
 		$default_sched_cat   = (int) ( $options['default_schedule_cat'] ?? 0 );
 		$default_sched_stat  = $options['default_schedule_status'] ?? 'draft';
+		$default_post_status = $options['default_post_status'] ?? 'draft';
+		$masked_unsplash_key = Sergio_AI_Security::mask_key( $options['unsplash_access_key'] ?? '' );
+		$masked_pexels_key   = Sergio_AI_Security::mask_key( $options['pexels_api_key'] ?? '' );
 		$schedule_image_opt  = $options['schedule_image_option'] ?? 'reference';
 
 		$scheduler     = new Sergio_AI_Scheduler();
@@ -321,1290 +384,17 @@ class Sergio_AI_Admin {
 			</nav>
 
 			<div class="sergio-tab-content" style="margin-top: 15px;">
-
-				<!-- ===================================== -->
-				<!-- TAB 1: TỔNG QUAN                     -->
-				<!-- ===================================== -->
-				<div id="tab-overview" class="sergio-tab-pane <?php echo 'overview' === $active_tab ? 'is-active' : ''; ?>">
-					<div class="sergio-overview-cards">
-						<div class="card">
-							<div class="card-kicker">
-								<span><?php esc_html_e( 'Kết Nối Gemini API', 'sergio-ai-studio' ); ?></span>
-							</div>
-							<div class="card-val <?php echo $has_key ? 'val-green' : 'val-amber'; ?>">
-								<?php echo $has_key ? esc_html__( 'Sẵn Sàng', 'sergio-ai-studio' ) : esc_html__( 'Chưa Cấu Hình', 'sergio-ai-studio' ); ?>
-							</div>
-							<p class="card-desc"><code><?php echo esc_html( $primary_model ); ?></code></p>
-						</div>
-
-						<div class="card">
-							<div class="card-kicker">
-								<span><?php esc_html_e( 'Tự Động Hóa WP-Cron', 'sergio-ai-studio' ); ?></span>
-							</div>
-							<div class="card-val <?php echo $scheduler_enabled ? 'val-green' : ''; ?>">
-								<?php echo $scheduler_enabled ? esc_html__( 'Đang Chạy', 'sergio-ai-studio' ) : esc_html__( 'Tạm Dừng', 'sergio-ai-studio' ); ?>
-							</div>
-							<p class="card-desc">
-								<?php echo $scheduler_enabled && $next_run_time ? esc_html( sprintf( __( 'Lần tới: %s', 'sergio-ai-studio' ), $next_run_time ) ) : esc_html__( 'Chưa lên lịch', 'sergio-ai-studio' ); ?>
-							</p>
-						</div>
-
-						<div class="card">
-							<div class="card-kicker">
-								<span><?php esc_html_e( 'Hàng Đợi Chờ Xử Lý', 'sergio-ai-studio' ); ?></span>
-							</div>
-							<div class="card-val val-blue">
-								<?php echo (int) $queue_count; ?> <span class="card-val-unit"><?php esc_html_e( 'chủ đề', 'sergio-ai-studio' ); ?></span>
-							</div>
-							<p class="card-desc"><?php printf( esc_html__( 'Mỗi đợt sinh %d bài', 'sergio-ai-studio' ), (int) $posts_per_run ); ?></p>
-						</div>
-
-						<div class="card">
-							<div class="card-kicker">
-								<span><?php esc_html_e( 'Hôm Nay Đã Tạo', 'sergio-ai-studio' ); ?></span>
-							</div>
-							<div class="card-val val-green">
-								<?php echo (int) $posts_today; ?> <span class="card-val-unit">/ <?php echo $max_posts_per_day > 0 ? (int) $max_posts_per_day : '∞'; ?> <?php esc_html_e( 'bài', 'sergio-ai-studio' ); ?></span>
-							</div>
-							<p class="card-desc"><?php esc_html_e( 'Đã kiểm chứng Fact Pack', 'sergio-ai-studio' ); ?></p>
-						</div>
-					</div>
-
-					<div class="sergio-grid-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-						<div class="postbox">
-							<div class="postbox-header"><h2 class="hndle"><span><?php esc_html_e( 'Khởi Chạy Nhanh Quy Trình', 'sergio-ai-studio' ); ?></span></h2></div>
-							<div class="inside">
-								<p><?php esc_html_e( 'Kích hoạt nhanh quy trình biên soạn bài viết bằng Gemini Deep Research hoặc chạy phiên WP-Cron ngay lập tức:', 'sergio-ai-studio' ); ?></p>
-								<p style="display: flex; gap: 10px; flex-wrap: wrap;">
-									<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=writer' ) ); ?>" class="button button-primary nav-tab-link" data-tab="tab-writer">
-										<?php esc_html_e( 'Nghiên Cứu & Viết Bài', 'sergio-ai-studio' ); ?>
-									</a>
-									<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=crawl' ) ); ?>" class="button button-secondary nav-tab-link" data-tab="tab-crawl">
-										<?php esc_html_e( 'Crawl & Viết Lại', 'sergio-ai-studio' ); ?>
-									</a>
-									<button type="button" class="button button-secondary" id="btn_run_cron_overview">
-										<?php esc_html_e( 'Kích Hoạt 1 Đợt Cron Ngay', 'sergio-ai-studio' ); ?>
-									</button>
-								</p>
-								<div id="cron_overview_feedback" style="margin-top: 10px; font-size: 13px;"></div>
-							</div>
-						</div>
-
-					<div class="postbox">
-							<div class="postbox-header">
-								<h2 class="hndle">
-									<span><?php esc_html_e( 'Bài Tiếp Theo Trong Hàng Đợi', 'sergio-ai-studio' ); ?></span>
-								</h2>
-							</div>
-							<div class="inside">
-								<?php if ( empty( $queue_items ) ) : ?>
-									<p style="color: #64748b; margin: 0 0 12px;"><?php esc_html_e( 'Hàng đợi hiện đang trống. Hệ thống sẽ tự động nghiên cứu theo Lĩnh vực ngách (chế độ Hybrid).', 'sergio-ai-studio' ); ?></p>
-								<?php else : ?>
-									<div style="padding: 10px 12px; background: #f6f7f7; border: 1px solid #c3c4c7; border-radius: 4px; margin-bottom: 12px;">
-										<div style="font-weight: 600; font-size: 13px; color: #1d2327; margin-bottom: 4px;">
-											#<?php echo esc_html( $queue_items[0]['id'] ); ?>: <?php echo esc_html( $queue_items[0]['topic'] ); ?>
-										</div>
-										<div class="description" style="font-size: 12px; color: #64748b;">
-											<?php printf( esc_html__( 'Nạp lúc: %s', 'sergio-ai-studio' ), esc_html( $queue_items[0]['created_at'] ) ); ?>
-										</div>
-									</div>
-								<?php endif; ?>
-								<p style="margin: 0;">
-									<a href="#tab-scheduler" class="button button-secondary button-small nav-tab-link" data-tab="tab-scheduler">
-										<?php esc_html_e( 'Quản lý hàng đợi &rarr;', 'sergio-ai-studio' ); ?>
-									</a>
-								</p>
-							</div>
-						</div>
-					</div>
-
-					<div class="postbox">
-						<div class="postbox-header">
-							<h2 class="hndle">
-								<span><?php esc_html_e( 'Nhật Ký Thực Thi Gần Đây', 'sergio-ai-studio' ); ?></span>
-							</h2>
-						</div>
-						<div class="inside" style="padding: 0;">
-							<?php
-							$recent_logs = array_slice( $logs, 0, 5 );
-							if ( empty( $recent_logs ) ) : ?>
-								<p style="padding: 16px; color: #64748b; margin: 0;"><?php esc_html_e( 'Chưa có nhật ký nào được ghi nhận.', 'sergio-ai-studio' ); ?></p>
-							<?php else : ?>
-								<table class="widefat striped" style="border: none;">
-									<thead>
-										<tr>
-											<th style="width: 160px;"><?php esc_html_e( 'Thời Gian', 'sergio-ai-studio' ); ?></th>
-											<th style="width: 100px;"><?php esc_html_e( 'Cấp Độ', 'sergio-ai-studio' ); ?></th>
-											<th style="width: 160px;"><?php esc_html_e( 'Giai Đoạn', 'sergio-ai-studio' ); ?></th>
-											<th><?php esc_html_e( 'Thông Điệp', 'sergio-ai-studio' ); ?></th>
-										</tr>
-									</thead>
-									<tbody>
-										<?php foreach ( $recent_logs as $log ) : ?>
-											<tr>
-												<td style="vertical-align: middle;"><?php echo esc_html( $log['created_at'] ); ?></td>
-												<td style="vertical-align: middle;">
-													<?php if ( 'error' === $log['level'] ) : ?>
-														<span class="sergio-log-badge badge-error"><?php esc_html_e( 'LỖI', 'sergio-ai-studio' ); ?></span>
-													<?php elseif ( 'warning' === $log['level'] ) : ?>
-														<span class="sergio-log-badge badge-warning"><?php esc_html_e( 'CẢNH BÁO', 'sergio-ai-studio' ); ?></span>
-													<?php else : ?>
-														<span class="sergio-log-badge badge-info"><?php esc_html_e( 'INFO', 'sergio-ai-studio' ); ?></span>
-													<?php endif; ?>
-												</td>
-												<td style="vertical-align: middle;">
-													<span style="display: inline-block; padding: 2px 6px; background: #f0f0f1; border-radius: 3px; font-size: 11px; color: #2c3338;">
-														<?php echo esc_html( $log['stage'] ); ?>
-													</span>
-												</td>
-												<td style="vertical-align: middle;"><?php echo wp_kses_post( Sergio_AI_Logger::format_log_message_html( $log['message'] ) ); ?></td>
-											</tr>
-										<?php endforeach; ?>
-									</tbody>
-								</table>
-								<div style="padding: 10px 16px; border-top: 1px solid #c3c4c7; background: #f6f7f7; display: flex; justify-content: flex-end; align-items: center;">
-									<a href="#tab-logs" class="button button-secondary button-small nav-tab-link" data-tab="tab-logs">
-										<?php esc_html_e( 'Xem toàn bộ nhật ký &rarr;', 'sergio-ai-studio' ); ?>
-									</a>
-								</div>
-							<?php endif; ?>
-						</div>
-					</div>
-				</div>
-
-				<!-- ===================================== -->
-				<!-- TAB 2: CÀI ĐẶT                       -->
-				<!-- ===================================== -->
-				<div id="tab-settings" class="sergio-tab-pane <?php echo 'settings' === $active_tab ? 'is-active' : ''; ?>">
-					<form method="post" action="options.php">
-						<?php settings_fields( 'sergio_ai_studio_settings_group' ); ?>
-
-						<div class="postbox">
-							<div class="postbox-header"><h2 class="hndle"><span><?php esc_html_e( 'Khóa Google Gemini API', 'sergio-ai-studio' ); ?></span></h2></div>
-							<div class="inside">
-								<table class="form-table" role="presentation">
-									<tbody>
-										<tr>
-											<th scope="row">
-												<label for="gemini_api_key"><?php esc_html_e( 'Gemini API Key', 'sergio-ai-studio' ); ?></label>
-											</th>
-											<td>
-												<input type="password" id="gemini_api_key" name="sergio_ai_studio_options[gemini_api_key]"
-													value="<?php echo esc_attr( $masked_key ); ?>"
-													class="regular-text" placeholder="AIzaSy..."
-													autocomplete="off"
-													<?php disabled( $is_config_key ); ?> />
-												<button type="button" class="button button-secondary" id="btn_test_conn">
-													<?php esc_html_e( 'Kiểm tra kết nối', 'sergio-ai-studio' ); ?>
-												</button>
-												<span id="api_conn_feedback" style="margin-left: 10px; font-weight: 500;"></span>
-												<?php if ( $is_config_key ) : ?>
-													<p class="description" style="color: #2271b1;">
-														<strong>wp-config.php:</strong> <?php esc_html_e( 'Khóa API đang được khóa an toàn qua hằng số SERGIO_AI_GEMINI_API_KEY.', 'sergio-ai-studio' ); ?>
-													</p>
-												<?php else : ?>
-													<p class="description">
-														<?php esc_html_e( 'Khóa được mã hóa an toàn bằng AES-256. Lấy khóa API miễn phí từ Google AI Studio.', 'sergio-ai-studio' ); ?>
-													</p>
-												<?php endif; ?>
-											</td>
-										</tr>
-									</tbody>
-								</table>
-							</div>
-						</div>
-
-						<div class="postbox">
-							<div class="postbox-header">
-								<h2 class="hndle">
-									<span><?php esc_html_e( 'Mô Hình Ngôn Ngữ (LLM)', 'sergio-ai-studio' ); ?></span>
-								</h2>
-							</div>
-							<div class="inside">
-								<table class="form-table" role="presentation">
-									<tbody>
-										<tr>
-											<th scope="row">
-												<label for="gemini_model_primary"><?php esc_html_e( 'Mô Hình Chính (Primary)', 'sergio-ai-studio' ); ?></label>
-											</th>
-											<td>
-												<select id="gemini_model_primary" name="sergio_ai_studio_options[gemini_model_primary]" style="min-width: 300px;">
-													<?php if ( ! empty( $models ) ) : ?>
-														<?php foreach ( $models as $m ) : ?>
-															<option value="<?php echo esc_attr( $m['name'] ); ?>" <?php selected( $primary_model, $m['name'] ); ?>>
-																<?php echo esc_html( $m['display_name'] . ' (' . $m['name'] . ')' ); ?>
-															</option>
-														<?php endforeach; ?>
-													<?php else : ?>
-														<option value="gemini-2.5-flash" <?php selected( $primary_model, 'gemini-2.5-flash' ); ?>>Gemini 2.5 Flash</option>
-														<option value="gemini-2.0-flash" <?php selected( $primary_model, 'gemini-2.0-flash' ); ?>>Gemini 2.0 Flash (Tốc độ cao & Quota độc lập)</option>
-														<option value="gemini-1.5-flash" <?php selected( $primary_model, 'gemini-1.5-flash' ); ?>>Gemini 1.5 Flash (Ổn định LTS)</option>
-														<option value="gemini-3.5-flash-lite" <?php selected( $primary_model, 'gemini-3.5-flash-lite' ); ?>>Gemini 3.5 Flash Lite</option>
-														<option value="gemini-2.5-pro" <?php selected( $primary_model, 'gemini-2.5-pro' ); ?>>Gemini 2.5 Pro</option>
-													<?php endif; ?>
-												</select>
-												<button type="button" class="button button-secondary" id="btn_refresh_models">
-													<?php esc_html_e( 'Làm mới danh sách', 'sergio-ai-studio' ); ?>
-												</button>
-												<p class="description"><?php esc_html_e( 'Dùng cho nghiên cứu dữ kiện và biên soạn nội dung chính.', 'sergio-ai-studio' ); ?></p>
-											</td>
-										</tr>
-										<tr>
-											<th scope="row">
-												<label for="gemini_model_fallback"><?php esc_html_e( 'Mô Hình Dự Phòng (Fallback)', 'sergio-ai-studio' ); ?></label>
-											</th>
-											<td>
-												<select id="gemini_model_fallback" name="sergio_ai_studio_options[gemini_model_fallback]" style="min-width: 300px;">
-													<?php if ( ! empty( $models ) ) : ?>
-														<?php foreach ( $models as $m ) : ?>
-															<option value="<?php echo esc_attr( $m['name'] ); ?>" <?php selected( $fallback_model, $m['name'] ); ?>>
-																<?php echo esc_html( $m['display_name'] . ' (' . $m['name'] . ')' ); ?>
-															</option>
-														<?php endforeach; ?>
-													<?php else : ?>
-														<option value="gemini-2.0-flash" <?php selected( $fallback_model, 'gemini-2.0-flash' ); ?>>Gemini 2.0 Flash (Tốc độ cao & Quota độc lập)</option>
-														<option value="gemini-1.5-flash" <?php selected( $fallback_model, 'gemini-1.5-flash' ); ?>>Gemini 1.5 Flash (Ổn định LTS)</option>
-														<option value="gemini-3.5-flash-lite" <?php selected( $fallback_model, 'gemini-3.5-flash-lite' ); ?>>Gemini 3.5 Flash Lite</option>
-														<option value="gemini-2.5-flash" <?php selected( $fallback_model, 'gemini-2.5-flash' ); ?>>Gemini 2.5 Flash</option>
-													<?php endif; ?>
-												</select>
-												<p class="description"><?php esc_html_e( 'Tự động kích hoạt khi mô hình chính gặp lỗi hạn mức quota (429) hoặc máy chủ quá tải (503).', 'sergio-ai-studio' ); ?></p>
-											</td>
-										</tr>
-									</tbody>
-								</table>
-							</div>
-						</div>
-
-						<div class="postbox">
-							<div class="postbox-header"><h2 class="hndle"><span><?php esc_html_e( 'Thiết Lập Mặc Định', 'sergio-ai-studio' ); ?></span></h2></div>
-							<div class="inside">
-								<table class="form-table" role="presentation">
-									<tbody>
-										<tr>
-											<th scope="row">
-												<label for="default_language"><?php esc_html_e( 'Ngôn Ngữ Toàn Site', 'sergio-ai-studio' ); ?></label>
-											</th>
-											<td>
-												<select id="default_language" name="sergio_ai_studio_options[default_language]">
-													<option value="vi" <?php selected( $language, 'vi' ); ?>>Tiếng Việt (Vietnamese)</option>
-													<option value="en" <?php selected( $language, 'en' ); ?>>English (Global)</option>
-												</select>
-											</td>
-										</tr>
-										<tr>
-											<th scope="row">
-												<label><?php esc_html_e( 'Trạng Thái Xuất Bản Mặc Định', 'sergio-ai-studio' ); ?></label>
-											</th>
-											<td>
-												<select name="sergio_ai_studio_options[default_post_status]">
-													<option value="draft" selected><?php esc_html_e( 'Bản nháp (Draft — Khuyên dùng)', 'sergio-ai-studio' ); ?></option>
-													<option value="publish"><?php esc_html_e( 'Đăng ngay lập tức (Publish)', 'sergio-ai-studio' ); ?></option>
-												</select>
-												<p class="description" style="color: #b32d2e;">
-													<?php esc_html_e( 'Khuyến nghị: Giữ Bản nháp để người biên tập kiểm duyệt nội dung trước khi công khai.', 'sergio-ai-studio' ); ?>
-												</p>
-											</td>
-										</tr>
-									</tbody>
-								</table>
-							</div>
-						</div>
-
-						<?php submit_button( __( 'Lưu Cài Đặt', 'sergio-ai-studio' ) ); ?>
-					</form>
-				</div>
-
-				<!-- ===================================== -->
-				<!-- TAB 3: LÊN LỊCH                     -->
-				<!-- ===================================== -->
-				<div id="tab-scheduler" class="sergio-tab-pane <?php echo 'scheduler' === $active_tab ? 'is-active' : ''; ?>">
-					<form method="post" action="options.php">
-						<?php settings_fields( 'sergio_ai_studio_settings_group' ); ?>
-						<input type="hidden" name="sergio_ai_studio_options[gemini_api_key]" value="<?php echo esc_attr( $masked_key ); ?>" />
-						<input type="hidden" name="sergio_ai_studio_options[gemini_model_primary]" value="<?php echo esc_attr( $primary_model ); ?>" />
-						<input type="hidden" name="sergio_ai_studio_options[gemini_model_fallback]" value="<?php echo esc_attr( $fallback_model ); ?>" />
-						<input type="hidden" name="sergio_ai_studio_options[default_language]" value="<?php echo esc_attr( $language ); ?>" />
-
-						<div class="sergio-grid-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-							<div class="postbox">
-								<div class="postbox-header"><h2 class="hndle"><span><?php esc_html_e( 'Chu Kỳ & Số Lượng Bài Viết', 'sergio-ai-studio' ); ?></span></h2></div>
-								<div class="inside">
-									<table class="form-table" role="presentation">
-										<tbody>
-											<tr>
-												<th scope="row"><?php esc_html_e( 'Kích Hoạt WP-Cron', 'sergio-ai-studio' ); ?></th>
-												<td>
-													<label>
-														<input type="checkbox" name="sergio_ai_studio_options[scheduler_enabled]" value="1" <?php checked( $scheduler_enabled, true ); ?> />
-														<?php esc_html_e( 'Bật lịch trình tự động chạy ngầm', 'sergio-ai-studio' ); ?>
-													</label>
-												</td>
-											</tr>
-											<tr>
-												<th scope="row">
-													<label for="schedule_frequency_select"><?php esc_html_e( 'Tần Suất Kích Hoạt', 'sergio-ai-studio' ); ?></label>
-												</th>
-												<td>
-													<select name="sergio_ai_studio_options[schedule_frequency]" id="schedule_frequency_select">
-														<option value="every_one_hour" <?php selected( $frequency, 'every_one_hour' ); ?>><?php esc_html_e( 'Mỗi 1 giờ (1 Hour)', 'sergio-ai-studio' ); ?></option>
-														<option value="every_two_hours" <?php selected( $frequency, 'every_two_hours' ); ?>><?php esc_html_e( 'Mỗi 2 giờ', 'sergio-ai-studio' ); ?></option>
-														<option value="every_four_hours" <?php selected( $frequency, 'every_four_hours' ); ?>><?php esc_html_e( 'Mỗi 4 giờ', 'sergio-ai-studio' ); ?></option>
-														<option value="every_six_hours" <?php selected( $frequency, 'every_six_hours' ); ?>><?php esc_html_e( 'Mỗi 6 giờ', 'sergio-ai-studio' ); ?></option>
-														<option value="twicedaily" <?php selected( $frequency, 'twicedaily' ); ?>><?php esc_html_e( 'Mỗi 12 giờ (2 lần/ngày)', 'sergio-ai-studio' ); ?></option>
-														<option value="daily" <?php selected( $frequency, 'daily' ); ?>><?php esc_html_e( 'Hàng ngày (1 lần/ngày)', 'sergio-ai-studio' ); ?></option>
-														<option value="weekly" <?php selected( $frequency, 'weekly' ); ?>><?php esc_html_e( 'Hàng tuần', 'sergio-ai-studio' ); ?></option>
-														<option value="sergio_custom_interval" <?php selected( $frequency, 'sergio_custom_interval' ); ?>><?php esc_html_e( 'Tùy chỉnh số giờ cụ thể...', 'sergio-ai-studio' ); ?></option>
-													</select>
-													<div id="custom_hours_wrapper" style="margin-top: 8px; display: <?php echo 'sergio_custom_interval' === $frequency ? 'block' : 'none'; ?>;">
-														<label for="schedule_custom_hours"><?php esc_html_e( 'Nhập số giờ (1 - 168):', 'sergio-ai-studio' ); ?></label>
-														<input type="number" id="schedule_custom_hours" name="sergio_ai_studio_options[schedule_custom_hours]"
-															value="<?php echo esc_attr( $custom_hours ); ?>" min="1" max="168" class="small-text" />
-													</div>
-												</td>
-											</tr>
-											<tr>
-												<th scope="row">
-													<label for="schedule_posts_per_run"><?php esc_html_e( 'Số Bài Mỗi Lần Chạy', 'sergio-ai-studio' ); ?></label>
-												</th>
-												<td>
-													<select name="sergio_ai_studio_options[schedule_posts_per_run]" id="schedule_posts_per_run">
-														<option value="1" <?php selected( $posts_per_run, 1 ); ?>>1 bài / phiên (Chuẩn)</option>
-														<option value="2" <?php selected( $posts_per_run, 2 ); ?>>2 bài / phiên</option>
-														<option value="3" <?php selected( $posts_per_run, 3 ); ?>>3 bài / phiên</option>
-														<option value="5" <?php selected( $posts_per_run, 5 ); ?>>5 bài / phiên</option>
-													</select>
-												</td>
-											</tr>
-											<tr>
-												<th scope="row">
-													<label for="schedule_max_posts_per_day"><?php esc_html_e( 'Trần Giới Hạn / Ngày', 'sergio-ai-studio' ); ?></label>
-												</th>
-												<td>
-													<select name="sergio_ai_studio_options[schedule_max_posts_per_day]" id="schedule_max_posts_per_day">
-														<option value="5" <?php selected( $max_posts_per_day, 5 ); ?>>Tối đa 5 bài / ngày</option>
-														<option value="10" <?php selected( $max_posts_per_day, 10 ); ?>>Tối đa 10 bài / ngày</option>
-														<option value="20" <?php selected( $max_posts_per_day, 20 ); ?>>Tối đa 20 bài / ngày</option>
-														<option value="50" <?php selected( $max_posts_per_day, 50 ); ?>>Tối đa 50 bài / ngày</option>
-														<option value="0" <?php selected( $max_posts_per_day, 0 ); ?>>Không giới hạn</option>
-													</select>
-												</td>
-											</tr>
-										</tbody>
-									</table>
-
-									<div style="margin-top: 15px; padding: 10px 14px; background: #f6f7f7; border: 1px solid #c3c4c7; border-radius: 4px; font-size: 13px; line-height: 1.5;">
-										<strong><?php esc_html_e( 'Trạng thái WP-Cron:', 'sergio-ai-studio' ); ?></strong>
-										<?php if ( $scheduler_enabled && $next_run_time ) : ?>
-											<span style="color: #007017; font-weight: 600;"><?php printf( esc_html__( 'Đang chạy — Lần tới: %s', 'sergio-ai-studio' ), esc_html( $next_run_time ) ); ?></span>
-										<?php elseif ( $scheduler_enabled ) : ?>
-											<span style="color: #007017; font-weight: 600;"><?php esc_html_e( 'Đang kích hoạt', 'sergio-ai-studio' ); ?></span>
-										<?php else : ?>
-											<span style="color: #64748b;"><?php esc_html_e( 'Lịch trình hiện đang tắt', 'sergio-ai-studio' ); ?></span>
-										<?php endif; ?>
-										<span style="color: #8c8f94; margin: 0 6px;">&bull;</span>
-										<span><?php printf( esc_html__( 'Hôm nay: %d bài đã tạo.', 'sergio-ai-studio' ), (int) $posts_today ); ?></span>
-									</div>
-								</div>
-							</div>
-
-							<div class="postbox">
-								<div class="postbox-header"><h2 class="hndle"><span><?php esc_html_e( 'Chiến Lược Chủ Đề & Định Dạng', 'sergio-ai-studio' ); ?></span></h2></div>
-								<div class="inside">
-									<table class="form-table" role="presentation">
-										<tbody>
-											<tr>
-												<th scope="row">
-													<label for="schedule_topic_mode"><?php esc_html_e( 'Nguồn Cung Cấp Chủ Đề', 'sergio-ai-studio' ); ?></label>
-												</th>
-												<td>
-													<select name="sergio_ai_studio_options[schedule_topic_mode]" id="schedule_topic_mode" style="width: 100%;">
-														<option value="hybrid" <?php selected( $topic_mode, 'hybrid' ); ?>>
-															<?php esc_html_e( 'Kết Hợp Thông Minh (Ưu tiên hàng đợi, tự tìm khi hết)', 'sergio-ai-studio' ); ?>
-														</option>
-														<option value="queue_only" <?php selected( $topic_mode, 'queue_only' ); ?>>
-															<?php esc_html_e( 'Chỉ Lấy Từ Hàng Đợi (Chỉ viết chủ đề nạp sẵn)', 'sergio-ai-studio' ); ?>
-														</option>
-														<option value="ai_discover" <?php selected( $topic_mode, 'ai_discover' ); ?>>
-															<?php esc_html_e( 'AI Tự Khám Phá (Tự nghiên cứu theo lĩnh vực)', 'sergio-ai-studio' ); ?>
-														</option>
-													</select>
-												</td>
-											</tr>
-											<tr id="niche_topic_wrapper">
-												<th scope="row">
-													<label for="schedule_niche_topic"><?php esc_html_e( 'Lĩnh Vực / Từ Khóa Ngách', 'sergio-ai-studio' ); ?></label>
-												</th>
-												<td>
-													<input type="text" id="schedule_niche_topic" name="sergio_ai_studio_options[schedule_niche_topic]"
-														value="<?php echo esc_attr( $niche_topic ); ?>" class="large-text"
-														placeholder="<?php esc_attr_e( 'Ví dụ: Tin tức AI, ChatGPT, WordPress...', 'sergio-ai-studio' ); ?>" />
-													<p class="description"><?php esc_html_e( 'Khi tự động nghiên cứu, Gemini sẽ tìm kiếm sự kiện và thực thể thật mới nhất trong lĩnh vực này.', 'sergio-ai-studio' ); ?></p>
-												</td>
-											</tr>
-											<tr>
-												<th scope="row">
-													<label for="schedule_target_length"><?php esc_html_e( 'Độ Dài Bài Viết Mục Tiêu', 'sergio-ai-studio' ); ?></label>
-												</th>
-												<td>
-													<select name="sergio_ai_studio_options[schedule_target_length]" id="schedule_target_length">
-														<option value="standard" <?php selected( $target_length, 'standard' ); ?>><?php esc_html_e( 'Tiêu chuẩn (~800 - 1,200 từ)', 'sergio-ai-studio' ); ?></option>
-														<option value="short" <?php selected( $target_length, 'short' ); ?>><?php esc_html_e( 'Ngắn gọn súc tích (~500 - 800 từ)', 'sergio-ai-studio' ); ?></option>
-														<option value="deep_dive" <?php selected( $target_length, 'deep_dive' ); ?>><?php esc_html_e( 'Phân tích chuyên sâu (~1,500 - 2,500 từ)', 'sergio-ai-studio' ); ?></option>
-													</select>
-												</td>
-											</tr>
-											<tr>
-												<th scope="row">
-													<label for="default_schedule_author"><?php esc_html_e( 'Tác Giả & Chuyên Mục', 'sergio-ai-studio' ); ?></label>
-												</th>
-												<td>
-													<select name="sergio_ai_studio_options[default_schedule_author]" id="default_schedule_author">
-														<?php foreach ( $authors as $auth ) : ?>
-															<option value="<?php echo esc_attr( $auth->ID ); ?>" <?php selected( $default_sched_auth, $auth->ID ); ?>>
-																<?php echo esc_html( $auth->display_name ); ?>
-															</option>
-														<?php endforeach; ?>
-													</select>
-
-													<select name="sergio_ai_studio_options[default_schedule_cat]" id="default_schedule_cat">
-														<option value="0"><?php esc_html_e( '-- Chọn chuyên mục mặc định --', 'sergio-ai-studio' ); ?></option>
-														<?php foreach ( $categories as $cat ) : ?>
-															<option value="<?php echo esc_attr( $cat->term_id ); ?>" <?php selected( $default_sched_cat, $cat->term_id ); ?>>
-																<?php echo esc_html( $cat->name ); ?>
-															</option>
-														<?php endforeach; ?>
-													</select>
-												</td>
-											</tr>
-											<tr>
-												<th scope="row"><?php esc_html_e( 'Trạng Thái Khi Sinh', 'sergio-ai-studio' ); ?></th>
-												<td>
-													<select name="sergio_ai_studio_options[default_schedule_status]">
-														<option value="draft" <?php selected( $default_sched_stat, 'draft' ); ?>><?php esc_html_e( 'Bản nháp (Draft — Khuyên dùng)', 'sergio-ai-studio' ); ?></option>
-														<option value="publish" <?php selected( $default_sched_stat, 'publish' ); ?>><?php esc_html_e( 'Xuất bản ngay (Publish)', 'sergio-ai-studio' ); ?></option>
-													</select>
-												</td>
-											</tr>
-											<tr>
-												<th scope="row">
-													<label for="schedule_image_option"><?php esc_html_e( 'Ảnh Đại Diện Bài Viết', 'sergio-ai-studio' ); ?></label>
-												</th>
-												<td>
-													<select name="sergio_ai_studio_options[schedule_image_option]" id="schedule_image_option">
-														<option value="reference" <?php selected( $schedule_image_opt, 'reference' ); ?>>
-															<?php esc_html_e( 'Trích xuất từ nguồn tham khảo (Ghi nguồn tác giả rõ ràng)', 'sergio-ai-studio' ); ?>
-														</option>
-														<option value="banner" <?php selected( $schedule_image_opt, 'banner' ); ?>>
-															<?php esc_html_e( 'Tự động vẽ Banner đồ họa thương hiệu (1200x630, 0 API)', 'sergio-ai-studio' ); ?>
-														</option>
-														<option value="none" <?php selected( $schedule_image_opt, 'none' ); ?>>
-															<?php esc_html_e( 'Không tạo ảnh đại diện (Tối ưu tốc độ tối đa)', 'sergio-ai-studio' ); ?>
-														</option>
-													</select>
-													<p class="description">
-														<?php esc_html_e( 'Phương thức tự động tạo hoặc gắn ảnh đại diện (Featured Image) chuẩn Rank Math khi tiến trình lập lịch chạy.', 'sergio-ai-studio' ); ?>
-													</p>
-												</td>
-											</tr>
-										</tbody>
-									</table>
-								</div>
-							</div>
-						</div>
-
-						<p style="margin-top: 15px;">
-							<?php submit_button( __( 'Lưu Toàn Bộ Cấu Hình Lịch Trình', 'sergio-ai-studio' ), 'primary', 'submit', false ); ?>
-						</p>
-					</form>
-
-					<!-- Queue Workbench -->
-					<div class="sergio-grid-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 25px;">
-						<div class="postbox">
-							<div class="postbox-header"><h2 class="hndle"><span><?php esc_html_e( 'Nạp Chủ Đề Vào Hàng Đợi (Queue)', 'sergio-ai-studio' ); ?></span></h2></div>
-							<div class="inside">
-								<p class="description"><?php esc_html_e( 'Dán danh sách chủ đề hoặc ý định tìm kiếm (mỗi dòng một chủ đề). Hệ thống sẽ xử lý tuần tự theo từng chu kỳ.', 'sergio-ai-studio' ); ?></p>
-								<p>
-									<textarea id="queue_topics_input" rows="5" class="large-text"
-										placeholder="<?php esc_attr_e( "Đánh giá chi tiết mô hình Claude 3.7 Sonnet\nMeta ra mắt kính Ray-Ban thông minh tích hợp AI\nOpenAI công bố lộ trình tác nhân tự trị 2026...", 'sergio-ai-studio' ); ?>"></textarea>
-								</p>
-								<p style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-									<select id="queue_category_select">
-										<option value="0"><?php esc_html_e( '-- Theo cài đặt mặc định --', 'sergio-ai-studio' ); ?></option>
-										<?php foreach ( $categories as $cat ) : ?>
-											<option value="<?php echo esc_attr( $cat->term_id ); ?>"><?php echo esc_html( $cat->name ); ?></option>
-										<?php endforeach; ?>
-									</select>
-									<button type="button" class="button button-primary" id="btn_add_to_queue">
-										<?php esc_html_e( 'Nạp Hàng Đợi', 'sergio-ai-studio' ); ?>
-									</button>
-									<span id="queue_add_feedback" style="font-weight: 500;"></span>
-								</p>
-							</div>
-						</div>
-
-						<div class="postbox">
-							<div class="postbox-header"><h2 class="hndle"><span><?php esc_html_e( 'Chạy Thử Nghiệm Ngay Lập Tức', 'sergio-ai-studio' ); ?></span></h2></div>
-							<div class="inside">
-								<p><?php printf( esc_html__( 'Kích hoạt ngay 1 đợt xử lý (sẽ tạo %d bài theo đúng quy tắc đã cấu hình). Không cần chờ đến giờ chạy tiếp theo.', 'sergio-ai-studio' ), (int) $posts_per_run ); ?></p>
-								<div style="margin: 12px 0 16px; padding: 10px 14px; background: #f6f7f7; border: 1px solid #c3c4c7; border-radius: 4px; font-size: 13px;">
-									<p style="margin: 0 0 6px; font-weight: 600;">
-										<?php esc_html_e( 'Chế độ hiện tại:', 'sergio-ai-studio' ); ?>
-										<?php
-										if ( 'queue_only' === $topic_mode ) {
-											esc_html_e( 'Chỉ lấy từ Hàng Đợi', 'sergio-ai-studio' );
-										} elseif ( 'ai_discover' === $topic_mode ) {
-											esc_html_e( 'AI tự động nghiên cứu theo Lĩnh vực ngách', 'sergio-ai-studio' );
-										} else {
-											esc_html_e( 'Kết Hợp Thông Minh (Hàng đợi + Lĩnh vực ngách)', 'sergio-ai-studio' );
-										}
-										?>
-									</p>
-									<p class="description" style="margin: 0;">
-										<?php printf( esc_html__( 'Quy mô đợt: %d bài viết / phiên', 'sergio-ai-studio' ), (int) $posts_per_run ); ?>
-										<span style="color: #8c8f94; margin: 0 6px;">&bull;</span>
-										<?php
-										$img_opt_label = ( 'none' === $schedule_image_opt ) ? __( 'Không tạo ảnh', 'sergio-ai-studio' ) : __( 'Ảnh từ nguồn tin', 'sergio-ai-studio' );
-										printf( esc_html__( 'Ảnh: %s', 'sergio-ai-studio' ), esc_html( $img_opt_label ) );
-										?>
-									</p>
-								</div>
-								<p>
-									<button type="button" class="button button-primary button-large" id="btn_run_cron_now">
-										<span><?php printf( esc_html__( 'Chạy Thử Ngay %d Bài (Run Batch Now)', 'sergio-ai-studio' ), (int) $posts_per_run ); ?></span>
-									</button>
-								</p>
-								<div id="cron_run_feedback" style="margin-top: 8px; font-size: 13px;"></div>
-							</div>
-						</div>
-					</div>
-
-					<div class="postbox" style="margin-top: 20px;">
-						<div class="postbox-header">
-							<h2 class="hndle">
-								<span><?php esc_html_e( 'Danh Sách Hàng Đợi Hiện Tại', 'sergio-ai-studio' ); ?> (<?php echo count( $queue_items ); ?>)</span>
-							</h2>
-						</div>
-						<div class="inside" style="padding: 0;">
-							<table class="widefat striped" id="queue_items_table" style="border: none;">
-								<thead>
-									<tr>
-										<th style="width: 50px;">ID</th>
-										<th><?php esc_html_e( 'Chủ Đề Nghiên Cứu', 'sergio-ai-studio' ); ?></th>
-										<th style="width: 120px;"><?php esc_html_e( 'Trạng Thái', 'sergio-ai-studio' ); ?></th>
-										<th style="width: 80px; text-align: center;"><?php esc_html_e( 'Lần Thử', 'sergio-ai-studio' ); ?></th>
-										<th style="width: 160px;"><?php esc_html_e( 'Thời Gian Tạo', 'sergio-ai-studio' ); ?></th>
-										<th style="width: 130px; text-align: center;"><?php esc_html_e( 'Thao Tác', 'sergio-ai-studio' ); ?></th>
-									</tr>
-								</thead>
-								<tbody>
-									<?php if ( empty( $queue_items ) ) : ?>
-										<tr id="queue_empty_row">
-											<td colspan="6" style="padding: 16px; color: #64748b;">
-												<?php esc_html_e( 'Hàng đợi hiện đang trống. Bạn có thể nạp chủ đề ở phía trên hoặc để AI tự động nghiên cứu theo Lĩnh vực ngách.', 'sergio-ai-studio' ); ?>
-											</td>
-										</tr>
-									<?php else : ?>
-										<?php foreach ( $queue_items as $q ) : ?>
-											<tr id="queue-row-<?php echo esc_attr( $q['id'] ); ?>">
-												<td style="vertical-align: middle;">#<?php echo esc_html( $q['id'] ); ?></td>
-												<td style="vertical-align: middle;">
-													<strong><?php echo esc_html( $q['topic'] ); ?></strong>
-													<?php if ( ! empty( $q['last_error'] ) ) : ?>
-														<div class="item-error-subtext" style="color: #b32d2e; font-size: 11px; margin-top: 3px;"><?php echo esc_html( $q['last_error'] ); ?></div>
-													<?php endif; ?>
-												</td>
-												<td style="vertical-align: middle;">
-													<?php if ( 'completed' === $q['status'] ) : ?>
-														<span class="sergio-queue-badge sergio-log-badge badge-success"><?php esc_html_e( 'HOÀN TẤT', 'sergio-ai-studio' ); ?></span>
-													<?php elseif ( 'failed' === $q['status'] ) : ?>
-														<span class="sergio-queue-badge sergio-log-badge badge-error"><?php esc_html_e( 'THẤT BẠI', 'sergio-ai-studio' ); ?></span>
-													<?php else : ?>
-														<span class="sergio-queue-badge sergio-log-badge badge-info"><?php esc_html_e( 'CHỜ XỬ LÝ', 'sergio-ai-studio' ); ?></span>
-													<?php endif; ?>
-												</td>
-												<td style="text-align: center; color: #64748b; vertical-align: middle;"><?php echo (int) ( $q['attempts'] ?? 0 ); ?>/3</td>
-												<td style="vertical-align: middle;"><?php echo esc_html( $q['created_at'] ); ?></td>
-												<td style="text-align: center; white-space: nowrap; vertical-align: middle;">
-													<?php if ( 'failed' === $q['status'] ) : ?>
-														<button type="button" class="button button-small sergio-btn-retry-queue" data-id="<?php echo esc_attr( $q['id'] ); ?>" title="<?php esc_attr_e( 'Thử lại chủ đề này', 'sergio-ai-studio' ); ?>">
-															<?php esc_html_e( 'Thử lại', 'sergio-ai-studio' ); ?>
-														</button>
-													<?php elseif ( 'pending' === $q['status'] ) : ?>
-														<button type="button" class="button button-small sergio-btn-priority-queue" data-id="<?php echo esc_attr( $q['id'] ); ?>" title="<?php esc_attr_e( 'Đẩy lên đầu hàng đợi ưu tiên', 'sergio-ai-studio' ); ?>">
-															<?php esc_html_e( 'Ưu tiên', 'sergio-ai-studio' ); ?>
-														</button>
-													<?php endif; ?>
-													<button type="button" class="button button-small button-link-delete sergio-btn-del-queue" data-id="<?php echo esc_attr( $q['id'] ); ?>" title="<?php esc_attr_e( 'Xóa mục này', 'sergio-ai-studio' ); ?>">
-														<?php esc_html_e( 'Xóa', 'sergio-ai-studio' ); ?>
-													</button>
-												</td>
-											</tr>
-										<?php endforeach; ?>
-									<?php endif; ?>
-								</tbody>
-							</table>
-						</div>
-					</div>
-				</div>
-
-				<!-- ===================================== -->
-				<!-- TAB 4: NGHIÊN CỨU & VIẾT BÀI         -->
-				<!-- ===================================== -->
-				<div id="tab-writer" class="sergio-tab-pane <?php echo 'writer' === $active_tab ? 'is-active' : ''; ?>">
-					<div class="postbox">
-						<div class="postbox-header"><h2 class="hndle"><span><?php esc_html_e( 'Nghiên Cứu Dữ Kiện & Viết Bài', 'sergio-ai-studio' ); ?></span></h2></div>
-						<div class="inside">
-							<p class="description" style="margin-bottom: 15px;">
-								<?php esc_html_e( 'Hệ thống tra cứu dữ kiện web bằng Google Search Grounding, lập Fact Pack đối chứng và chấp bút bài viết độc bản chuẩn Rank Math SEO.', 'sergio-ai-studio' ); ?>
-							</p>
-
-							<table class="form-table" role="presentation">
-								<tbody>
-									<tr>
-										<th scope="row">
-											<label for="writer_seed_query"><?php esc_html_e( 'Chủ Đề Hoặc Ý Định Tìm Kiếm (*)', 'sergio-ai-studio' ); ?></label>
-										</th>
-										<td>
-											<input type="text" id="writer_seed_query" class="large-text"
-												placeholder="<?php esc_attr_e( 'Ví dụ: OpenAI ra mắt mô hình o3-mini, Meta Llama 4, chip M4 Apple...', 'sergio-ai-studio' ); ?>" />
-											<p class="description">
-												<?php esc_html_e( 'Hệ thống sẽ bóc tách các thực thể thật và xây dựng tiêu đề báo chí độc bản từ dữ kiện kiểm chứng, không dùng nguyên văn chuỗi này.', 'sergio-ai-studio' ); ?>
-											</p>
-										</td>
-									</tr>
-									<tr>
-										<th scope="row">
-											<label for="writer_category"><?php esc_html_e( 'Chuyên Mục & Ngôn Ngữ', 'sergio-ai-studio' ); ?></label>
-										</th>
-										<td>
-											<select id="writer_category">
-												<option value="0"><?php esc_html_e( '-- Chọn chuyên mục đích --', 'sergio-ai-studio' ); ?></option>
-												<?php foreach ( $categories as $cat ) : ?>
-													<option value="<?php echo esc_attr( $cat->term_id ); ?>"><?php echo esc_html( $cat->name ); ?></option>
-												<?php endforeach; ?>
-											</select>
-
-											<select id="writer_language" style="margin-left: 10px;">
-												<option value="vi" <?php selected( $language, 'vi' ); ?>>Tiếng Việt (Vietnamese)</option>
-												<option value="en" <?php selected( $language, 'en' ); ?>>English (Global)</option>
-											</select>
-										</td>
-									</tr>
-									<tr>
-										<th scope="row">
-											<label for="writer_target_length"><?php esc_html_e( 'Độ Dài & Giọng Văn', 'sergio-ai-studio' ); ?></label>
-										</th>
-										<td>
-											<select id="writer_target_length">
-												<option value="standard" selected><?php esc_html_e( 'Tiêu chuẩn SEO (~1.000 - 1.500 từ)', 'sergio-ai-studio' ); ?></option>
-												<option value="short"><?php esc_html_e( 'Ngắn gọn / Tin nhanh (~600 - 900 từ)', 'sergio-ai-studio' ); ?></option>
-												<option value="deep_dive"><?php esc_html_e( 'Chuyên sâu / Mega Post (~1.800 - 2.800 từ)', 'sergio-ai-studio' ); ?></option>
-											</select>
-
-											<select id="writer_tone" style="margin-left: 10px;">
-												<option value="journalistic" selected><?php esc_html_e( 'Báo chí phân tích & Khách quan (Khuyên dùng)', 'sergio-ai-studio' ); ?></option>
-												<option value="tech"><?php esc_html_e( 'Chuyên gia công nghệ (Tech Deep Dive)', 'sergio-ai-studio' ); ?></option>
-												<option value="tutorial"><?php esc_html_e( 'Hướng dẫn thực hành (Step-by-step How-To)', 'sergio-ai-studio' ); ?></option>
-												<option value="review"><?php esc_html_e( 'Đánh giá & So sánh toàn diện (Review & Comparison)', 'sergio-ai-studio' ); ?></option>
-												<option value="engaging"><?php esc_html_e( 'Sôi nổi, truyền cảm hứng & Dễ tiếp cận', 'sergio-ai-studio' ); ?></option>
-											</select>
-										</td>
-									</tr>
-									<tr>
-										<th scope="row">
-											<label for="writer_model_override"><?php esc_html_e( 'Mô Hình AI & Dữ Kiện', 'sergio-ai-studio' ); ?></label>
-										</th>
-										<td>
-											<select id="writer_model_override">
-												<option value="default"><?php esc_html_e( 'Theo cấu hình hệ thống (Primary/Fallback)', 'sergio-ai-studio' ); ?></option>
-												<option value="gemini-2.0-flash"><?php esc_html_e( 'Gemini 2.0 Flash (Tốc độ cao nhất, đề xuất chống timeout)', 'sergio-ai-studio' ); ?></option>
-												<option value="gemini-2.5-flash"><?php esc_html_e( 'Gemini 2.5 Flash (Cân bằng & Toàn diện)', 'sergio-ai-studio' ); ?></option>
-												<option value="gemini-1.5-flash"><?php esc_html_e( 'Gemini 1.5 Flash (Ổn định cao LTS)', 'sergio-ai-studio' ); ?></option>
-												<option value="gemini-2.5-pro"><?php esc_html_e( 'Gemini 2.5 Pro (Lập luận chuyên sâu)', 'sergio-ai-studio' ); ?></option>
-											</select>
-
-											<select id="writer_grounding_mode" style="margin-left: 10px;">
-												<option value="grounding" selected><?php esc_html_e( 'Google Search Grounding (Tìm dữ kiện web)', 'sergio-ai-studio' ); ?></option>
-												<option value="direct"><?php esc_html_e( 'Tri thức tổng hợp trực tiếp (Tốc độ cao)', 'sergio-ai-studio' ); ?></option>
-											</select>
-										</td>
-									</tr>
-									<tr>
-										<th scope="row">
-											<label for="writer_verification_gate"><?php esc_html_e( 'Kiểm Chứng & Xử Lý Ảnh', 'sergio-ai-studio' ); ?></label>
-										</th>
-										<td>
-											<select id="writer_verification_gate">
-												<option value="standard" selected><?php esc_html_e( 'Tiêu chuẩn (Nền tảng uy tín / Nguồn chính thức / ≥2 link)', 'sergio-ai-studio' ); ?></option>
-												<option value="strict"><?php esc_html_e( 'Nghiêm ngặt (Bắt buộc tối thiểu 2 domain báo chí độc lập)', 'sergio-ai-studio' ); ?></option>
-											</select>
-
-											<select id="writer_image_option" style="margin-left: 10px;">
-												<option value="reference" selected><?php esc_html_e( 'Trích xuất từ nguồn tham khảo (Ghi nguồn tác giả rõ ràng)', 'sergio-ai-studio' ); ?></option>
-												
-												<option value="none"><?php esc_html_e( 'Không tạo ảnh (Tối ưu tốc độ tối đa)', 'sergio-ai-studio' ); ?></option>
-											</select>
-										</td>
-									</tr>
-									<tr>
-										<th scope="row">
-											<label for="writer_post_status"><?php esc_html_e( 'Trạng Thái Bài Viết Khi Tạo', 'sergio-ai-studio' ); ?></label>
-										</th>
-										<td>
-											<select id="writer_post_status">
-												<option value="draft" selected><?php esc_html_e( 'Lưu bản nháp (Draft - Khuyên dùng để kiểm duyệt)', 'sergio-ai-studio' ); ?></option>
-												<option value="pending"><?php esc_html_e( 'Chờ duyệt (Pending Review)', 'sergio-ai-studio' ); ?></option>
-												<option value="publish"><?php esc_html_e( 'Xuất bản trực tiếp (Publish)', 'sergio-ai-studio' ); ?></option>
-											</select>
-										</td>
-									</tr>
-									<tr>
-										<th scope="row"><?php esc_html_e( 'Tùy Chọn Tối Ưu', 'sergio-ai-studio' ); ?></th>
-										<td>
-											<fieldset>
-												<label style="display: block; margin-bottom: 6px;">
-													<input type="checkbox" id="writer_enable_rank_math" checked value="1" />
-													<?php esc_html_e( 'Tối ưu Rank Math SEO PRO (Focus Keyword, SEO Title/Description, Social Card)', 'sergio-ai-studio' ); ?>
-												</label>
-												<label style="display: block; margin-bottom: 6px;">
-													<input type="checkbox" id="writer_enable_internal_links" checked value="1" />
-													<?php esc_html_e( 'Tự động quét & chèn Liên kết nội bộ (Internal Links)', 'sergio-ai-studio' ); ?>
-												</label>
-												<label style="display: block;">
-													<input type="checkbox" id="writer_enable_sources_box" checked value="1" />
-													<?php esc_html_e( 'Chèn hộp Nguồn kiểm chứng minh bạch (Sources Box) ở cuối bài', 'sergio-ai-studio' ); ?>
-												</label>
-											</fieldset>
-										</td>
-									</tr>
-								</tbody>
-							</table>
-
-							<p style="margin-top: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-								<button type="button" class="button button-primary button-large" id="btn_run_pipeline">
-									<?php esc_html_e( 'Khởi Chạy Fact Pack & Viết Bài (1-Click)', 'sergio-ai-studio' ); ?>
-								</button>
-								<button type="button" class="button button-secondary button-large" id="btn_step1_fact_pack_only">
-									<?php esc_html_e( 'Chỉ Lập Fact Pack (Kiểm tra dữ kiện trước)', 'sergio-ai-studio' ); ?>
-								</button>
-							</p>
-						</div>
-					</div>
-
-					<!-- Linear Progress Stepper -->
-					<div id="pipeline_progress_box" style="display: none; margin-top: 15px; padding: 12px 16px; background: #f6f7f7; border: 1px solid #c3c4c7; border-radius: 4px;">
-						<div class="stepper-status-header" style="display: flex; align-items: center; gap: 8px;">
-							<span class="stepper-header-icon"><span class="spinner is-active" style="float:none; margin:0;"></span></span>
-							<strong id="pipeline_progress_msg"><?php esc_html_e( 'Đang khởi tạo kết nối...', 'sergio-ai-studio' ); ?></strong>
-						</div>
-						<div id="pipeline_steps_list" style="margin-top: 10px; line-height: 1.8;"></div>
-					</div>
-
-					<!-- Interactive Fact Pack Preview Postbox -->
-					<div id="fact_pack_preview_box" class="postbox" style="display: none; margin-top: 20px;">
-						<div class="postbox-header">
-							<h2 class="hndle">
-								<span><?php esc_html_e( 'Gói Dữ Kiện Đã Xác Thực (Fact Pack Preview)', 'sergio-ai-studio' ); ?></span>
-							</h2>
-						</div>
-						<div class="inside">
-							<p class="description"><?php esc_html_e( 'Xem trước các dữ kiện thật đã được đối chiếu từ web trước khi chấp bút bài viết:', 'sergio-ai-studio' ); ?></p>
-							<div id="fact_pack_content_area" style="line-height: 1.7; margin: 15px 0;"></div>
-							<p style="margin: 0; padding-top: 10px; border-top: 1px solid #c3c4c7;">
-								<button type="button" class="button button-primary" id="btn_write_from_fact_pack">
-									<?php esc_html_e( 'Tiến Hành Chấp Bút Bài Viết Từ Fact Pack Này', 'sergio-ai-studio' ); ?>
-								</button>
-								<button type="button" class="button button-secondary" id="btn_cancel_fact_pack">
-									<?php esc_html_e( 'Đóng Xem Trước', 'sergio-ai-studio' ); ?>
-								</button>
-							</p>
-						</div>
-					</div>
-
-					<!-- Result Card -->
-					<div id="pipeline_result_card" style="display: none; margin-top: 20px; padding: 14px 18px; background: #edfaef; border: 1px solid #c3e6cb; border-radius: 4px; color: #1a6828;"></div>
-				</div>
-
-				<!-- ===================================== -->
-				<!-- TAB 5: CRAWL & VIẾT LẠI             -->
-				<!-- ===================================== -->
-				<div id="tab-crawl" class="sergio-tab-pane <?php echo 'crawl' === $active_tab ? 'is-active' : ''; ?>">
-					<div class="postbox">
-						<div class="postbox-header"><h2 class="hndle"><span><?php esc_html_e( 'Crawl & Viết Lại Nội Dung', 'sergio-ai-studio' ); ?></span></h2></div>
-						<div class="inside">
-							<p class="description" style="margin-bottom: 15px;">
-								<?php esc_html_e( 'Thu thập nội dung từ các trang tin tức bên ngoài, bóc tách bài viết sạch qua thuật toán DOM, và dùng Gemini tái bút bằng góc nhìn riêng biệt kèm trích dẫn nguồn.', 'sergio-ai-studio' ); ?>
-							</p>
-
-							<table class="form-table" role="presentation">
-								<tbody>
-									<tr>
-										<th scope="row">
-											<label for="crawl_urls"><?php esc_html_e( 'Danh Sách URL (Mỗi dòng một URL)', 'sergio-ai-studio' ); ?></label>
-										</th>
-										<td>
-											<textarea id="crawl_urls" rows="6" class="large-text code"
-												placeholder="https://techcrunch.com/2026/10/31/ai-news/&#10;https://venturebeat.com/ai/new-model/"></textarea>
-											<p class="description">
-												<?php esc_html_e( 'Chỉ cho phép http/https. Hệ thống tự động kích hoạt bộ lọc SSRF chặn loopback, private IP (127.x, 192.168.x, 10.x, cloud metadata). Giới hạn tối đa 500KB/trang.', 'sergio-ai-studio' ); ?>
-											</p>
-										</td>
-									</tr>
-									<tr>
-										<th scope="row">
-											<label for="crawl_category"><?php esc_html_e( 'Chuyên Mục & Ngôn Ngữ', 'sergio-ai-studio' ); ?></label>
-										</th>
-										<td>
-											<select id="crawl_category">
-												<option value="0"><?php esc_html_e( '-- Chọn chuyên mục đích --', 'sergio-ai-studio' ); ?></option>
-												<?php foreach ( $categories as $cat ) : ?>
-													<option value="<?php echo esc_attr( $cat->term_id ); ?>"><?php echo esc_html( $cat->name ); ?></option>
-												<?php endforeach; ?>
-											</select>
-
-											<select id="crawl_language" style="margin-left: 10px;">
-												<option value="vi" <?php selected( $language, 'vi' ); ?>>Tiếng Việt (Vietnamese)</option>
-												<option value="en" <?php selected( $language, 'en' ); ?>>English (Global)</option>
-											</select>
-										</td>
-									</tr>
-									<tr>
-										<th scope="row">
-											<label for="crawl_style"><?php esc_html_e( 'Văn Phong & Cấu Trúc', 'sergio-ai-studio' ); ?></label>
-										</th>
-										<td>
-											<select id="crawl_style">
-												<option value="news"><?php esc_html_e( 'Tin tức báo chí chuẩn mực', 'sergio-ai-studio' ); ?></option>
-												<option value="analysis"><?php esc_html_e( 'Phân tích chuyên sâu & bình luận', 'sergio-ai-studio' ); ?></option>
-												<option value="tutorial"><?php esc_html_e( 'Hướng dẫn thực hành', 'sergio-ai-studio' ); ?></option>
-											</select>
-
-											<select id="crawl_max_chars" style="margin-left: 10px;">
-												<option value="4000">4,000 ký tự (~600 từ)</option>
-												<option value="8000" selected>8,000 ký tự (~1,200 từ) — Chuẩn</option>
-												<option value="12000">12,000 ký tự (~1,800 từ)</option>
-											</select>
-										</td>
-									</tr>
-								</tbody>
-							</table>
-
-							<p style="margin-top: 20px;">
-								<button type="button" class="button button-primary button-large" id="btn_crawl_rewrite">
-									<?php esc_html_e( 'Crawl & Viết Lại', 'sergio-ai-studio' ); ?>
-								</button>
-							</p>
-						</div>
-					</div>
-
-					<div id="crawl_progress_box" style="display: none; margin-top: 15px; padding: 12px 16px; background: #f6f7f7; border: 1px solid #c3c4c7; border-radius: 4px;">
-						<div class="stepper-status-header" style="display: flex; align-items: center; gap: 8px;">
-							<span class="stepper-header-icon"><span class="spinner is-active" style="float:none; margin:0;"></span></span>
-							<strong id="crawl_progress_msg"><?php esc_html_e( 'Đang kết nối crawl...', 'sergio-ai-studio' ); ?></strong>
-						</div>
-						<div id="crawl_steps_list" style="margin-top: 10px; line-height: 1.8;"></div>
-					</div>
-
-					<div id="crawl_results_wrap" style="display: none; margin-top: 20px;">
-						<div class="postbox">
-							<div class="postbox-header"><h2 class="hndle"><span><?php esc_html_e( 'Kết Quả Thu Thập & Tái Bút', 'sergio-ai-studio' ); ?></span></h2></div>
-							<div class="inside" style="padding: 0;">
-								<table class="widefat striped" id="crawl_results_table" style="border: none;">
-									<thead>
-										<tr>
-											<th><?php esc_html_e( 'URL Nguồn', 'sergio-ai-studio' ); ?></th>
-											<th><?php esc_html_e( 'Tiêu Đề Bài Viết Mới', 'sergio-ai-studio' ); ?></th>
-											<th style="width: 120px;"><?php esc_html_e( 'Trạng Thái', 'sergio-ai-studio' ); ?></th>
-											<th style="width: 140px;"><?php esc_html_e( 'Hành Động', 'sergio-ai-studio' ); ?></th>
-										</tr>
-									</thead>
-									<tbody id="crawl_results_tbody"></tbody>
-								</table>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- ===================================== -->
-				<!-- TAB 6: AUDIT & TỐI ƯU SEO             -->
-				<!-- ===================================== -->
-				<div id="tab-seo" class="sergio-tab-pane <?php echo 'seo' === $active_tab ? 'is-active' : ''; ?>">
-					<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
-						<div>
-							<h2 style="margin: 0; font-size: 18px; font-weight: 600;"><?php esc_html_e( 'Audit & Tối Ưu SEO Toàn Diện', 'sergio-ai-studio' ); ?></h2>
-							<p class="description" style="margin: 3px 0 0;"><?php esc_html_e( 'Quét sức khỏe SEO on-page toàn site, đo lường theo tiêu chuẩn Rank Math và kích hoạt Gemini AI tối ưu tiêu đề, mô tả, từ khóa LSI.', 'sergio-ai-studio' ); ?></p>
-						</div>
-						<button type="button" class="button" id="btn_run_site_seo_audit">
-							<?php esc_html_e( 'Quét Lại Sức Khỏe Toàn Site', 'sergio-ai-studio' ); ?>
-						</button>
-					</div>
-
-					<!-- Metrics Deck -->
-					<div class="sergio-overview-cards" id="seo_health_strip">
-						<div class="card">
-							<div class="card-kicker"><?php esc_html_e( 'Điểm SEO Trung Bình', 'sergio-ai-studio' ); ?></div>
-							<div class="card-val val-blue">
-								<span id="seo_stat_avg_score">--</span> <span class="card-val-unit">/ 100</span>
-							</div>
-							<p class="card-desc" id="seo_stat_avg_label"><?php esc_html_e( 'Sức khỏe tổng thể', 'sergio-ai-studio' ); ?></p>
-						</div>
-
-						<div class="card">
-							<div class="card-kicker"><?php esc_html_e( 'Đạt Chuẩn Tốt (>80đ)', 'sergio-ai-studio' ); ?></div>
-							<div class="card-val val-green">
-								<span id="seo_stat_good_count">0</span> <span class="card-val-unit"><?php esc_html_e( 'trang', 'sergio-ai-studio' ); ?></span>
-							</div>
-							<p class="card-desc"><?php esc_html_e( 'Chuẩn Rank Math xanh', 'sergio-ai-studio' ); ?></p>
-						</div>
-
-						<div class="card">
-							<div class="card-kicker"><?php esc_html_e( 'Cần Tối Ưu (50-79đ)', 'sergio-ai-studio' ); ?></div>
-							<div class="card-val val-amber">
-								<span id="seo_stat_warning_count">0</span> <span class="card-val-unit"><?php esc_html_e( 'trang', 'sergio-ai-studio' ); ?></span>
-							</div>
-							<p class="card-desc"><?php esc_html_e( 'Cần tinh chỉnh On-page', 'sergio-ai-studio' ); ?></p>
-						</div>
-
-						<div class="card">
-							<div class="card-kicker"><?php esc_html_e( 'Thiếu Focus Keyword', 'sergio-ai-studio' ); ?></div>
-							<div class="card-val val-red">
-								<span id="seo_stat_missing_kw">0</span> <span class="card-val-unit"><?php esc_html_e( 'trang', 'sergio-ai-studio' ); ?></span>
-							</div>
-							<p class="card-desc"><?php esc_html_e( 'Chưa xác định từ khóa', 'sergio-ai-studio' ); ?></p>
-						</div>
-					</div>
-
-					<!-- Batch Optimizer Banner -->
-					<div id="seo_site_action_plan_box" style="margin-bottom: 20px; display: none; padding: 12px 16px; background: #fff8e5; border: 1px solid #ffeeba; border-radius: 4px;">
-						<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-							<div>
-								<strong><?php esc_html_e( 'Chẩn Đoán & Kế Hoạch Cải Thiện Toàn Site', 'sergio-ai-studio' ); ?></strong>
-								<div id="seo_action_plan_items" style="margin-top: 6px;"></div>
-							</div>
-							<button type="button" class="button button-primary" id="btn_batch_fix_all_missing">
-								<?php esc_html_e( 'Tự Động Tối Ưu Bằng AI', 'sergio-ai-studio' ); ?>
-							</button>
-						</div>
-						<div id="seo_batch_progress_box" style="display: none; margin-top: 10px;">
-							<span class="spinner is-active" style="float:none; margin:0 6px 0 0;"></span>
-							<span id="seo_batch_progress_text"><?php esc_html_e( 'Đang tự động tối ưu SEO bằng Gemini AI...', 'sergio-ai-studio' ); ?></span>
-						</div>
-					</div>
-
-					<!-- SEO 2-Column Workbench -->
-					<div style="display: grid; grid-template-columns: 320px 1fr; gap: 20px;">
-						<!-- Left: Posts List -->
-						<div class="postbox">
-							<div class="postbox-header"><h2 class="hndle"><span><?php esc_html_e( 'Danh Sách Nội Dung', 'sergio-ai-studio' ); ?></span></h2></div>
-							<div class="inside" style="padding: 12px;">
-								<div class="filter-pills-group" style="margin-bottom: 10px; display: flex; gap: 6px;">
-									<button type="button" class="button button-small button-primary filter-pill is-active seo-type-filter" data-type=""><?php esc_html_e( 'Tất Cả', 'sergio-ai-studio' ); ?></button>
-									<button type="button" class="button button-small button-secondary filter-pill seo-type-filter" data-type="post"><?php esc_html_e( 'Bài Viết', 'sergio-ai-studio' ); ?></button>
-									<button type="button" class="button button-small button-secondary filter-pill seo-type-filter" data-type="page"><?php esc_html_e( 'Trang', 'sergio-ai-studio' ); ?></button>
-								</div>
-
-								<div style="margin-bottom: 12px;">
-									<input type="search" id="seo_search_posts" class="regular-text" placeholder="<?php esc_attr_e( 'Tìm kiếm bài viết, trang...', 'sergio-ai-studio' ); ?>" style="width: 100%;" />
-								</div>
-
-								<div id="seo_posts_list_scroll" style="max-height: 600px; overflow-y: auto;">
-									<?php if ( ! empty( $seo_posts ) ) : ?>
-										<div class="seo-post-cards-wrap">
-											<?php
-											foreach ( $seo_posts as $sp ) :
-												$sp_score = (int) get_post_meta( $sp->ID, 'rank_math_seo_score', true );
-												$sp_badge = Sergio_AI_SEO_Audit::get_score_badge( $sp_score );
-												$sp_kw    = get_post_meta( $sp->ID, 'rank_math_focus_keyword', true );
-											?>
-												<div class="seo-post-pick-card" data-post-id="<?php echo esc_attr( $sp->ID ); ?>" data-post-type="<?php echo esc_attr( $sp->post_type ); ?>" data-title="<?php echo esc_attr( mb_strtolower( $sp->post_title ) ); ?>" style="border: 1px solid #c3c4c7; padding: 10px; margin-bottom: 8px; border-radius: 4px; cursor: pointer; background: #fff;">
-													<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-														<span class="pick-score-badge <?php echo esc_attr( $sp_badge['class'] ); ?>" style="font-weight: 600; font-size: 12px; padding: 1px 6px; border-radius: 3px; background: #f0f0f1;">
-															<?php echo $sp_score > 0 ? (int) $sp_score : '--'; ?>
-														</span>
-														<div style="display: flex; gap: 4px; font-size: 11px; color: #64748b;">
-															<code><?php echo esc_html( strtoupper( $sp->post_type ) ); ?></code>
-															<span><?php echo esc_html( strtoupper( $sp->post_status ) ); ?></span>
-														</div>
-													</div>
-													<strong class="pick-card-title" style="display: block; font-size: 13px; line-height: 1.35; margin-bottom: 4px; color: #2271b1;"><?php echo esc_html( $sp->post_title ); ?></strong>
-													<div class="pick-card-meta" style="font-size: 12px; color: #64748b;">
-														<span><?php echo ! empty( $sp_kw ) ? esc_html( 'KW: ' . $sp_kw ) : '<em style="color:#94a3b8;">Chưa có từ khóa</em>'; ?></span>
-													</div>
-												</div>
-											<?php endforeach; ?>
-										</div>
-									<?php else : ?>
-										<p style="font-size: 13px; color: #64748b;"><?php esc_html_e( 'Chưa có bài viết hoặc trang nào.', 'sergio-ai-studio' ); ?></p>
-									<?php endif; ?>
-								</div>
-							</div>
-						</div>
-
-						<!-- Right: Workbench Pane -->
-						<div id="seo_workbench_pane">
-							<!-- Empty state -->
-							<div id="seo_pane_empty" class="postbox" style="text-align: center; padding: 48px 24px; margin: 0;">
-								<h3 style="font-size: 16px; margin: 0 0 8px; font-weight: 600;"><?php esc_html_e( 'Chọn Một Bài Viết Hoặc Trang Để Bắt Đầu', 'sergio-ai-studio' ); ?></h3>
-								<p class="description" style="max-width: 480px; margin: 0 auto; line-height: 1.5;"><?php esc_html_e( 'Nhấp vào một bài viết hoặc trang từ danh sách bên trái để đo lường chi tiết thang điểm 100 của Rank Math và kích hoạt Gemini AI tối ưu hóa tiêu đề, mô tả và nội dung.', 'sergio-ai-studio' ); ?></p>
-							</div>
-
-							<!-- Active audit workbench -->
-							<div id="seo_pane_active" style="display: none;">
-								<div class="postbox">
-									<div class="postbox-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; min-height: 42px;">
-										<div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; padding-right: 16px;">
-											<span id="audit_post_type_label" class="sergio-log-badge badge-info" style="font-size: 11px; font-weight: 600; flex-shrink: 0;">POST</span>
-											<span id="audit_post_id_label" style="color: #64748b; font-size: 13px; font-weight: 600; flex-shrink: 0;">#00</span>
-											<span style="color: #c3c4c7; flex-shrink: 0;">—</span>
-											<strong id="audit_post_title_heading" style="font-size: 14px; color: #1d2327; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></strong>
-										</div>
-										<div style="display: flex; gap: 6px; flex-shrink: 0; align-items: center;">
-											<a href="#" target="_blank" id="audit_post_edit_btn" class="button button-small"><?php esc_html_e( 'Sửa bài trong WP', 'sergio-ai-studio' ); ?></a>
-											<a href="#" target="_blank" id="audit_post_view_btn" class="button button-small"><?php esc_html_e( 'Xem trước', 'sergio-ai-studio' ); ?></a>
-										</div>
-									</div>
-									<div class="inside">
-										<div style="display: flex; align-items: center; justify-content: space-between; background: #f6f7f7; border: 1px solid #c3c4c7; padding: 12px 16px; border-radius: 4px; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
-											<div style="display: flex; align-items: center; gap: 12px;">
-												<div id="audit_score_disc" style="font-size: 26px; font-weight: 700;">
-													<span id="audit_score_val">0</span><span style="font-size: 14px; font-weight: normal; color: #64748b;">/100</span>
-												</div>
-												<div>
-													<strong id="audit_score_status_text" style="font-size: 14px; display: block;">Đang phân tích...</strong>
-													<span class="description" id="audit_score_subtext">Thang điểm Rank Math SEO On-Page</span>
-												</div>
-											</div>
-											<div style="display: flex; gap: 8px; flex-wrap: wrap;">
-												<button type="button" class="button" id="btn_trigger_ai_seo">
-													<?php esc_html_e( '1. Gợi Ý Từ Khóa & Metadata', 'sergio-ai-studio' ); ?>
-												</button>
-												<button type="button" class="button button-primary" id="btn_trigger_deep_content_seo">
-													<?php esc_html_e( '2. Nâng Cấp Nội Dung Bằng AI', 'sergio-ai-studio' ); ?>
-												</button>
-											</div>
-										</div>
-
-										<div id="ai_seo_loading_box" style="display: none; margin-bottom: 15px; padding: 10px 14px; background: #f0f6fc; border: 1px solid #c5d9ed; border-radius: 4px; font-size: 13px;">
-											<p>
-												<span class="spinner is-active" style="float:none; margin:0 6px 0 0;"></span>
-												<span id="ai_seo_loading_msg"><?php esc_html_e( 'Gemini đang phân tích nội dung, ý định tìm kiếm và kiến tạo bộ tiêu đề & mô tả tối ưu...', 'sergio-ai-studio' ); ?></span>
-											</p>
-										</div>
-
-										<!-- AI Optimization Results Deck -->
-										<div id="ai_seo_results_deck" style="display: none; margin: 0 0 16px; padding: 14px 16px; background: #f0f6fc; border: 1px solid #c5d9ed; border-radius: 4px;">
-											<h3 style="margin: 0 0 10px; font-size: 14px; font-weight: 600; color: #1d2327;">
-												<?php esc_html_e( 'Chiến Lược Tối Ưu Từ Gemini AI & Rank Math', 'sergio-ai-studio' ); ?>
-											</h3>
-
-											<div id="ai_rec_intent_box" style="margin-bottom: 10px; display: none;">
-												<span id="ai_rec_intent_tag" class="sergio-log-badge badge-info" style="font-size: 12px; font-weight: 500;"></span>
-											</div>
-
-											<div style="margin-bottom: 10px;">
-												<label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 4px;"><?php esc_html_e( 'Từ Khóa Chính Khuyên Dùng:', 'sergio-ai-studio' ); ?></label>
-												<div style="display: flex; gap: 8px;">
-													<input type="text" id="ai_rec_focus_kw" class="regular-text" style="font-weight: 600;" readonly />
-													<button type="button" class="button button-secondary button-small" id="btn_apply_ai_kw"><?php esc_html_e( 'Chọn Từ Khóa Này', 'sergio-ai-studio' ); ?></button>
-												</div>
-											</div>
-
-											<div style="margin-bottom: 10px;">
-												<label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 4px;"><?php esc_html_e( 'Từ Khóa Phụ / LSI Keywords:', 'sergio-ai-studio' ); ?></label>
-												<div id="ai_rec_secondary_kws" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
-											</div>
-
-											<div style="margin-bottom: 10px;">
-												<label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 4px;"><?php esc_html_e( 'Các Phương Án Tiêu Đề SEO (CTR Cao):', 'sergio-ai-studio' ); ?></label>
-												<div id="ai_rec_titles_list" style="display: flex; flex-direction: column; gap: 6px;"></div>
-											</div>
-
-											<div style="margin-bottom: 10px;">
-												<label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 4px;"><?php esc_html_e( 'Phương Án Thẻ Mô Tả Meta:', 'sergio-ai-studio' ); ?></label>
-												<div id="ai_rec_descs_list" style="display: flex; flex-direction: column; gap: 6px;"></div>
-											</div>
-
-											<div>
-												<label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 4px;"><?php esc_html_e( 'Đề Xuất Mở Rộng Nội Dung (E-E-A-T):', 'sergio-ai-studio' ); ?></label>
-												<ul id="ai_rec_enhancements_list" style="margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5;"></ul>
-											</div>
-										</div>
-
-										<!-- SERP Google Preview & Rank Math Editor -->
-										<div style="margin: 0 0 16px; padding: 14px 16px; background: #ffffff; border: 1px solid #c3c4c7; border-radius: 4px;">
-											<h4 style="margin: 0 0 10px; font-size: 13px;"><?php esc_html_e( 'Mô Phỏng Hiển Thị Google Search (SERP Preview)', 'sergio-ai-studio' ); ?></h4>
-											<div style="background: #fff; border: 1px solid #dadce0; border-radius: 6px; padding: 12px 14px; margin-bottom: 14px;">
-												<div id="serp_preview_url" style="font-size: 12px; color: #202124; margin-bottom: 3px;">
-													<span class="serp-url-text">https://example.com/...</span>
-												</div>
-												<h3 id="serp_preview_title" style="font-size: 17px; line-height: 1.3; color: #1a0dab; margin: 0 0 4px 0; font-weight: 400; cursor: pointer;"></h3>
-												<p id="serp_preview_desc" style="font-size: 13px; line-height: 1.45; color: #4d5156; margin: 0;"></p>
-											</div>
-
-											<table class="form-table" role="presentation" style="margin: 0;">
-												<tbody>
-													<tr>
-														<th scope="row">
-															<label for="edit_seo_focus_kw"><?php esc_html_e( 'Focus Keyword', 'sergio-ai-studio' ); ?></label>
-														</th>
-														<td>
-															<input type="text" id="edit_seo_focus_kw" class="large-text" placeholder="<?php esc_attr_e( 'Nhập từ khóa mục tiêu...', 'sergio-ai-studio' ); ?>" />
-														</td>
-													</tr>
-													<tr>
-														<th scope="row">
-															<label for="edit_seo_title"><?php esc_html_e( 'Tiêu Đề SEO', 'sergio-ai-studio' ); ?></label>
-														</th>
-														<td>
-															<input type="text" id="edit_seo_title" class="large-text" placeholder="<?php esc_attr_e( 'Tiêu đề hiển thị trên Google...', 'sergio-ai-studio' ); ?>" />
-															<span class="description" id="edit_title_char_counter" style="margin-left: 8px;">0 / 60</span>
-														</td>
-													</tr>
-													<tr>
-														<th scope="row">
-															<label for="edit_seo_description"><?php esc_html_e( 'Thẻ Mô Tả Meta', 'sergio-ai-studio' ); ?></label>
-														</th>
-														<td>
-															<textarea id="edit_seo_description" rows="3" class="large-text" placeholder="<?php esc_attr_e( 'Mô tả ngắn gọn hấp dẫn...', 'sergio-ai-studio' ); ?>"></textarea>
-															<span class="description" id="edit_desc_char_counter" style="margin-left: 8px;">0 / 160</span>
-														</td>
-													</tr>
-												</tbody>
-											</table>
-
-											<p style="margin-top: 15px;">
-												<button type="button" class="button button-primary button-large" id="btn_save_seo_to_rankmath">
-													<?php esc_html_e( 'Áp Dụng Vào Rank Math & Lưu Bài Viết', 'sergio-ai-studio' ); ?>
-												</button>
-												<span id="save_seo_feedback" style="margin-left: 10px; font-weight: 500;"></span>
-											</p>
-										</div>
-
-										<!-- Detailed On-Page Checklist -->
-										<div class="postbox" style="margin: 0;">
-											<div class="postbox-header"><h3 class="hndle"><span><?php esc_html_e( 'Bảng Kiểm Định Chi Tiết On-Page (Rank Math Standards)', 'sergio-ai-studio' ); ?></span></h3></div>
-											<div class="inside">
-												<div id="audit_checklist_wrap"></div>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- ===================================== -->
-				<!-- TAB 7: NHẬT KÝ                       -->
-				<!-- ===================================== -->
-				<div id="tab-logs" class="sergio-tab-pane <?php echo 'logs' === $active_tab ? 'is-active' : ''; ?>">
-
-					<!-- Subsubsub Filter Links -->
-					<ul class="subsubsub">
-						<li class="all"><a href="#tab-logs" class="current log-subsubsub-link" data-level="" aria-current="page"><?php esc_html_e( 'Tất cả', 'sergio-ai-studio' ); ?> <span class="count">(<?php echo (int) $log_stats['total_logs']; ?>)</span></a> |</li>
-												<li class="warning"><a href="#tab-logs" class="log-subsubsub-link" data-level="warning"><?php esc_html_e( 'Cảnh báo', 'sergio-ai-studio' ); ?> <span class="count">(<?php echo (int) $log_stats['warning_count']; ?>)</span></a> |</li>
-						<li class="error"><a href="#tab-logs" class="log-subsubsub-link" data-level="error"><?php esc_html_e( 'Lỗi', 'sergio-ai-studio' ); ?> <span class="count">(<?php echo (int) $log_stats['error_count']; ?>)</span></a></li>
-					</ul>
-
-					<!-- Search Box -->
-					<p class="search-box">
-						<label class="screen-reader-text" for="log-search-input"><?php esc_html_e( 'Tìm kiếm nhật ký:', 'sergio-ai-studio' ); ?></label>
-						<input type="search" id="log-search-input" name="s" value="" placeholder="<?php esc_attr_e( 'Tìm theo từ khóa, ID...', 'sergio-ai-studio' ); ?>">
-						<input type="button" id="search-submit" class="button" value="<?php esc_attr_e( 'Tìm nhật ký', 'sergio-ai-studio' ); ?>">
-					</p>
-
-					<!-- Top Navigation Bar: Bulk Actions & Dropdown Filters (Native WP Style) -->
-					<div class="tablenav top">
-						<div class="alignleft actions bulkactions">
-							<label for="bulk-action-selector-top" class="screen-reader-text"><?php esc_html_e( 'Chọn hành động hàng loạt', 'sergio-ai-studio' ); ?></label>
-							<select name="action" id="bulk-action-selector-top">
-								<option value="-1"><?php esc_html_e( 'Hành động', 'sergio-ai-studio' ); ?></option>
-								<option value="delete"><?php esc_html_e( 'Xóa', 'sergio-ai-studio' ); ?></option>
-								<option value="clear_all"><?php esc_html_e( 'Xóa tất cả nhật ký', 'sergio-ai-studio' ); ?></option>
-							</select>
-							<input type="button" id="doaction" class="button action" value="<?php esc_attr_e( 'Áp dụng', 'sergio-ai-studio' ); ?>">
-						</div>
-
-						<div class="alignleft actions">
-							<label for="filter-by-level" class="screen-reader-text"><?php esc_html_e( 'Lọc theo cấp độ', 'sergio-ai-studio' ); ?></label>
-							<select name="level" id="filter-by-level">
-								<option value=""><?php esc_html_e( 'Tất cả cấp độ', 'sergio-ai-studio' ); ?></option>
-								<option value="warning"><?php esc_html_e( 'Cảnh báo (WARN)', 'sergio-ai-studio' ); ?></option>
-								<option value="error"><?php esc_html_e( 'Lỗi (ERROR)', 'sergio-ai-studio' ); ?></option>
-							</select>
-
-							<label for="filter-by-stage" class="screen-reader-text"><?php esc_html_e( 'Lọc theo giai đoạn', 'sergio-ai-studio' ); ?></label>
-							<select name="stage" id="filter-by-stage">
-								<option value=""><?php esc_html_e( 'Tất cả giai đoạn', 'sergio-ai-studio' ); ?></option>
-								<option value="generation"><?php esc_html_e( 'Viết bài & Nghiên cứu', 'sergio-ai-studio' ); ?></option>
-								<option value="scheduler"><?php esc_html_e( 'Lập lịch tự động', 'sergio-ai-studio' ); ?></option>
-								<option value="seo"><?php esc_html_e( 'Tối ưu SEO', 'sergio-ai-studio' ); ?></option>
-								<option value="image"><?php esc_html_e( 'Xử lý ảnh', 'sergio-ai-studio' ); ?></option>
-								<option value="rewrite"><?php esc_html_e( 'Viết lại bài', 'sergio-ai-studio' ); ?></option>
-							</select>
-
-							<input type="button" id="post-query-submit" class="button" value="<?php esc_attr_e( 'Lọc', 'sergio-ai-studio' ); ?>">
-							<span id="log_refresh_spinner" class="spinner" style="float: none; margin: 0 4px; vertical-align: middle;"></span>
-							<span id="clear_logs_feedback" style="margin-left: 6px; font-size: 13px;"></span>
-						</div>
-
-						<div class="tablenav-pages">
-							<span class="displaying-num" id="log_displaying_num"><?php printf( esc_html__( '%d mục', 'sergio-ai-studio' ), count( $logs ) ); ?></span>
-						</div>
-						<br class="clear">
-					</div>
-
-					<!-- WP List Table -->
-					<table class="wp-list-table widefat fixed striped posts" id="logs_table">
-						<thead>
-							<tr>
-								<th scope="col" id="cb" class="manage-column column-cb check-column">
-									<label class="screen-reader-text" for="cb-select-all-1"><?php esc_html_e( 'Chọn tất cả', 'sergio-ai-studio' ); ?></label>
-									<input id="cb-select-all-1" type="checkbox">
-								</th>
-								<th scope="col" id="date" class="manage-column column-date" style="width: 160px;"><?php esc_html_e( 'Thời Gian', 'sergio-ai-studio' ); ?></th>
-								<th scope="col" id="level" class="manage-column column-level" style="width: 90px;"><?php esc_html_e( 'Cấp Độ', 'sergio-ai-studio' ); ?></th>
-								<th scope="col" id="stage" class="manage-column column-stage" style="width: 180px;"><?php esc_html_e( 'Giai Đoạn', 'sergio-ai-studio' ); ?></th>
-								<th scope="col" id="message" class="manage-column column-primary"><?php esc_html_e( 'Thông Điệp & Dữ Liệu', 'sergio-ai-studio' ); ?></th>
-							</tr>
-						</thead>
-						<tbody id="raw_logs_tbody">
-							<?php echo self::render_raw_logs_rows_html( $logs ); ?>
-						</tbody>
-						<tfoot>
-							<tr>
-								<th scope="col" class="manage-column column-cb check-column">
-									<label class="screen-reader-text" for="cb-select-all-2"><?php esc_html_e( 'Chọn tất cả', 'sergio-ai-studio' ); ?></label>
-									<input id="cb-select-all-2" type="checkbox">
-								</th>
-								<th scope="col" class="manage-column column-date"><?php esc_html_e( 'Thời Gian', 'sergio-ai-studio' ); ?></th>
-								<th scope="col" class="manage-column column-level"><?php esc_html_e( 'Cấp Độ', 'sergio-ai-studio' ); ?></th>
-								<th scope="col" class="manage-column column-stage"><?php esc_html_e( 'Giai Đoạn', 'sergio-ai-studio' ); ?></th>
-								<th scope="col" class="manage-column column-primary"><?php esc_html_e( 'Thông Điệp & Dữ Liệu', 'sergio-ai-studio' ); ?></th>
-							</tr>
-						</tfoot>
-					</table>
-
-					<!-- Bottom Navigation Bar -->
-					<div class="tablenav bottom">
-						<div class="alignleft actions bulkactions">
-							<label for="bulk-action-selector-bottom" class="screen-reader-text"><?php esc_html_e( 'Chọn hành động hàng loạt', 'sergio-ai-studio' ); ?></label>
-							<select name="action2" id="bulk-action-selector-bottom">
-								<option value="-1"><?php esc_html_e( 'Hành động', 'sergio-ai-studio' ); ?></option>
-								<option value="delete"><?php esc_html_e( 'Xóa', 'sergio-ai-studio' ); ?></option>
-								<option value="clear_all"><?php esc_html_e( 'Xóa tất cả nhật ký', 'sergio-ai-studio' ); ?></option>
-							</select>
-							<input type="button" id="doaction2" class="button action" value="<?php esc_attr_e( 'Áp dụng', 'sergio-ai-studio' ); ?>">
-						</div>
-						<div class="tablenav-pages">
-							<span class="displaying-num" id="log_displaying_num_bottom"><?php printf( esc_html__( '%d mục', 'sergio-ai-studio' ), count( $logs ) ); ?></span>
-						</div>
-						<br class="clear">
-					</div>
-
-				</div>
-</div><!-- .sergio-tab-content -->
+				<?php
+				// Modular View Templates
+				include SERGIO_AI_STUDIO_DIR . 'templates/tab-overview.php';
+				include SERGIO_AI_STUDIO_DIR . 'templates/tab-settings.php';
+				include SERGIO_AI_STUDIO_DIR . 'templates/tab-scheduler.php';
+				include SERGIO_AI_STUDIO_DIR . 'templates/tab-writer.php';
+				include SERGIO_AI_STUDIO_DIR . 'templates/tab-crawl.php';
+				include SERGIO_AI_STUDIO_DIR . 'templates/tab-seo.php';
+				include SERGIO_AI_STUDIO_DIR . 'templates/tab-logs.php';
+				?>
+			</div><!-- .sergio-tab-content -->
 		</div><!-- .wrap -->
 		<?php
 	}
@@ -2372,8 +1162,15 @@ class Sergio_AI_Admin {
 					<?php endif; ?>
 				</td>
 				<td class="column-stage">
-					<strong><?php echo esc_html( Sergio_AI_Logger::map_stage_label( $log['stage'] ) ); ?></strong>
-					<div style="font-size: 11px; color: #64748b;"><code><?php echo esc_html( $log['stage'] ); ?></code></div>
+					<?php
+					$st_label = Sergio_AI_Logger::map_stage_label( $log['stage'] );
+					if ( $st_label !== $log['stage'] ) :
+					?>
+						<strong><?php echo esc_html( $st_label ); ?></strong>
+						<div style="font-size: 11px; color: #64748b;"><code><?php echo esc_html( $log['stage'] ); ?></code></div>
+					<?php else : ?>
+						<code><?php echo esc_html( $log['stage'] ); ?></code>
+					<?php endif; ?>
 				</td>
 				<td class="column-primary">
 					<div><?php echo wp_kses_post( Sergio_AI_Logger::format_log_message_html( $log['message'] ) ); ?></div>
