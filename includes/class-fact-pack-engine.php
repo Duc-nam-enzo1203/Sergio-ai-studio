@@ -54,7 +54,31 @@ class Sergio_AI_Fact_Pack_Engine {
         $override_model = isset( $options['override_model'] ) && ! empty( $options['override_model'] ) && 'default' !== $options['override_model'] ? sanitize_text_field( $options['override_model'] ) : '';
         $strictness     = isset( $options['verification_strictness'] ) ? sanitize_key( $options['verification_strictness'] ) : 'standard';
 
-        $current_date = wp_date( 'd/m/Y' );
+        
+        $reference_sources = isset( $options['reference_sources'] ) ? trim( $options['reference_sources'] ) : '';
+        if ( empty( $reference_sources ) ) {
+            $global_opts = get_option( 'sergio_ai_studio_options', array() );
+            $reference_sources = isset( $global_opts['trusted_reference_sources'] ) ? trim( $global_opts['trusted_reference_sources'] ) : '';
+        }
+
+        $cleaned_domains = array();
+        if ( ! empty( $reference_sources ) ) {
+            $raw_domains = preg_split( '/[\r\n,;]+/', $reference_sources );
+            foreach ( $raw_domains as $rd ) {
+                $rd = trim( $rd );
+                if ( empty( $rd ) ) {
+                    continue;
+                }
+                $host = wp_parse_url( $rd, PHP_URL_HOST );
+                $domain = ! empty( $host ) ? $host : preg_replace( '#^https?://#i', '', $rd );
+                $domain = trim( explode( '/', $domain )[0] );
+                if ( ! empty( $domain ) ) {
+                    $cleaned_domains[] = strtolower( $domain );
+                }
+            }
+            $cleaned_domains = array_values( array_unique( $cleaned_domains ) );
+        }
+    $current_date = wp_date( 'd/m/Y' );
         $current_year = wp_date( 'Y' );
 
         $this->logger->info(
@@ -93,6 +117,15 @@ QUY TẮC BẤT DI BẤT DỊCH:
 4. BỘ LỌC TÍNH MỚI & CHỐNG BÀI BÁO CŨ (STALE NEWS FILTER):
 - Ưu tiên cao nhất các nguồn tin, bài báo, bài đăng mạng xã hội (X/Twitter, Reddit, GitHub, Blog chính thức) xuất bản gần nhất trong năm {$current_year}.
 - Nếu một tin tức hoặc sự kiện đã diễn ra từ các năm trước hoặc không còn tính thời sự, bắt buộc tìm kiếm các cập nhật mới nhất, phiên bản mới nhất trong năm {$current_year}. Tuyệt đối không đưa số liệu hay tin tức cũ đã lỗi thời vào Fact Pack.";
+
+        if ( ! empty( $cleaned_domains ) ) {
+            $domains_list = implode( ', ', $cleaned_domains );
+            $site_queries = implode( ' OR ', array_map( function( $d ) { return 'site:' . $d; }, $cleaned_domains ) );
+            $system_prompt .= "\n\n5. ĐẶC BIỆT ƯU TIÊN NGUỒN BÁO CHÍ & TRANG TIN THAM KHẢO CHỈ ĐỊNH:\n" .
+                              "- Bạn HÃY ĐẶC BIỆT ƯU TIÊN tìm kiếm thông tin, bài báo, phóng sự từ các trang web sau: " . $domains_list . ".\n" .
+                              "- Sử dụng chiến lược tìm kiếm có định hướng (" . $site_queries . ") kết hợp chủ đề để bóc tách các bài viết mới nhất 24h-48h gần đây.\n" .
+                              "- BẮT BUỘC trích xuất các sự kiện, số liệu, ý kiến chuyên gia và URL bài viết gốc từ các trang báo này đưa vào source_citations.";
+        }
 
         $clean_topic = trim( wp_strip_all_tags( $topic ) );
         $prompt = "YÊU CẦU NGHIÊN CỨU TỪ NGƯỜI DÙNG ĐƯỢC ĐẶT TRONG THẺ <user_intent> DƯỚI ĐÂY:
@@ -139,6 +172,9 @@ Hãy tìm kiếm và trích xuất một GÓI DỮ KIỆN (FACT PACK) chuẩn x�
   ]
 }
 ```";
+        if ( ! empty( $cleaned_domains ) ) {
+            $prompt .= "\n\nLƯU Ý ĐẶC BIỆT VỀ NGUỒN:\nƯu tiên tối đa tìm kiếm và lấy dữ kiện từ các trang báo chỉ định: " . implode( ', ', $cleaned_domains );
+        }
 
         // Call Gemini with Search Grounding or direct reasoning based on user options
         $enable_grounding = ( 'direct' !== $grounding_mode );
@@ -218,6 +254,17 @@ Hãy tìm kiếm và trích xuất một GÓI DỮ KIỆN (FACT PACK) chuẩn x�
         }
         $parsed_pack['source_citations'] = $valid_citations;
         $domain_count = count( $unique_domains );
+        $has_trusted_domain = false;
+        if ( ! empty( $cleaned_domains ) ) {
+            foreach ( array_keys( $unique_domains ) as $d ) {
+                foreach ( $cleaned_domains as $cd ) {
+                    if ( $d === $cd || str_ends_with( $d, '.' . $cd ) ) {
+                        $has_trusted_domain = true;
+                        break 2;
+                    }
+                }
+            }
+        }
 
         // Collect unique URLs count for platform sources (e.g. GitHub repos, HuggingFace models, ArXiv papers)
         $unique_urls = array();
@@ -251,7 +298,7 @@ Hãy tìm kiếm và trích xuất một GÓI DỮ KIỆN (FACT PACK) chuẩn x�
             } elseif ( ! $has_facts ) {
                 $is_verified      = false;
                 $rejection_reason = __( 'Gói dữ kiện không chứa các dữ kiện cốt lõi (key_facts trống).', 'sergio-ai-studio' );
-            } elseif ( $domain_count < 2 ) {
+            } elseif ( ! $has_trusted_domain && $domain_count < 2 ) {
                 $is_verified      = false;
                 $rejection_reason = sprintf(
                     __( 'Cổng kiểm chứng nghiêm ngặt: Chỉ tìm thấy %d domain nguồn (%s). Chế độ Nghiêm ngặt yêu cầu tối thiểu 2 domain độc lập.', 'sergio-ai-studio' ),

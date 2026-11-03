@@ -177,6 +177,7 @@ class Sergio_AI_Scheduler {
 			$max_per_day   = isset( $options['schedule_max_posts_per_day'] ) ? (int) $options['schedule_max_posts_per_day'] : 10;
 			$topic_mode    = isset( $options['schedule_topic_mode'] ) ? $options['schedule_topic_mode'] : 'hybrid';
 			$niche_topic   = isset( $options['schedule_niche_topic'] ) ? trim( $options['schedule_niche_topic'] ) : '';
+			$sched_ref_sources = $options['schedule_reference_sources'] ?? ( $options['trusted_reference_sources'] ?? '' );
 			$default_cat   = isset( $options['default_schedule_cat'] ) ? (int) $options['default_schedule_cat'] : 0;
 			$default_auth  = isset( $options['default_schedule_author'] ) ? (int) $options['default_schedule_author'] : 0;
 			// Default to draft / pending for human editorial review
@@ -209,7 +210,7 @@ class Sergio_AI_Scheduler {
 					$category_id = ! empty( $queue_row['category_id'] ) ? (int) $queue_row['category_id'] : $default_cat;
 
 				} elseif ( 'ai_discover' === $topic_mode ) {
-					$discovered = self::discover_topic_from_niche( $client, $logger, $niche_topic, $language );
+					$discovered = self::discover_topic_from_niche( $client, $logger, $niche_topic, $language, $sched_ref_sources );
 					if ( is_wp_error( $discovered ) ) {
 						$logger->error( 'cron_discovery_failed', $discovered->get_error_message() );
 						break;
@@ -224,7 +225,7 @@ class Sergio_AI_Scheduler {
 					} else {
 						// Fallback to auto-discovery
 						$logger->info( 'cron_hybrid_fallback', 'Hàng đợi trống. Tự động nghiên cứu tin tức theo Lĩnh vực ngách.' );
-						$discovered = self::discover_topic_from_niche( $client, $logger, $niche_topic, $language );
+						$discovered = self::discover_topic_from_niche( $client, $logger, $niche_topic, $language, $sched_ref_sources );
 						if ( is_wp_error( $discovered ) ) {
 							$logger->error( 'cron_discovery_failed', $discovered->get_error_message() );
 							break;
@@ -241,7 +242,8 @@ class Sergio_AI_Scheduler {
 
 				// 3. Step 1: Build Fact Pack
 				$fact_engine = new Sergio_AI_Fact_Pack_Engine( $client, $logger );
-				$fact_pack   = $fact_engine->build_fact_pack( $topic_title, $language );
+				$fact_options = array( 'reference_sources' => $sched_ref_sources );
+				$fact_pack   = $fact_engine->build_fact_pack( $topic_title, $language, $fact_options );
 
 				if ( is_wp_error( $fact_pack ) ) {
 					$err = $fact_pack->get_error_message();
@@ -403,13 +405,41 @@ class Sergio_AI_Scheduler {
 	 * AI Auto-Discovery: Ask Gemini to discover a hot trending news topic in the niche
 	 * Powered by Google Search Grounding to guarantee real-world grounding and fresh entities
 	 */
-	public static function discover_topic_from_niche( $client, $logger, $niche = '', $language = 'vi' ) {
+	public static function discover_topic_from_niche( $client, $logger, $niche = '', $language = 'vi', $reference_sources = '' ) {
 		if ( empty( $niche ) ) {
 			$niche = 'Tin tức trí tuệ nhân tạo, công nghệ phần mềm mới nhất';
 		}
 
 		$date_str = wp_date( 'd/m/Y' );
 		$year_str = wp_date( 'Y' );
+
+		if ( empty( $reference_sources ) ) {
+			$options_sched = get_option( 'sergio_ai_studio_options', array() );
+			$reference_sources = $options_sched['schedule_reference_sources'] ?? ( $options_sched['trusted_reference_sources'] ?? '' );
+		}
+
+		$cleaned_ref_domains = array();
+		if ( ! empty( $reference_sources ) ) {
+			$raw_ref_arr = preg_split( '/[\r\n,;]+/', $reference_sources );
+			foreach ( $raw_ref_arr as $item ) {
+				$item = trim( $item );
+				if ( empty( $item ) ) continue;
+				$h = wp_parse_url( $item, PHP_URL_HOST );
+				$d = ! empty( $h ) ? $h : preg_replace( '#^https?://#i', '', $item );
+				$d = trim( explode( '/', $d )[0] );
+				if ( ! empty( $d ) ) {
+					$cleaned_ref_domains[] = strtolower( $d );
+				}
+			}
+			$cleaned_ref_domains = array_values( array_unique( $cleaned_ref_domains ) );
+		}
+
+		$ref_prompt_directive = '';
+		if ( ! empty( $cleaned_ref_domains ) ) {
+			$ref_doms_str = implode( ', ', $cleaned_ref_domains );
+			$site_query_str = implode( ' OR ', array_map( function( $d ) { return 'site:' . $d; }, $cleaned_ref_domains ) );
+			$ref_prompt_directive = "\n- ĐẶC BIỆT ƯU TIÊN tìm kiếm và phát hiện các bài báo, tin tức thời sự nóng hổi vừa được đăng tải trong 24h - 48h gần đây trên các trang báo sau: {$ref_doms_str} (gợi ý: {$site_query_str}).\n";
+		}
 
 		// Retrieve recent topics to explicitly forbid duplicates
 		global $wpdb;
@@ -428,6 +458,7 @@ class Sergio_AI_Scheduler {
 		$prompt = "Bạn là biên tập viên tin tức công nghệ hàng đầu. Thời gian thực tế hiện tại là ngày {$date_str} (năm {$year_str}).\n" .
 				  "Hãy sử dụng Google Search để tìm kiếm các bài báo, sự kiện, xu hướng thảo luận nóng hổi trên mạng xã hội (X/Twitter, Reddit, Tech blogs, GitHub Trending) MỚI NHẤT VỪA DIỄN RA TRONG 24H - 48H GẦN ĐÂY trong lĩnh vực: \"{$niche}\".\n" .
 				  $exclusion_text .
+				  $ref_prompt_directive .
 				  "QUY TẮC BẮT BUỘC:\n" .
 				  "- Trả về CHỈ DUY NHẤT 1 DÒNG là tiêu đề chủ đề (ngắn gọn, dưới 15 từ, chứa tên thực thể/sản phẩm có thật).\n" .
 				  "- KHÔNG có dấu ngoặc kép, KHÔNG có lời giải thích, KHÔNG có tiền tố như 'Chủ đề: ' hay '1. '.\n" .

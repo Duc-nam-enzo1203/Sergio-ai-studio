@@ -61,8 +61,8 @@ defined( 'ABSPATH' ) || exit;
 					<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=writer' ) ); ?>" class="button button-primary nav-tab-link" data-tab="tab-writer">
 						<?php esc_html_e( 'Nghiên Cứu & Viết Bài', 'sergio-ai-studio' ); ?>
 					</a>
-					<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=crawl' ) ); ?>" class="button button-secondary nav-tab-link" data-tab="tab-crawl">
-						<?php esc_html_e( 'Crawl & Viết Lại', 'sergio-ai-studio' ); ?>
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=scheduler' ) ); ?>" class="button button-secondary nav-tab-link" data-tab="tab-scheduler">
+						<?php esc_html_e( 'Cấu Hình Lên Lịch', 'sergio-ai-studio' ); ?>
 					</a>
 					<button type="button" class="button button-secondary" id="btn_run_cron_overview">
 						<?php esc_html_e( 'Kích Hoạt 1 Đợt Cron Ngay', 'sergio-ai-studio' ); ?>

@@ -31,6 +31,19 @@ defined( 'ABSPATH' ) || exit;
 					</tr>
 					<tr>
 						<th scope="row">
+							<label for="writer_reference_sources"><?php esc_html_e( 'Trang Báo Tham Khảo Ưu Tiên', 'sergio-ai-studio' ); ?></label>
+						</th>
+						<td>
+							<input type="text" id="writer_reference_sources" class="large-text"
+								value="<?php echo esc_attr( $trusted_sources ); ?>"
+								placeholder="<?php esc_attr_e( 'Ví dụ: vnexpress.net, tuoitre.vn, baomoi.com (để trống nếu muốn AI tìm toàn mạng)', 'sergio-ai-studio' ); ?>" />
+							<p class="description">
+								<?php esc_html_e( 'AI sẽ ưu tiên bóc tách sự kiện, số liệu và trích dẫn URL bài viết từ các trang báo này vào Fact Pack.', 'sergio-ai-studio' ); ?>
+							</p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row">
 							<label for="writer_category"><?php esc_html_e( 'Chuyên Mục & Ngôn Ngữ', 'sergio-ai-studio' ); ?></label>
 						</th>
 						<td>

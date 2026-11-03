@@ -56,7 +56,6 @@ class Sergio_AI_Admin {
 			'settings'  => 'dashicons-admin-settings',
 			'scheduler' => 'dashicons-calendar-alt',
 			'writer'    => 'dashicons-edit',
-			'crawl'     => 'dashicons-admin-links',
 			'seo'       => 'dashicons-chart-area',
 			'logs'      => 'dashicons-list-view',
 			'shield'    => 'dashicons-shield',
@@ -145,6 +144,9 @@ class Sergio_AI_Admin {
 			if ( isset( $input['default_language'] ) ) {
 				$clean['default_language'] = sanitize_text_field( wp_unslash( $input['default_language'] ) );
 			}
+			if ( isset( $input['trusted_reference_sources'] ) ) {
+				$clean['trusted_reference_sources'] = sanitize_textarea_field( wp_unslash( $input['trusted_reference_sources'] ) );
+			}
 			if ( isset( $input['default_post_status'] ) ) {
 				$clean['default_post_status'] = in_array( $input['default_post_status'], array( 'draft', 'publish' ), true ) ? $input['default_post_status'] : 'draft';
 			}
@@ -186,6 +188,9 @@ class Sergio_AI_Admin {
 			}
 			if ( isset( $input['schedule_topic_mode'] ) ) {
 				$clean['schedule_topic_mode'] = in_array( $input['schedule_topic_mode'], array( 'hybrid', 'queue_only', 'ai_discover' ), true ) ? $input['schedule_topic_mode'] : 'hybrid';
+			}
+			if ( isset( $input['schedule_reference_sources'] ) ) {
+				$clean['schedule_reference_sources'] = sanitize_textarea_field( wp_unslash( $input['schedule_reference_sources'] ) );
 			}
 			if ( isset( $input['schedule_niche_topic'] ) ) {
 				$clean['schedule_niche_topic'] = sanitize_text_field( wp_unslash( $input['schedule_niche_topic'] ) );
@@ -295,6 +300,8 @@ class Sergio_AI_Admin {
 		$default_sched_auth  = (int) ( $options['default_schedule_author'] ?? get_current_user_id() );
 		$default_sched_cat   = (int) ( $options['default_schedule_cat'] ?? 0 );
 		$default_sched_stat  = $options['default_schedule_status'] ?? 'draft';
+		$trusted_sources     = $options['trusted_reference_sources'] ?? 'vnexpress.net, tuoitre.vn, thanhnien.vn, baomoi.com, vietnamnet.vn';
+		$schedule_sources    = $options['schedule_reference_sources'] ?? $trusted_sources;
 		$default_post_status = $options['default_post_status'] ?? 'draft';
 		$masked_unsplash_key = Sergio_AI_Security::mask_key( $options['unsplash_access_key'] ?? '' );
 		$masked_pexels_key   = Sergio_AI_Security::mask_key( $options['pexels_api_key'] ?? '' );
@@ -331,6 +338,9 @@ class Sergio_AI_Admin {
 
 		// Active tab from URL.
 		$active_tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'overview'; // phpcs:ignore
+		if ( 'crawl' === $active_tab ) {
+			$active_tab = 'writer';
+		}
 		?>
 		<div class="wrap sergio-ai-studio-wrap">
 
@@ -369,9 +379,6 @@ class Sergio_AI_Admin {
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=writer' ) ); ?>" class="nav-tab <?php echo 'writer' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-writer">
 					<?php esc_html_e( 'Nghiên Cứu & Viết Bài', 'sergio-ai-studio' ); ?>
 				</a>
-				<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=crawl' ) ); ?>" class="nav-tab <?php echo 'crawl' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-crawl">
-					<?php esc_html_e( 'Crawl & Viết Lại', 'sergio-ai-studio' ); ?>
-				</a>
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=sergio-ai-studio&tab=seo' ) ); ?>" class="nav-tab <?php echo 'seo' === $active_tab ? 'nav-tab-active' : ''; ?>" data-tab="tab-seo">
 					<?php esc_html_e( 'Audit & Tối Ưu SEO', 'sergio-ai-studio' ); ?>
 				</a>
@@ -390,7 +397,6 @@ class Sergio_AI_Admin {
 				include SERGIO_AI_STUDIO_DIR . 'templates/tab-settings.php';
 				include SERGIO_AI_STUDIO_DIR . 'templates/tab-scheduler.php';
 				include SERGIO_AI_STUDIO_DIR . 'templates/tab-writer.php';
-				include SERGIO_AI_STUDIO_DIR . 'templates/tab-crawl.php';
 				include SERGIO_AI_STUDIO_DIR . 'templates/tab-seo.php';
 				include SERGIO_AI_STUDIO_DIR . 'templates/tab-logs.php';
 				?>
@@ -488,6 +494,7 @@ class Sergio_AI_Admin {
 		set_transient( $cooldown_key, 1, 10 );
 
 		$seed_query     = isset( $_POST['seed_query'] ) ? sanitize_text_field( wp_unslash( $_POST['seed_query'] ) ) : '';
+		$reference_sources = isset( $_POST['reference_sources'] ) ? sanitize_textarea_field( wp_unslash( $_POST['reference_sources'] ) ) : '';
 		$category       = isset( $_POST['category_id'] ) ? absint( $_POST['category_id'] ) : 0;
 		$language       = isset( $_POST['language'] ) ? sanitize_text_field( wp_unslash( $_POST['language'] ) ) : 'vi';
 		$target_length  = isset( $_POST['target_length'] ) ? sanitize_key( $_POST['target_length'] ) : 'standard';
@@ -495,6 +502,7 @@ class Sergio_AI_Admin {
 		$model_override = isset( $_POST['model_override'] ) ? sanitize_text_field( wp_unslash( $_POST['model_override'] ) ) : '';
 		$grounding_mode    = isset( $_POST['grounding_mode'] ) ? sanitize_key( $_POST['grounding_mode'] ) : 'grounding';
 		$verification_gate = isset( $_POST['verification_gate'] ) ? sanitize_key( $_POST['verification_gate'] ) : 'standard';
+		$reference_sources = isset( $_POST['reference_sources'] ) ? sanitize_textarea_field( wp_unslash( $_POST['reference_sources'] ) ) : '';
 		$image_option      = isset( $_POST['image_option'] ) ? sanitize_key( $_POST['image_option'] ) : 'reference';
 		$post_status       = isset( $_POST['post_status'] ) && in_array( $_POST['post_status'], array( 'draft', 'pending', 'publish' ), true ) ? $_POST['post_status'] : 'draft';
 		$enable_rm         = ! empty( $_POST['enable_rank_math'] );
@@ -509,6 +517,7 @@ class Sergio_AI_Admin {
 			'override_model'          => $model_override,
 			'grounding_mode'          => $grounding_mode,
 			'verification_strictness' => $verification_gate,
+			'reference_sources'       => $reference_sources,
 			'target_length'           => $target_length,
 			'tone'                    => $tone,
 			'image_option'            => $image_option,
@@ -592,6 +601,7 @@ class Sergio_AI_Admin {
 			'override_model'          => $model_override,
 			'grounding_mode'          => $grounding_mode,
 			'verification_strictness' => $verification_gate,
+			'reference_sources'       => $reference_sources,
 		);
 
 		$logger      = new Sergio_AI_Logger();

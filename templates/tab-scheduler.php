@@ -130,6 +130,17 @@ defined( 'ABSPATH' ) || exit;
 							</tr>
 							<tr>
 								<th scope="row">
+									<label for="schedule_reference_sources"><?php esc_html_e( 'Trang Báo & Tham Khảo Ưu Tiên', 'sergio-ai-studio' ); ?></label>
+								</th>
+								<td>
+									<input type="text" id="schedule_reference_sources" name="sergio_ai_studio_options[schedule_reference_sources]"
+										value="<?php echo esc_attr( $schedule_sources ); ?>" class="large-text"
+										placeholder="vnexpress.net, tuoitre.vn, baomoi.com, vietnamnet.vn..." />
+									<p class="description"><?php esc_html_e( 'AI sẽ ưu tiên đọc tin tức nóng hổi trong 24h-48h gần đây từ các trang báo này khi lập lịch tự động.', 'sergio-ai-studio' ); ?></p>
+								</td>
+							</tr>
+							<tr>
+								<th scope="row">
 									<label for="schedule_target_length"><?php esc_html_e( 'Độ Dài Bài Viết Mục Tiêu', 'sergio-ai-studio' ); ?></label>
 								</th>
 								<td>

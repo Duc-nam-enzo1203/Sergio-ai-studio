@@ -150,6 +150,32 @@ defined( 'ABSPATH' ) || exit;
 			</div>
 		</div>
 
+		
+		<div class="postbox">
+			<div class="postbox-header"><h2 class="hndle"><span><?php esc_html_e( 'Nguồn Báo Chí & Tham Khảo Độc Lập (Trusted Media Outlets)', 'sergio-ai-studio' ); ?></span></h2></div>
+			<div class="inside">
+				<p class="description" style="margin-bottom: 12px;">
+					<?php esc_html_e( 'Danh sách các trang báo chí và cổng thông tin uy tín. Khi nghiên cứu hoặc lập lịch, AI sẽ ưu tiên quét tin tức 24h-48h từ các nguồn này để tổng hợp dữ kiện chuẩn xác nhất.', 'sergio-ai-studio' ); ?>
+				</p>
+				<table class="form-table" role="presentation">
+					<tbody>
+						<tr>
+							<th scope="row">
+								<label for="trusted_reference_sources"><?php esc_html_e( 'Trang Báo Tham Khảo Mặc Định', 'sergio-ai-studio' ); ?></label>
+							</th>
+							<td>
+								<textarea id="trusted_reference_sources" name="sergio_ai_studio_options[trusted_reference_sources]"
+									rows="3" class="large-text" placeholder="vnexpress.net, tuoitre.vn, thanhnien.vn, baomoi.com, vietnamnet.vn"><?php echo esc_textarea( $trusted_sources ); ?></textarea>
+								<p class="description">
+									<?php esc_html_e( 'Nhập tên miền cách nhau bằng dấu phẩy hoặc xuống dòng (Ví dụ: vnexpress.net, tuoitre.vn, baomoi.com, techcrunch.com...).', 'sergio-ai-studio' ); ?>
+								</p>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+
 		<div class="postbox">
 			<div class="postbox-header"><h2 class="hndle"><span><?php esc_html_e( 'Thiết Lập Mặc Định', 'sergio-ai-studio' ); ?></span></h2></div>
 			<div class="inside">
