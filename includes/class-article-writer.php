@@ -155,7 +155,12 @@ NGUYÊN TẮC BẤT DI BẤT DỊCH (VI PHẠM SẼ BỊ TỪ CHỐI):
 7. QUY TẮC MỞ BÀI ĐỘT PHÁ (CẤM VĂN TRẦN THUẬT MỘT MÀU):
    - ÁP DỤNG KIỂU MỞ BÀI: {$selected_hook_guide}.
    - TUYỆT ĐỐI CẤM các câu mở đầu tẻ nhạt như: \"Vào ngày...\", \"Vừa qua...\", \"Trong bối cảnh...\", \"Sự phát triển của...\", \"Không thể phủ nhận rằng...\".
-   - Câu đầu tiên phải sắc lẹm, kích thích tính tò mò của độc giả ngay tức thì, đồng thời lồng ghép từ khóa chính \"{$focus_kw}\" một cách tự nhiên.";
+   - Câu đầu tiên phải sắc lẹm, kích thích tính tò mò của độc giả ngay tức thì, đồng thời lồng ghép từ khóa chính \"{$focus_kw}\" một cách tự nhiên.
+8. BỘ LUẬT CHỐNG VIẾT CHUNG CHUNG & BẮT BUỘC DẪN CHỨNG (ANTI-VAGUENESS & CONCRETE PROOF):
+   - CẤM TUYỆT ĐỐI đưa ra nhận định suông (\"vượt trội\", \"tối ưu chi phí\", \"mạnh mẽ\", \"dễ sử dụng\") MÀ KHÔNG CÓ DẪN CHỨNG SỐ LIỆU (con số %, tiền tệ VND/USD, benchmark, kích thước, thời gian) ngay sau đó.
+   - BẮT BUỘC có phân tích SO SÁNH TRỰC DIỆN (Head-to-Head) với ít nhất 1-2 đối thủ lớn nhất cùng phân khúc hoặc thế hệ tiền nhiệm, kèm bảng đối chiếu HTML: <table class=\"table table-bordered table-hover my-4\">.
+   - BẮT BUỘC giải thích CƠ CHẾ NGUYÊN LÝ HOẠT ĐỘNG (How it works under the hood) thay vì chỉ mô tả bề mặt.
+   - BẮT BUỘC chỉ rõ TÍNH KHẢ DỤNG THỰC TẾ & RÀO CẢN: Giá bán/chi phí thực tế, mức độ sẵn sàng tại Việt Nam, và đối tượng nào KHÔNG NÊN sử dụng.";
 
         $safe_headline = trim( wp_strip_all_tags( $headline ) );
         $safe_focus_kw = trim( wp_strip_all_tags( $focus_kw ) );
@@ -188,7 +193,10 @@ HƯỚNG DẪN VIẾT BÀI VÀ CẤU TRÚC ĐỘT PHÁ (BẮT BUỘC TUÂN THỦ
        </ul>
    </div>
 3. Khối Mục Lục (TOC): Tự động tạo khối <div class=\"sergio-toc\"> liên kết đến các thẻ <h2 id=\"...\">.
-4. Thân bài phân tích đa chiều: Bám sát dàn ý đề xuất, chèn bảng <table class=\"table table-bordered table-hover my-4\"> nếu có số liệu.
+4. Thân bài phân tích chuyên sâu đa chiều:
+   - Đi thẳng vào nguyên lý và cơ chế hoạt động (How it works).
+   - So sánh trực diện (Head-to-Head) với 1-2 đối thủ/sản phẩm cùng phân khúc, BẮT BUỘC chèn 1 bảng so sánh chi tiết: <table class=\"table table-bordered table-hover my-4\"> (gồm các cột: Tiêu chí, [Đối tượng chính], [Đối thủ 1], Đánh giá thực tế).
+   - Cấm nhận định rỗng không có số liệu chứng minh.
 5. Khối Phản Biện / Lưu Ý Thực Tế: Trong thân bài, chèn ít nhất một khối phân tích góc khuất / rào cản:
    <blockquote class=\"sergio-insight-box my-4 p-3 border-start border-4 border-warning bg-light\" style=\"font-style:normal; margin:20px 0; padding:16px 20px; background:#fffbeb; border-left:4px solid #f59e0b; border-radius:4px;\">
        <strong style=\"color:#b45309;\">⚠️ Góc nhìn phản biện & Lưu ý thực tế:</strong> [Phân tích trung thực về chi phí ẩn, rào cản ứng dụng hoặc so sánh thực tiễn]

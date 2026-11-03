@@ -147,7 +147,12 @@ NGUYÊN TẮC BẮT BUỘC:
    - TIÊU ĐỀ: Bắt buộc nêu tên 1-2 repo nổi bật nhất (Ví dụ: "Top Repo GitHub Ngày {$current_date}: [Tên Repo 1] và [Tên Repo 2] Bứt Phá Làn Sóng AI").
    - DÀN Ý: Phải chia các mục H2 riêng biệt để phân tích chi tiết từng repo có tên cụ thể trong Fact Pack (Tên, ngôn ngữ, tính năng cốt lõi, lý do tăng sao hôm nay).
    - BẮT BUỘC có 1 mục H2 là bảng so sánh thông số các repo.
-   - TUYỆT ĐỐI CẤM dàn ý chung chung nói về lợi ích của mã nguồn mở mà không nhắc tên repo cụ thể.";
+   - TUYỆT ĐỐI CẤM dàn ý chung chung nói về lợi ích của mã nguồn mở mà không nhắc tên repo cụ thể.
+8. BỘ QUY TẮC DÀN Ý CHUYÊN SÂU TOÀN DIỆN CHO MỌI CHỦ ĐỀ (MANDATORY DEEP OUTLINE):
+   - Thẻ <h2> tuyệt đối KHÔNG đặt chung chung như "Tổng quan", "Ưu điểm nổi bật", "Đánh giá chung". Heading phải gắn liền với thực thể, giải pháp hoặc câu hỏi sắc bén.
+   - BẮT BUỘC có 1 mục H2 đi sâu vào CƠ CHẾ VẬN HÀNH / NGUYÊN LÝ HOẠT ĐỘNG (Bóc tách tại sao nó làm được như vậy thay vì chỉ nói bề nổi).
+   - BẮT BUỘC có 1 mục H2 SO SÁNH TRỰC DIỆN với 1-2 đối thủ cạnh tranh hoặc thế hệ tiền nhiệm (có dàn ý cho bảng so sánh).
+   - BẮT BUỘC có 1 mục H2 về GÓC KHUẤT, RÀO CẢN THỰC TẾ & AI KHÔNG NÊN DÙNG (Giúp người đọc có góc nhìn trung thực).";
 
         $prompt = "Ý ĐỊNH TÌM KIẾM BAN ĐẦU CỦA NGƯỜI DÙNG:
 <user_intent>

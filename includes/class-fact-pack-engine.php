@@ -116,7 +116,13 @@ QUY TẮC BẤT DI BẤT DỊCH:
 
 4. BỘ LỌC TÍNH MỚI & CHỐNG BÀI BÁO CŨ (STALE NEWS FILTER):
 - Ưu tiên cao nhất các nguồn tin, bài báo, bài đăng mạng xã hội (X/Twitter, Reddit, GitHub, Blog chính thức) xuất bản gần nhất trong năm {$current_year}.
-- Nếu một tin tức hoặc sự kiện đã diễn ra từ các năm trước hoặc không còn tính thời sự, bắt buộc tìm kiếm các cập nhật mới nhất, phiên bản mới nhất trong năm {$current_year}. Tuyệt đối không đưa số liệu hay tin tức cũ đã lỗi thời vào Fact Pack.";
+- Nếu một tin tức hoặc sự kiện đã diễn ra từ các năm trước hoặc không còn tính thời sự, bắt buộc tìm kiếm các cập nhật mới nhất, phiên bản mới nhất trong năm {$current_year}. Tuyệt đối không đưa số liệu hay tin tức cũ đã lỗi thời vào Fact Pack.
+
+5. BỘ QUY TẮC ĐÀO SÂU DỮ KIỆN CHO MỌI CHỦ ĐỀ (ANTI-VAGUENESS FACT EXTRACTION):
+- Dù là chủ đề công nghệ, xe cộ, tài chính, bất động sản, chính sách hay đời sống: BẮT BUỘC tìm kiếm các số liệu định lượng cụ thể: Giá tiền (VND/USD), thông số kỹ thuật, benchmark, thời lượng pin, dung lượng, mốc lịch trình.
+- BẮT BUỘC trích xuất tên 1-2 đối thủ cạnh tranh trực tiếp hoặc thế hệ tiền nhiệm để phục vụ so sánh trực diện.
+- BẮT BUỘC trích xuất các ý kiến phản biện, hạn chế/điểm yếu thực tế, chi phí ẩn hoặc rào cản khi sử dụng (đặc biệt là tính khả dụng tại Việt Nam nếu có).
+- TUYỆT ĐỐI KHÔNG chỉ lấy khẩu hiệu quảng cáo một chiều của nhà sản xuất.";
 
         if ( ! empty( $cleaned_domains ) ) {
             $domains_list = implode( ', ', $cleaned_domains );
