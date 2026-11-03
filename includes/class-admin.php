@@ -145,7 +145,7 @@ class Sergio_AI_Admin {
 		$clean['default_schedule_author']   = isset( $input['default_schedule_author'] ) ? absint( $input['default_schedule_author'] ) : 0;
 		$clean['default_schedule_cat']      = isset( $input['default_schedule_cat'] ) ? absint( $input['default_schedule_cat'] ) : 0;
 		$clean['default_schedule_status']   = in_array( $input['default_schedule_status'] ?? '', array( 'draft', 'publish' ), true ) ? $input['default_schedule_status'] : 'draft';
-		$clean['schedule_image_option']    = in_array( $input['schedule_image_option'] ?? '', array( 'reference', 'banner', 'none' ), true ) ? $input['schedule_image_option'] : 'reference';
+		$clean['schedule_image_option']    = in_array( $input['schedule_image_option'] ?? '', array( 'reference', 'none' ), true ) ? $input['schedule_image_option'] : 'reference';
 
 		$scheduler = new Sergio_AI_Scheduler();
 		if ( $clean['scheduler_enabled'] ) {
@@ -864,7 +864,7 @@ class Sergio_AI_Admin {
 										<?php printf( esc_html__( 'Quy mô đợt: %d bài viết / phiên', 'sergio-ai-studio' ), (int) $posts_per_run ); ?>
 										<span style="color: #8c8f94; margin: 0 6px;">&bull;</span>
 										<?php
-										$img_opt_label = ( 'banner' === $schedule_image_opt ) ? __( 'Banner GD', 'sergio-ai-studio' ) : ( ( 'none' === $schedule_image_opt ) ? __( 'Không tạo ảnh', 'sergio-ai-studio' ) : __( 'Ảnh từ nguồn tin', 'sergio-ai-studio' ) );
+										$img_opt_label = ( 'none' === $schedule_image_opt ) ? __( 'Không tạo ảnh', 'sergio-ai-studio' ) : __( 'Ảnh từ nguồn tin', 'sergio-ai-studio' );
 										printf( esc_html__( 'Ảnh: %s', 'sergio-ai-studio' ), esc_html( $img_opt_label ) );
 										?>
 									</p>
@@ -1042,7 +1042,7 @@ class Sergio_AI_Admin {
 
 											<select id="writer_image_option" style="margin-left: 10px;">
 												<option value="reference" selected><?php esc_html_e( 'Trích xuất từ nguồn tham khảo (Ghi nguồn tác giả rõ ràng)', 'sergio-ai-studio' ); ?></option>
-												<option value="banner"><?php esc_html_e( 'Tự động vẽ Banner đồ họa chuẩn mạng xã hội (1200x630)', 'sergio-ai-studio' ); ?></option>
+												
 												<option value="none"><?php esc_html_e( 'Không tạo ảnh (Tối ưu tốc độ tối đa)', 'sergio-ai-studio' ); ?></option>
 											</select>
 										</td>

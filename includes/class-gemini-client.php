@@ -186,7 +186,7 @@ class Sergio_AI_Gemini_Client {
                 $clean_id = str_replace( 'models/', '', $raw_name );
 
                 // Filter out non-text/experimental embeddings/aqa
-                if ( preg_match( '/(embedding|aqa|imagen|medlm)/i', $clean_id ) ) {
+                if ( preg_match( '/(embedding|aqa|imagen|medlm|tts|audio)/i', $clean_id ) ) {
                     continue;
                 }
 
@@ -364,11 +364,15 @@ class Sergio_AI_Gemini_Client {
         $primary = str_replace( 'models/', '', $primary );
         if ( 'gemini-2.5-flash-lite' === $primary ) {
             $primary = 'gemini-3.5-flash-lite';
+        } elseif ( false !== stripos( $primary, '-tts' ) || false !== stripos( $primary, 'audio' ) ) {
+            $primary = 'gemini-2.5-flash';
         }
 
         $fallback = ! empty( $this->fallback_model ) ? str_replace( 'models/', '', $this->fallback_model ) : '';
         if ( 'gemini-2.5-flash-lite' === $fallback ) {
             $fallback = 'gemini-3.5-flash-lite';
+        } elseif ( false !== stripos( $fallback, '-tts' ) || false !== stripos( $fallback, 'audio' ) ) {
+            $fallback = 'gemini-2.0-flash';
         }
 
         $candidates = array( $primary );

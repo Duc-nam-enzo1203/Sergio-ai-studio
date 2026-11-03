@@ -342,43 +342,31 @@ HƯỚNG DẪN VIẾT BÀI:
         // -------------------------------------------------------------
         $image_option = isset( $settings['image_option'] ) ? sanitize_key( $settings['image_option'] ) : 'reference';
 
-        if ( 'none' !== $image_option ) {
+        if ( 'reference' === $image_option ) {
             try {
                 if ( class_exists( 'Sergio_AI_Image_Service' ) ) {
                     $image_service = new Sergio_AI_Image_Service( $this->logger );
 
-                    if ( 'banner' === $image_option ) {
-                        // Directly generate GD template banner without network scraping
-                        $clean_t = sanitize_text_field( wp_strip_all_tags( $post_title ) );
-                        $alt_t   = ! empty( $focus_kw ) ? $focus_kw . ' - ' . $clean_t : $clean_t;
-                        $banner_id = $image_service->generate_template_banner( $post_id, $clean_t, $alt_t );
-                        if ( $banner_id && ! is_wp_error( $banner_id ) ) {
-                            set_post_thumbnail( $post_id, $banner_id );
-                            update_post_meta( $post_id, '_sergio_ai_featured_image_id', $banner_id );
-                            update_post_meta( $post_id, '_sergio_ai_image_type', 'gd_template' );
+                    // Resolve sources from article_data or fact pack
+                    $sources = ! empty( $article_data['sources'] ) ? (array) $article_data['sources'] : array();
+                    if ( empty( $sources ) && $fact_pack_id > 0 && class_exists( 'Sergio_AI_Fact_Pack_Engine' ) ) {
+                        $engine = new Sergio_AI_Fact_Pack_Engine( $this->client, $this->logger );
+                        $pack   = $engine->get_pack_by_id( $fact_pack_id );
+                        if ( ! empty( $pack['source_citations'] ) ) {
+                            $sources = (array) $pack['source_citations'];
                         }
-                    } else {
-                        // Resolve sources from article_data or fact pack
-                        $sources = ! empty( $article_data['sources'] ) ? (array) $article_data['sources'] : array();
-                        if ( empty( $sources ) && $fact_pack_id > 0 && class_exists( 'Sergio_AI_Fact_Pack_Engine' ) ) {
-                            $engine = new Sergio_AI_Fact_Pack_Engine( $this->client, $this->logger );
-                            $pack   = $engine->get_pack_by_id( $fact_pack_id );
-                            if ( ! empty( $pack['source_citations'] ) ) {
-                                $sources = (array) $pack['source_citations'];
-                            }
-                        }
-
-                        $image_service->attach_featured_image(
-                            $post_id,
-                            $post_title,
-                            $article_data['primary_focus_keyword'] ?? '',
-                            $article_data['image_prompt_en'] ?? '',
-                            $sources
-                        );
                     }
+
+                    $image_service->attach_featured_image(
+                        $post_id,
+                        $post_title,
+                        $article_data['primary_focus_keyword'] ?? '',
+                        $article_data['image_prompt_en'] ?? '',
+                        $sources
+                    );
                 }
             } catch ( Exception $e ) {
-                $this->logger->warning( 'image_service_failed', 'Lỗi ngoại lệ khi tạo ảnh bài viết: ' . $e->getMessage() );
+                $this->logger->warning( 'image_service_failed', 'Lỗi ngoại lệ khi xử lý ảnh bài viết: ' . $e->getMessage() );
             }
         }
 

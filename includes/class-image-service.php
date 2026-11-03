@@ -93,10 +93,10 @@ class Sergio_AI_Image_Service {
             }
         }
 
-        // 3. FALLBACK: High Quality GD Template Banner (1200x630)
+        // If no source image found, skip creating featured image entirely (No GD banner)
         if ( empty( $attachment_id ) ) {
-            $attachment_id = $this->generate_template_banner( $post_id, $clean_title, $alt_text );
-            update_post_meta( $post_id, '_sergio_ai_image_type', 'gd_template' );
+            $this->logger->info( 'image_source_skipped', sprintf( 'Bài viết #%d: Nguồn tin tham khảo không có ảnh hoặc không thể tải ảnh. Bỏ qua tạo ảnh đại diện.', $post_id ) );
+            return 0;
         }
 
         if ( is_wp_error( $attachment_id ) || empty( $attachment_id ) ) {

@@ -180,7 +180,7 @@ class Sergio_AI_Scheduler {
 			$default_cat   = isset( $options['default_schedule_cat'] ) ? (int) $options['default_schedule_cat'] : 0;
 			$default_auth  = isset( $options['default_schedule_author'] ) ? (int) $options['default_schedule_author'] : 0;
 			// Default to draft / pending for human editorial review
-			$post_status   = isset( $options['default_schedule_status'] ) && in_array( $options['default_schedule_status'], array( 'draft', 'pending' ), true )
+			$post_status   = isset( $options['default_schedule_status'] ) && in_array( $options['default_schedule_status'], array( 'draft', 'pending', 'publish' ), true )
 				? $options['default_schedule_status']
 				: 'draft';
 			$language      = isset( $options['default_language'] ) ? $options['default_language'] : 'vi';
@@ -409,6 +409,7 @@ class Sergio_AI_Scheduler {
 		}
 
 		$date_str = wp_date( 'd/m/Y' );
+		$year_str = wp_date( 'Y' );
 
 		// Retrieve recent topics to explicitly forbid duplicates
 		global $wpdb;
@@ -424,29 +425,47 @@ class Sergio_AI_Scheduler {
 			$exclusion_text = "\nCÁC CHỦ ĐỀ ĐÃ XUẤT BẢN GẦN ĐÂY (TUYỆT ĐỐI KHÔNG TRÙNG LẶP NỘI DUNG VỚI DANH SÁCH NÀY):\n- " . implode( "\n- ", array_slice( $recent_posts, 0, 10 ) ) . "\n";
 		}
 
-		$prompt = "Bạn là biên tập viên tin tức hàng đầu. Hôm nay là ngày {$date_str}.\n" .
-				  "Dựa trên lĩnh vực chuyên sâu: \"{$niche}\", hãy tra cứu bằng Google Search và chọn ra ĐÚNG 1 sự kiện, bản tin hoặc sản phẩm thực tế mới nhất trong 7 ngày qua để viết bài phân tích chuyên sâu.\n" .
+		$prompt = "Bạn là biên tập viên tin tức công nghệ hàng đầu. Thời gian thực tế hiện tại là ngày {$date_str} (năm {$year_str}).\n" .
+				  "Hãy sử dụng Google Search để tìm kiếm các bài báo, sự kiện hoặc công bố sản phẩm thực tế MỚI NHẤT VỪA DIỄN RA TRONG 24H - 48H GẦN ĐÂY trong lĩnh vực: \"{$niche}\".\n" .
 				  $exclusion_text .
 				  "QUY TẮC BẮT BUỘC:\n" .
 				  "- Trả về CHỈ DUY NHẤT 1 DÒNG là tiêu đề chủ đề (ngắn gọn, dưới 15 từ, chứa tên thực thể/sản phẩm có thật).\n" .
 				  "- KHÔNG có dấu ngoặc kép, KHÔNG có lời giải thích, KHÔNG có tiền tố như 'Chủ đề: ' hay '1. '.\n" .
-				  "- Chủ đề PHẢI CÓ THẬT VÀ MỚI XẢY RA, không bịa đặt tên thực thể.";
+				  "- Chủ đề PHẢI CÓ THẬT VÀ MỚI XẢY RA TRONG NĂM {$year_str}, không bịa đặt tên thực thể.";
 
-		$logger->info( 'cron_topic_discovery', sprintf( 'Đang tự động nghiên cứu chủ đề mới bằng Google Search Grounding cho lĩnh vực: %s', $niche ) );
+		$logger->info( 'cron_topic_discovery', sprintf( 'Đang tự động nghiên cứu chủ đề mới nhất (24h-48h) bằng Google Search Grounding cho lĩnh vực: %s', $niche ) );
+
+		$discovered = '';
 
 		// Google Search Grounding ENABLED (true)
 		$res = $client->generate_content( $prompt, '', true, 0.7, 45 );
-		if ( is_wp_error( $res ) ) {
-			return $res;
+		if ( ! is_wp_error( $res ) ) {
+			$raw_text   = is_array( $res ) ? ( $res['text'] ?? '' ) : (string) $res;
+			$discovered = trim( sanitize_text_field( $raw_text ) );
+			$discovered = trim( $discovered, "\"'\t\n\r" );
+			$discovered = preg_replace( '/^(?:chủ đề|tiêu đề|topic)[:\s]*/iu', '', $discovered );
 		}
 
-		$raw_text   = is_array( $res ) ? ( $res['text'] ?? '' ) : (string) $res;
-		$discovered = trim( sanitize_text_field( $raw_text ) );
-		$discovered = trim( $discovered, "\"'\t\n\r" );
-		$discovered = preg_replace( '/^(?:chủ đề|tiêu đề|topic)[:\s]*/iu', '', $discovered );
+		// Resilient Fallback 1: Direct Reasoning if Grounding failed or returned empty
+		if ( is_wp_error( $res ) || empty( $discovered ) ) {
+			$logger->warning( 'cron_discovery_gf_retry', 'Google Search Grounding bận hoặc gặp hạn mức 429. Đang chuyển sang chế độ suy luận phân tích xu hướng thời sự trực tiếp...' );
+			$gf_prompt = "Bạn là chuyên gia phân tích công nghệ. Năm hiện tại là {$year_str}.\n" .
+						 "Trong lĩnh vực: \"{$niche}\", hãy chọn ra 1 sự kiện hoặc chủ đề phân tích chuyên sâu nóng hổi, có giá trị thực tiễn cao nhất hiện nay.\n" .
+						 $exclusion_text .
+						 "QUY TẮC: Trả về CHỈ DUY NHẤT 1 DÒNG là tiêu đề chủ đề (dưới 15 từ), không thêm lời giải thích.";
+			$gf_res = $client->generate_content( $gf_prompt, '', false, 0.7, 40 );
+			if ( ! is_wp_error( $gf_res ) ) {
+				$raw_text   = is_array( $gf_res ) ? ( $gf_res['text'] ?? '' ) : (string) $gf_res;
+				$discovered = trim( sanitize_text_field( $raw_text ) );
+				$discovered = trim( $discovered, "\"'\t\n\r" );
+				$discovered = preg_replace( '/^(?:chủ đề|tiêu đề|topic)[:\s]*/iu', '', $discovered );
+			}
+		}
 
+		// Resilient Fallback 2: Contextual fallback topic (prevents cron pipeline crash)
 		if ( empty( $discovered ) ) {
-			return new WP_Error( 'discovery_empty', 'Không thể tạo chủ đề tự động.' );
+			$discovered = sprintf( 'Đánh giá xu hướng và giải pháp đột phá mới trong lĩnh vực %s năm %s', $niche, $year_str );
+			$logger->info( 'cron_discovery_smart_fallback', sprintf( 'Sử dụng chủ đề phân tích tổng quan: "%s"', $discovered ) );
 		}
 
 		if ( self::is_topic_duplicate_recent( $discovered, 30 ) ) {
