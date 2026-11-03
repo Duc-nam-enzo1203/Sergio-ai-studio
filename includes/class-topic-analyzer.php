@@ -142,7 +142,12 @@ NGUYÊN TẮC BẮT BUỘC:
 6. CHỈ ĐỊNH ĐỘT PHÁ SÁNG TẠO:
    - Hướng tiếp cận bài viết: {$chosen_arch['label']} ({$chosen_arch['instruction']}).
    - Kiểu mở bài ấn tượng: {$chosen_hook_desc}.
-   - Dàn ý BẮT BUỘC phải có ít nhất 1 mục H2 phân tích phản biện/thách thức thực tế hoặc so sánh sâu, TUYỆT ĐỐI không lập dàn ý một màu khen ngợi sáo rỗng.";
+   - Dàn ý BẮT BUỘC phải có ít nhất 1 mục H2 phân tích phản biện/thách thức thực tế hoặc so sánh sâu, TUYỆT ĐỐI không lập dàn ý một màu khen ngợi sáo rỗng.
+7. QUY TẮC ĐẶC BIỆT KHI CHỦ ĐỀ LÀ REPO GITHUB / MÃ NGUỒN MỞ TRENDING:
+   - TIÊU ĐỀ: Bắt buộc nêu tên 1-2 repo nổi bật nhất (Ví dụ: "Top Repo GitHub Ngày {$current_date}: [Tên Repo 1] và [Tên Repo 2] Bứt Phá Làn Sóng AI").
+   - DÀN Ý: Phải chia các mục H2 riêng biệt để phân tích chi tiết từng repo có tên cụ thể trong Fact Pack (Tên, ngôn ngữ, tính năng cốt lõi, lý do tăng sao hôm nay).
+   - BẮT BUỘC có 1 mục H2 là bảng so sánh thông số các repo.
+   - TUYỆT ĐỐI CẤM dàn ý chung chung nói về lợi ích của mã nguồn mở mà không nhắc tên repo cụ thể.";
 
         $prompt = "Ý ĐỊNH TÌM KIẾM BAN ĐẦU CỦA NGƯỜI DÙNG:
 <user_intent>

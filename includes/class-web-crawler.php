@@ -600,4 +600,83 @@ class Sergio_AI_Web_Crawler {
             array( '%s', '%s', '%s', '%s', '%s' )
         );
     }
+    /**
+     * Fetch real-time trending repositories from GitHub.
+     *
+     * @param string $since 'daily', 'weekly', 'monthly'
+     * @param string $language Programming language filter (e.g. 'python', 'javascript', '' for all)
+     * @param int $limit Maximum number of repos to return (default 8)
+     * @return array List of repositories with keys: name, full_name, url, desc, stars_today, language
+     */
+    public static function fetch_github_trending( string $since = 'daily', string $language = '', int $limit = 8 ): array {
+        $url = 'https://github.com/trending';
+        if ( ! empty( $language ) ) {
+            $url .= '/' . rawurlencode( strtolower( $language ) );
+        }
+        $url .= '?since=' . rawurlencode( $since );
+
+        $response = wp_safe_remote_get( $url, array(
+            'timeout'    => 15,
+            'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'headers'    => array(
+                'Accept'          => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language' => 'en-US,en;q=0.9',
+            ),
+        ) );
+
+        if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
+            return array();
+        }
+
+        $html = wp_remote_retrieve_body( $response );
+        if ( empty( $html ) ) {
+            return array();
+        }
+
+        $items = array();
+        if ( preg_match_all( '/<article class="Box-row"[\s\S]*?<\/article>/i', $html, $articles ) ) {
+            foreach ( $articles[0] as $block ) {
+                if ( count( $items ) >= $limit ) {
+                    break;
+                }
+                // Extract repository slug
+                if ( ! preg_match( '/href="\/([a-zA-Z0-9_\-\.\/]+)"[^>]*class="Link"/i', $block, $repo_m ) ) {
+                    continue;
+                }
+                $repo_slug = trim( $repo_m[1] );
+                if ( str_contains( $repo_slug, '/' ) === false || str_contains( $repo_slug, '/stargazers' ) || str_contains( $repo_slug, '/network' ) ) {
+                    continue;
+                }
+
+                // Extract description
+                $desc = '';
+                if ( preg_match( '/<p class="col-9[^\"]*"[^>]*>([\s\S]*?)<\/p>/i', $block, $desc_m ) ) {
+                    $desc = trim( function_exists('wp_strip_all_tags') ? wp_strip_all_tags( $desc_m[1] ) : strip_tags( $desc_m[1] ) );
+                }
+
+                // Extract stars today
+                $stars_today = '';
+                if ( preg_match( '/(\d[\d,]*)\s+stars\s+today/i', $block, $stars_m ) ) {
+                    $stars_today = trim( $stars_m[1] );
+                }
+
+                // Extract language
+                $lang = 'Chưa xác định';
+                if ( preg_match( '/itemprop="programmingLanguage">([^<]+)<\/span>/i', $block, $lang_m ) ) {
+                    $lang = trim( $lang_m[1] );
+                }
+
+                $items[] = array(
+                    'name'        => basename( $repo_slug ),
+                    'full_name'   => $repo_slug,
+                    'url'         => 'https://github.com/' . $repo_slug,
+                    'description' => $desc,
+                    'stars_today' => $stars_today,
+                    'language'    => $lang,
+                );
+            }
+        }
+
+        return $items;
+    }
 }
