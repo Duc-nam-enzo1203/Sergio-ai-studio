@@ -181,3 +181,4 @@ defined( 'ABSPATH' ) || exit;
 	<!-- Result Card -->
 	<div id="pipeline_result_card" style="display: none; margin-top: 20px; padding: 14px 18px; background: #edfaef; border: 1px solid #c3e6cb; border-radius: 4px; color: #1a6828;"></div>
 </div>
+
