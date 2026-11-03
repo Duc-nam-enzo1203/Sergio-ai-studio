@@ -426,12 +426,12 @@ class Sergio_AI_Scheduler {
 		}
 
 		$prompt = "Bạn là biên tập viên tin tức công nghệ hàng đầu. Thời gian thực tế hiện tại là ngày {$date_str} (năm {$year_str}).\n" .
-				  "Hãy sử dụng Google Search để tìm kiếm các bài báo, sự kiện hoặc công bố sản phẩm thực tế MỚI NHẤT VỪA DIỄN RA TRONG 24H - 48H GẦN ĐÂY trong lĩnh vực: \"{$niche}\".\n" .
+				  "Hãy sử dụng Google Search để tìm kiếm các bài báo, sự kiện, xu hướng thảo luận nóng hổi trên mạng xã hội (X/Twitter, Reddit, Tech blogs, GitHub Trending) MỚI NHẤT VỪA DIỄN RA TRONG 24H - 48H GẦN ĐÂY trong lĩnh vực: \"{$niche}\".\n" .
 				  $exclusion_text .
 				  "QUY TẮC BẮT BUỘC:\n" .
 				  "- Trả về CHỈ DUY NHẤT 1 DÒNG là tiêu đề chủ đề (ngắn gọn, dưới 15 từ, chứa tên thực thể/sản phẩm có thật).\n" .
 				  "- KHÔNG có dấu ngoặc kép, KHÔNG có lời giải thích, KHÔNG có tiền tố như 'Chủ đề: ' hay '1. '.\n" .
-				  "- Chủ đề PHẢI CÓ THẬT VÀ MỚI XẢY RA TRONG NĂM {$year_str}, không bịa đặt tên thực thể.";
+				  "- Chủ đề PHẢI CÓ THẬT VÀ MỚI XẢY RA TRONG NĂM {$year_str}, tuyệt đối không chọn bài báo cũ lỗi thời, không bịa đặt tên thực thể.";
 
 		$logger->info( 'cron_topic_discovery', sprintf( 'Đang tự động nghiên cứu chủ đề mới nhất (24h-48h) bằng Google Search Grounding cho lĩnh vực: %s', $niche ) );
 

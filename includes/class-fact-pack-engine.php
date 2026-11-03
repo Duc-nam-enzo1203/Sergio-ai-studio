@@ -88,7 +88,11 @@ QUY TẮC BẤT DI BẤT DỊCH:
 - Người dùng nhập chuỗi ký tự rác, vô nghĩa (ví dụ: 'asdfghjk', '123456').
 - Chủ đề hỏi về một thực thể hoàn toàn bịa đặt, giả tưởng không hề tồn tại trên thế giới.
 
-3. TUYỆT ĐỐI KHÔNG BỊA đặt tên repo, không bịa tên sản phẩm không có thật. Mọi tên gọi phải là thực thể có thật.";
+3. TUYỆT ĐỐI KHÔNG BỊA đặt tên repo, không bịa tên sản phẩm không có thật. Mọi tên gọi phải là thực thể có thật.
+
+4. BỘ LỌC TÍNH MỚI & CHỐNG BÀI BÁO CŨ (STALE NEWS FILTER):
+- Ưu tiên cao nhất các nguồn tin, bài báo, bài đăng mạng xã hội (X/Twitter, Reddit, GitHub, Blog chính thức) xuất bản gần nhất trong năm {$current_year}.
+- Nếu một tin tức hoặc sự kiện đã diễn ra từ các năm trước hoặc không còn tính thời sự, bắt buộc tìm kiếm các cập nhật mới nhất, phiên bản mới nhất trong năm {$current_year}. Tuyệt đối không đưa số liệu hay tin tức cũ đã lỗi thời vào Fact Pack.";
 
         $clean_topic = trim( wp_strip_all_tags( $topic ) );
         $prompt = "YÊU CẦU NGHIÊN CỨU TỪ NGƯỜI DÙNG ĐƯỢC ĐẶT TRONG THẺ <user_intent> DƯỚI ĐÂY:
