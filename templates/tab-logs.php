@@ -11,9 +11,9 @@ defined( 'ABSPATH' ) || exit;
 
 	<!-- Subsubsub Filter Links -->
 	<ul class="subsubsub">
-		<li class="all"><a href="#tab-logs" class="current log-subsubsub-link" data-level="" aria-current="page"><?php esc_html_e( 'Tất cả', 'sergio-ai-studio' ); ?> <span class="count">(<?php echo (int) $log_stats['total_logs']; ?>)</span></a> |</li>
-		<li class="warning"><a href="#tab-logs" class="log-subsubsub-link" data-level="warning"><?php esc_html_e( 'Cảnh báo', 'sergio-ai-studio' ); ?> <span class="count">(<?php echo (int) $log_stats['warning_count']; ?>)</span></a> |</li>
-		<li class="error"><a href="#tab-logs" class="log-subsubsub-link" data-level="error"><?php esc_html_e( 'Lỗi', 'sergio-ai-studio' ); ?> <span class="count">(<?php echo (int) $log_stats['error_count']; ?>)</span></a></li>
+		<li class="all"><a href="#" class="current log-subsubsub-link" data-level="" aria-current="page"><?php esc_html_e( 'Tất cả', 'sergio-ai-studio' ); ?> <span class="count">(<?php echo (int) $log_stats['total_logs']; ?>)</span></a> |</li>
+		<li class="warning"><a href="#" class="log-subsubsub-link" data-level="warning"><?php esc_html_e( 'Cảnh báo', 'sergio-ai-studio' ); ?> <span class="count">(<?php echo (int) $log_stats['warning_count']; ?>)</span></a> |</li>
+		<li class="error"><a href="#" class="log-subsubsub-link" data-level="error"><?php esc_html_e( 'Lỗi', 'sergio-ai-studio' ); ?> <span class="count">(<?php echo (int) $log_stats['error_count']; ?>)</span></a></li>
 	</ul>
 
 	<!-- Search Box -->

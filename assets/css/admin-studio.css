@@ -755,7 +755,9 @@
 .sergio-ai-studio-wrap .subsubsub a,
 .sergio-ai-studio-wrap .subsubsub a:hover,
 .sergio-ai-studio-wrap .subsubsub a:focus,
-.sergio-ai-studio-wrap .subsubsub a.current {
+.sergio-ai-studio-wrap .subsubsub a.current,
+.sergio-ai-studio-wrap .subsubsub a.current:hover,
+.sergio-ai-studio-wrap .subsubsub a.current:focus {
     background: transparent !important;
     background-color: transparent !important;
     border: none !important;
@@ -763,6 +765,26 @@
     box-shadow: none !important;
     outline: none !important;
     text-decoration: none !important;
+}
+
+.sergio-ai-studio-wrap .subsubsub a,
+.sergio-ai-studio-wrap .subsubsub a:hover,
+.sergio-ai-studio-wrap .subsubsub a:focus,
+.sergio-ai-studio-wrap .subsubsub a.current,
+.sergio-ai-studio-wrap .subsubsub a.current:hover,
+.sergio-ai-studio-wrap .subsubsub a.current:focus {
+    display: inline !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    line-height: 2 !important;
+    padding: 0.2em !important;
+    margin: 0 !important;
+    position: static !important;
+    top: auto !important;
+    transform: none !important;
+    vertical-align: baseline !important;
+    box-sizing: content-box !important;
 }
 
 .sergio-ai-studio-wrap .subsubsub {

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Sergio AI Studio v2.1 — Studio Controller (Bespoke Craft Edition)
  */
 
@@ -183,7 +183,7 @@ jQuery(document).ready(function($) {
 
         // 1. Update navigation tab active states
         $('.nav-tab, .nav-tree-item, .nav-tab-link').removeClass('nav-tab-active is-active');
-        $('[data-tab="' + tabId + '"], [data-tab="' + slug + '"], [href*="tab=' + slug + '"], [href="#' + tabId + '"]').addClass('nav-tab-active is-active');
+        $('.nav-tab[data-tab="' + tabId + '"], .nav-tab[data-tab="' + slug + '"], .nav-tab[href*="tab=' + slug + '"], .nav-tab[href="#' + tabId + '"], .nav-tree-item[data-tab="' + tabId + '"], .nav-tree-item[data-tab="' + slug + '"], .nav-tab-link[data-tab="' + tabId + '"], .nav-tab-link[data-tab="' + slug + '"]').addClass('nav-tab-active is-active');
 
         // 2. Hide all panes and show target pane
         $('.sergio-tab-pane, .studio-tab-panel').removeClass('is-active').hide();
